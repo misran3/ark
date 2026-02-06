@@ -1,0 +1,14 @@
+[project]
+name = "user-lambda"
+version = "0.1.0"
+description = "User Lambda function for handling user-related operations"
+requires-python = ">=3.12"
+dependencies = [
+    "aws-lambda-powertools>=3.24.0",
+    "aws-xray-sdk>=2.15.0",
+]
+
+[tool.uv.sources]
+shared = { workspace = true }
+database = { workspace = true }
+

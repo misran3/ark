@@ -1,0 +1,9 @@
+# Claude
+.claude/settings.json
+docs/plans
+
+## Local MCP servers
+.mcp.json
+
+# System files
+.DS_Store

@@ -1,0 +1,226 @@
+import * as cdk from 'aws-cdk-lib';
+import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import * as cognito from 'aws-cdk-lib/aws-cognito';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as logs from 'aws-cdk-lib/aws-logs';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
+import { Construct } from 'constructs';
+import * as path from 'path';
+import { APP_NAME, APP_NAME_LOWERCASE } from './constants';
+
+export interface ApiStackProps extends cdk.StackProps {
+    userPool: cognito.UserPool;
+    usersTable: dynamodb.Table;
+    usersTableEmailIndexName: string;
+}
+
+interface LambdaFunctionConfig {
+    name: string;
+    handler: string;
+    description: string;
+    additionalDeps?: string[];
+    additionalEnv?: Record<string, string>;
+    tableGrants?: dynamodb.Table[];
+    timeout?: cdk.Duration;
+    copySourceFiles?: boolean; // If true, copy Lambda source files
+}
+
+export class ApiStack extends cdk.Stack {
+    public readonly api: apigateway.RestApi;
+    private readonly coreRoot: string = path.join(__dirname, '../../core');
+    private readonly commonEnv: Record<string, string>;
+
+    constructor(scope: Construct, id: string, props: ApiStackProps) {
+        super(scope, id, props);
+
+        // Common environment variables for all Lambda functions
+        this.commonEnv = {
+            ENVIRONMENT: process.env.ENVIRONMENT || 'dev',
+            LOG_LEVEL: process.env.LOG_LEVEL || 'INFO',
+            USERS_TABLE_NAME: props.usersTable.tableName,
+        };
+
+        // Create Cognito Authorizer for API Gateway
+        const cognitoAuthorizer = new apigateway.CognitoUserPoolsAuthorizer(this, 'CognitoAuthorizer', {
+            cognitoUserPools: [props.userPool],
+            identitySource: 'method.request.header.Authorization',
+            authorizerName: `${APP_NAME}CognitoAuthorizer`,
+        });
+
+        // Create REST API
+        this.api = new apigateway.RestApi(this, `${APP_NAME}Api`, {
+            restApiName: `${APP_NAME} API`,
+            description: `API for ${APP_NAME} application`,
+            deployOptions: {
+                stageName: process.env.STAGE_NAME || 'dev',
+                loggingLevel: apigateway.MethodLoggingLevel.INFO,
+                dataTraceEnabled: true,
+                tracingEnabled: true,
+                metricsEnabled: true,
+            },
+            defaultCorsPreflightOptions: {
+                allowOrigins: apigateway.Cors.ALL_ORIGINS,
+                allowMethods: apigateway.Cors.ALL_METHODS,
+                allowHeaders: ['Content-Type', 'X-Amz-Date', 'Authorization', 'X-Api-Key', 'X-Amz-Security-Token'],
+                allowCredentials: true,
+            },
+            cloudWatchRole: true,
+        });
+
+        // =============================================================
+        // User Lambda Function
+        // =============================================================
+        const userLambdaFn = this.createLambdaFunction({
+            name: 'user-lambda',
+            handler: 'handler.lambda_handler',
+            description: 'Get and update user profile information',
+            additionalDeps: ['./shared', './database'],
+            additionalEnv: {
+                USERS_TABLE_NAME: props.usersTable.tableName,
+                USERS_TABLE_EMAIL_INDEX: props.usersTableEmailIndexName,
+            },
+            tableGrants: [props.usersTable],
+        });
+
+        // =============================================================
+        // User API Resources and Methods
+        // =============================================================
+        this.createUserAPIResources(userLambdaFn, cognitoAuthorizer);
+
+        // CloudFormation Outputs
+        new cdk.CfnOutput(this, 'ApiUrl', {
+            value: this.api.url,
+            description: 'API Gateway URL',
+            exportName: `${APP_NAME}ApiUrl`,
+        });
+
+        new cdk.CfnOutput(this, 'ApiId', {
+            value: this.api.restApiId,
+            description: 'API Gateway ID',
+            exportName: `${APP_NAME}ApiId`,
+        });
+
+        // SSM Parameter for Amplify build
+        new ssm.StringParameter(this, 'ApiUrlParam', {
+          parameterName: `/${APP_NAME_LOWERCASE}/api-url`,
+          stringValue: this.api.url,
+          description: 'API Gateway URL for frontend',
+        });
+    }
+
+    /**
+     * Creates API Gateway resources and methods for user-related operations, all protected by Cognito Authorizer.
+     * @param userLambdaFn The Lambda function that handles user-related API requests.
+     * @param authorizer The Cognito User Pools Authorizer to secure the endpoints.
+     */
+    private createUserAPIResources(userLambdaFn: lambda.Function, authorizer: apigateway.CognitoUserPoolsAuthorizer) {
+        const usersResource = this.api.root.addResource('users');
+
+        // Health check endpoint
+        const healthResource = usersResource.addResource('health');
+        healthResource.addMethod('GET', new apigateway.LambdaIntegration(userLambdaFn));
+
+        // POST /users
+        usersResource.addMethod('POST', new apigateway.LambdaIntegration(userLambdaFn), {
+            authorizationType: apigateway.AuthorizationType.COGNITO,
+            authorizer: authorizer,
+        });
+
+        // GET /users
+        usersResource.addMethod('GET', new apigateway.LambdaIntegration(userLambdaFn), {
+            authorizationType: apigateway.AuthorizationType.COGNITO,
+            authorizer: authorizer,
+        });
+
+        // GET, PUT, DELETE /users/{user_id}
+        const userIdResource = usersResource.addResource('{user_id}');
+
+        userIdResource.addMethod('GET', new apigateway.LambdaIntegration(userLambdaFn), {
+            authorizationType: apigateway.AuthorizationType.COGNITO,
+            authorizer: authorizer,
+        });
+        userIdResource.addMethod('PUT', new apigateway.LambdaIntegration(userLambdaFn), {
+            authorizationType: apigateway.AuthorizationType.COGNITO,
+            authorizer: authorizer,
+        });
+        userIdResource.addMethod('DELETE', new apigateway.LambdaIntegration(userLambdaFn), {
+            authorizationType: apigateway.AuthorizationType.COGNITO,
+            authorizer: authorizer,
+        });
+    }
+
+    /**
+     * Utility method to create a Lambda function with specified configuration,
+     * including bundling dependencies with uv and optionally copying source files.
+     * @param config Lambda function configuration details
+     * @returns The created Lambda function
+     */
+    private createLambdaFunction(config: LambdaFunctionConfig): lambda.Function {
+        // Create CloudWatch Log Group
+        const logGroup = new logs.LogGroup(this, `${config.name}LogGroup`, {
+            logGroupName: `/aws/lambda/${APP_NAME_LOWERCASE}-${config.name.toLowerCase()}`,
+            retention: process.env.ENVIRONMENT === 'prod' ? logs.RetentionDays.ONE_MONTH : logs.RetentionDays.ONE_WEEK,
+            removalPolicy: process.env.ENVIRONMENT === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
+        });
+
+        let installPackages = `./lambda/${config.name}`;
+        if (config.additionalDeps && config.additionalDeps.length > 0) {
+            installPackages = installPackages.concat(` ${config.additionalDeps.join(' ')}`);
+        }
+
+        // Build bundling command based on whether we need to copy source files
+        const bundlingCommands: string[] = [
+            // Install uv to /tmp (writable location)
+            'pip install --no-cache-dir --target /tmp/pip-packages uv',
+            'export PYTHONPATH=/tmp/pip-packages:$PYTHONPATH',
+            // Navigate to workspace root
+            'cd /asset-input',
+        ];
+
+        // Copy source files first
+        if (config.copySourceFiles) {
+            const lambdaDir = `./lambda/${config.name}`;
+            bundlingCommands.push(
+                // Copy all source files from Lambda directory to output
+                `cp -r ${lambdaDir}/* /asset-output/`,
+                // Make shell scripts executable (e.g., run.sh)
+                'find /asset-output -name "*.sh" -exec chmod +x {} \\;',
+            );
+        }
+
+        // Install Python dependencies (always)
+        bundlingCommands.push(
+            `python -m uv pip install --python 3.12 --target /asset-output --no-cache ${installPackages}`,
+        );
+
+        const fn = new lambda.Function(this, config.name, {
+            functionName: `${APP_NAME_LOWERCASE}-${config.name.toLowerCase()}`,
+            description: config.description,
+            handler: config.handler,
+            runtime: lambda.Runtime.PYTHON_3_12,
+            architecture: lambda.Architecture.ARM_64,
+            memorySize: 512,
+            timeout: config.timeout || cdk.Duration.seconds(300), // Default to 5 minutes, can be overridden
+            code: lambda.Code.fromAsset(this.coreRoot, {
+                bundling: {
+                    image: lambda.Runtime.PYTHON_3_12.bundlingImage,
+                    command: ['bash', '-c', bundlingCommands.join(' && ')],
+                },
+            }),
+            environment: {
+                ...this.commonEnv,
+                ...config.additionalEnv,
+            },
+            tracing: lambda.Tracing.ACTIVE,
+            logGroup: logGroup,
+        });
+
+        // Grant DynamoDB access
+        config.tableGrants?.forEach((table) => {
+            table.grantReadWriteData(fn);
+        });
+
+        return fn;
+    }
+}

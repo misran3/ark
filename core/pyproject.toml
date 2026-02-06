@@ -1,0 +1,24 @@
+[project]
+name = "core"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.setuptools]
+packages = []
+
+[tool.uv.workspace]
+members = [
+    "lambda/user-lambda",
+    "agent",
+    "shared",
+    "database",
+]
+
+[dependency-groups]
+dev = [
+    "black>=26.1.0",
+    "pytest>=9.0.2",
+]

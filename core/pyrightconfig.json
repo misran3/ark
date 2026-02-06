@@ -1,0 +1,5 @@
+{
+  "extraPaths": ["agent/src", "shared/src", "database/src"],
+  "venvPath": ".",
+  "venv": ".venv"
+}
