@@ -70,7 +70,7 @@ export class ApiStack extends cdk.Stack {
             cloudWatchRole: true,
         });
 
-        // Shared /api resource for data and captain lambdas
+        // Create base /api resource
         this.apiResource = this.api.root.addResource('api');
 
         // =============================================================
