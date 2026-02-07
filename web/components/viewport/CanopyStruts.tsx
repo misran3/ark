@@ -19,9 +19,9 @@ const VP_X_FRAC = 0.5;
 const VP_Y_FRAC = 0.55; // measured from bottom, so 0.55 = 45% from top
 
 // Strut width at frame edge vs center (world units, scaled at render)
-const STRUT_WIDTH_EDGE = 0.045;
-const STRUT_WIDTH_CENTER = 0.022;
-const STRUT_DEPTH = 0.02; // thickness in Z
+const STRUT_WIDTH_EDGE = 0.06;
+const STRUT_WIDTH_CENTER = 0.018;
+const STRUT_DEPTH = 0.025; // thickness in Z
 
 // Z-plane and depth offset for curvature feel
 const Z_PLANE = 1.5;
@@ -83,23 +83,21 @@ function buildTaperedStrut(
     4, 5, 6,  4, 6, 7,
   ]);
 
-  // Vertex colors: lighter on top faces (catching overhead light), darker on bottom
-  // Layout: 8 vertices, each gets RGB
-  const topColor = [0.14, 0.16, 0.22]; // lighter gunmetal
-  const bottomColor = [0.07, 0.08, 0.12]; // darker shadow
-  const midColor = [0.10, 0.12, 0.17]; // intermediate for sides
+  // Vertex colors: near-black silhouette body with single bright edge.
+  // Custom shader renders these directly (no lighting dependency).
+  const darkBase = [0.02, 0.025, 0.04];       // near-black silhouette body
+  const edgeHighlight = [0.18, 0.24, 0.35];   // steel-cyan edge catching overhead light
 
-  // Vertices 0,3,4,7 are on the +perp side (top), 1,2,5,6 on -perp side (bottom)
-  // For front/back faces, use mid tones
+  // Vertices 0,3,4,7 are on the +perp side (top edge), 1,2,5,6 on -perp (shadow)
   const colors = new Float32Array([
-    ...topColor,     // 0
-    ...bottomColor,  // 1
-    ...bottomColor,  // 2
-    ...topColor,     // 3
-    ...topColor,     // 4
-    ...bottomColor,  // 5
-    ...bottomColor,  // 6
-    ...topColor,     // 7
+    ...edgeHighlight, // 0: start, top edge (catches light)
+    ...darkBase,      // 1: start, bottom edge (shadow)
+    ...darkBase,      // 2: start, bottom edge (shadow)
+    ...edgeHighlight, // 3: start, top edge (catches light)
+    ...edgeHighlight, // 4: end, top edge (catches light)
+    ...darkBase,      // 5: end, bottom edge (shadow)
+    ...darkBase,      // 6: end, bottom edge (shadow)
+    ...edgeHighlight, // 7: end, top edge (catches light)
   ]);
 
   const geo = new THREE.BufferGeometry();
@@ -181,13 +179,32 @@ export function CanopyStruts() {
     };
   }, [geometry]);
 
+  // Custom shader — bypasses scene lighting, vertex colors are direct output
+  const strutMaterial = useMemo(() => {
+    return new THREE.ShaderMaterial({
+      vertexShader: `
+        attribute vec3 color;
+        varying vec3 vColor;
+        void main() {
+          vColor = color;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vColor;
+        void main() {
+          gl_FragColor = vec4(vColor, 1.0);
+        }
+      `,
+    });
+  }, []);
+
+  // Cleanup material on unmount
+  useEffect(() => {
+    return () => { strutMaterial.dispose(); };
+  }, [strutMaterial]);
+
   return (
-    <mesh ref={meshRef} geometry={geometry} castShadow={false} receiveShadow={false}>
-      <meshLambertMaterial
-        vertexColors
-        emissive={new THREE.Color('#001a1f')}
-        emissiveIntensity={0.1}
-      />
-    </mesh>
+    <mesh ref={meshRef} geometry={geometry} material={strutMaterial} castShadow={false} receiveShadow={false} />
   );
 }
