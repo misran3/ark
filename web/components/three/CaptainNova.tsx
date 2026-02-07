@@ -12,4 +12,5 @@ import CaptainNova from './captain-nova';
 export default CaptainNova;
 
 // Re-export types
-export type { CaptainNovaProps, NovaGeometryConfig, NovaAnimationConfig } from './captain-nova/types';
+export type { CaptainNovaProps, CaptainNovaHandle } from './captain-nova';
+export type { NovaGeometryConfig, AnimationConfig } from './captain-nova/types';
