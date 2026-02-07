@@ -67,7 +67,16 @@ export function ConsolePanel({
   return (
     <div className="relative h-full">
       {/* ===== INSTRUMENT WELL: Physically recessed housing ===== */}
-      <div className="instrument-well h-full relative">
+      <div
+        className="instrument-well h-full relative"
+        style={{
+          // 4B: Backlight spill — colored glow onto surrounding dashboard surface
+          boxShadow: isPowered
+            ? `0 0 20px ${alertBacklight}, 0 0 40px rgba(0, 242, 253, 0.02)`
+            : 'none',
+          transition: 'box-shadow 0.5s ease-out',
+        }}
+      >
         {/* Multi-step inset bevel (matching glass bevel language) */}
         {/* Step 1: Outer highlight — light catching well rim */}
         <div
