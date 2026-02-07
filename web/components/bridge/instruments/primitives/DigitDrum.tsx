@@ -85,6 +85,13 @@ export function DigitDrum({
     return texture;
   }, [digitColor]);
 
+  // Dispose GPU texture on unmount or when digitColor changes
+  useEffect(() => {
+    return () => {
+      drumTexture.dispose();
+    };
+  }, [drumTexture]);
+
   // Handle value changes — add velocity for momentum
   useEffect(() => {
     const diff = value - prevValueRef.current;
