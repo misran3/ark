@@ -3,65 +3,85 @@
 import { useBootStore } from '@/lib/stores/boot-store';
 import { HUDTopBar } from './hud/HUDTopBar';
 import { HUDThreats } from './hud/HUDThreats';
+import { HUDAmbient } from './hud/HUDAmbient';
 import { CommandConsole } from './console/CommandConsole';
 import { CaptainNovaStation } from './hud/CaptainNovaPanel';
+import { CockpitFrame } from './cockpit/CockpitFrame';
+import { LeftDataStrip } from './cockpit/LeftDataStrip';
 import { Viewport3D } from '../viewport/Viewport3D';
 
 export function BridgeLayout() {
   const phase = useBootStore((state) => state.phase);
   const showHUD = phase === 'hud-rise' || phase === 'complete';
   const showConsole = phase === 'console-boot' || phase === 'hud-rise' || phase === 'complete';
+  const showFrame = phase === 'console-boot' || phase === 'hud-rise' || phase === 'complete';
 
   return (
     <div className="fixed inset-0 bg-space-black overflow-hidden">
-      {/* HUD Top Bar - nearly transparent */}
+      {/* Layer 1: Full-screen 3D viewport (behind everything) */}
+      <div className="absolute inset-0 z-0">
+        <Viewport3D />
+      </div>
+
+      {/* Layer 2: Cockpit frame (structural hull overlay) */}
       <div
-        className="absolute top-0 left-0 right-0 z-30 transition-all duration-700 ease-out"
+        style={{
+          opacity: showFrame ? 1 : 0,
+          transition: 'opacity 0.8s ease-out',
+        }}
+      >
+        <CockpitFrame />
+        <LeftDataStrip />
+      </div>
+
+      {/* Layer 3: Captain Nova station (inside right frame area) */}
+      <div
+        className="absolute top-6 right-0 w-[180px] z-20 pointer-events-none"
+        style={{
+          bottom: '220px',
+          opacity: showHUD ? 1 : 0,
+          transform: showHUD ? 'translateX(0)' : 'translateX(40px)',
+          transition: 'opacity 0.7s ease-out, transform 0.7s ease-out',
+        }}
+      >
+        <CaptainNovaStation />
+      </div>
+
+      {/* Layer 4: HUD overlays (floating holographic elements) */}
+      {/* Top bar - floating above frame */}
+      <div
+        className="absolute top-0 left-0 right-0 z-30"
         style={{
           opacity: showHUD ? 1 : 0,
-          transform: showHUD ? 'translateY(0)' : 'translateY(-100%)',
+          transform: showHUD ? 'translateY(0)' : 'translateY(-20px)',
+          transition: 'opacity 0.7s ease-out, transform 0.7s ease-out',
         }}
       >
         <HUDTopBar />
       </div>
 
-      {/* Main content area - viewport + Nova */}
-      <div className="absolute inset-0 flex">
-        {/* Threats Box - top left */}
-        <div
-          className="absolute top-20 left-4 z-30 transition-all duration-700 ease-out"
-          style={{
-            opacity: showHUD ? 1 : 0,
-            transform: showHUD ? 'translateX(0)' : 'translateX(-100%)',
-          }}
-        >
-          <HUDThreats />
-        </div>
-
-        {/* Viewport - center, takes most space */}
-        <div className="flex-1 relative">
-          <Viewport3D />
-        </div>
-
-        {/* Captain Nova - right panel */}
-        <div
-          className="w-80 flex-shrink-0 z-30 transition-all duration-700 ease-out"
-          style={{
-            opacity: showHUD ? 1 : 0,
-            transform: showHUD ? 'translateX(0)' : 'translateX(100%)',
-          }}
-        >
-          <CaptainNovaStation />
-        </div>
+      {/* Threats list - inside viewscreen, upper-left */}
+      <div
+        className="absolute top-12 left-14 z-30"
+        style={{
+          opacity: showHUD ? 1 : 0,
+          transform: showHUD ? 'translateX(0)' : 'translateX(-30px)',
+          transition: 'opacity 0.7s ease-out 0.2s, transform 0.7s ease-out 0.2s',
+        }}
+      >
+        <HUDThreats />
       </div>
 
-      {/* Command Console - bottom */}
+      {/* Ambient HUD elements */}
+      {showHUD && <HUDAmbient />}
+
+      {/* Layer 5: Console dashboard (bottom, integrated into frame) */}
       <div
-        className="absolute bottom-0 left-0 right-0 h-[280px] z-20"
+        className="absolute bottom-0 left-0 right-0 h-[220px] z-20"
         style={{
           opacity: showConsole ? 1 : 0,
-          transform: showConsole ? 'translateY(0)' : 'translateY(100%)',
-          transition: 'opacity 0.3s ease-out, transform 0.3s ease-out',
+          transform: showConsole ? 'translateY(0)' : 'translateY(60px)',
+          transition: 'opacity 0.4s ease-out, transform 0.4s ease-out',
         }}
       >
         <CommandConsole />
