@@ -1,73 +1,37 @@
 'use client';
 
 import { useBootSequence } from '@/hooks/useBootSequence';
-import { TrueBlack } from './boot/TrueBlack';
-import { EmergencyLighting } from './boot/EmergencyLighting';
-import { PowerSurge } from './boot/PowerSurge';
-import { ViewportCalibration } from './boot/ViewportCalibration';
-import { HUDProjection } from './boot/HUDProjection';
-import { EyelidReveal } from './boot/EyelidReveal';
+import { StartScreen } from './boot/StartScreen';
+import { NameExitAnimation } from './boot/NameExitAnimation';
+import { BootOverlay } from './boot/BootOverlay';
 
 interface BootSequenceProps {
   children: React.ReactNode;
 }
 
 export function BootSequence({ children }: BootSequenceProps) {
-  const { phase, progress, skipBoot } = useBootSequence();
-
-  const isBootComplete = phase === 'complete';
-  const showBootOverlay = !isBootComplete;
+  const { phase, startBoot, skipBoot } = useBootSequence();
 
   return (
     <>
-      {/* Boot overlay - always in same position in tree */}
-      {showBootOverlay && (
-        // Click/tap anywhere to skip boot sequence
-        <div className="fixed inset-0 bg-black cursor-pointer z-[9999]" onClick={skipBoot}>
-          {/* Beat 0: True Black */}
-          {phase === 'black' && <TrueBlack />}
+      {/* Start screen - first visit only */}
+      {phase === 'start-screen' && <StartScreen onStart={startBoot} />}
 
-          {/* Beat 1: Emergency lighting */}
-          {phase === 'emergency' && <EmergencyLighting />}
+      {/* Name exit animation */}
+      {phase === 'name-exit' && <NameExitAnimation />}
 
-          {/* Beat 2: Power surge */}
-          {phase === 'power-surge' && <PowerSurge />}
-
-          {/* Beat 3: Viewport calibration overlay */}
-          {phase === 'viewport-awake' && <ViewportCalibration />}
-
-          {/* Beat 3: Eyelid reveal with light leak */}
-          {(phase === 'viewport-awake' || phase === 'console-boot' ||
-            phase === 'hud-rise' || phase === 'settling') && (
-            <EyelidReveal isOpen={phase !== 'viewport-awake'} />
-          )}
-
-          {/* Beat 5: HUD projection */}
-          {phase === 'hud-rise' && <HUDProjection />}
-
-          {/* Skip hint */}
-          <div
-            className="absolute bottom-4 left-1/2 -translate-x-1/2 font-mono text-[9px] tracking-wider uppercase z-50"
-            style={{
-              color: 'rgba(0, 240, 255, 0.2)',
-              animation: 'hud-drift 4s ease-in-out infinite',
-              opacity: phase === 'black' || phase === 'emergency' ? 0 : 1,
-              transition: 'opacity 0.3s',
-            }}
-          >
-            Click to skip
-          </div>
-        </div>
+      {/* Boot overlay - darkness through full-power */}
+      {phase !== 'complete' && phase !== 'start-screen' && phase !== 'name-exit' && (
+        <BootOverlay phase={phase} onSkip={skipBoot} />
       )}
 
-      {/* Content - always mounted to prevent remount, but visibility controlled by phase */}
-      {/* Visible from power-surge onwards (when frame lighting comes on) */}
+      {/* Bridge content - always mounted after name exits */}
       <div
-        className="relative h-full w-full"
         style={{
-          visibility: phase === 'power-surge' || phase === 'viewport-awake' ||
-                     phase === 'console-boot' || phase === 'hud-rise' ||
-                     phase === 'settling' || phase === 'complete' ? 'visible' : 'hidden',
+          visibility:
+            phase === 'start-screen' || phase === 'name-exit'
+              ? 'hidden'
+              : 'visible',
         }}
       >
         {children}
