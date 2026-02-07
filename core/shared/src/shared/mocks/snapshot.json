@@ -1,0 +1,290 @@
+{
+  "accounts": [
+    {
+      "account_id": "acc_checking_001",
+      "type": "checking",
+      "balance": 4250.00,
+      "nickname": "Main Checking",
+      "source": "nessie"
+    },
+    {
+      "account_id": "acc_savings_001",
+      "type": "savings",
+      "balance": 12500.00,
+      "nickname": "Emergency Fund",
+      "source": "nessie"
+    },
+    {
+      "account_id": "acc_credit_001",
+      "type": "credit_card",
+      "balance": -1847.32,
+      "nickname": "Rewards Card",
+      "source": "nessie"
+    }
+  ],
+  "recent_transactions": [
+    {
+      "id": "tx_001",
+      "account_id": "acc_checking_001",
+      "date": "2026-02-05T12:00:00Z",
+      "merchant": "Whole Foods",
+      "category": "groceries",
+      "amount": -87.43,
+      "is_recurring": false,
+      "bucket": "needs"
+    },
+    {
+      "id": "tx_002",
+      "account_id": "acc_checking_001",
+      "date": "2026-02-04T19:30:00Z",
+      "merchant": "DoorDash",
+      "category": "dining",
+      "amount": -34.99,
+      "is_recurring": false,
+      "bucket": "wants"
+    },
+    {
+      "id": "tx_003",
+      "account_id": "acc_checking_001",
+      "date": "2026-02-03T08:00:00Z",
+      "merchant": "Starbucks",
+      "category": "coffee",
+      "amount": -6.75,
+      "is_recurring": false,
+      "bucket": "wants"
+    },
+    {
+      "id": "tx_004",
+      "account_id": "acc_credit_001",
+      "date": "2026-02-02T20:00:00Z",
+      "merchant": "Uber Eats",
+      "category": "dining",
+      "amount": -42.50,
+      "is_recurring": false,
+      "bucket": "wants"
+    },
+    {
+      "id": "tx_005",
+      "account_id": "acc_checking_001",
+      "date": "2026-02-01T00:00:00Z",
+      "merchant": "Netflix",
+      "category": "subscriptions",
+      "amount": -15.99,
+      "is_recurring": true,
+      "next_expected_date": "2026-03-01T00:00:00Z",
+      "bucket": "wants"
+    },
+    {
+      "id": "tx_006",
+      "account_id": "acc_checking_001",
+      "date": "2026-02-01T00:00:00Z",
+      "merchant": "Spotify",
+      "category": "subscriptions",
+      "amount": -10.99,
+      "is_recurring": true,
+      "next_expected_date": "2026-03-01T00:00:00Z",
+      "bucket": "wants"
+    },
+    {
+      "id": "tx_007",
+      "account_id": "acc_checking_001",
+      "date": "2026-02-01T00:00:00Z",
+      "merchant": "Planet Fitness",
+      "category": "gym",
+      "amount": -24.99,
+      "is_recurring": true,
+      "next_expected_date": "2026-03-01T00:00:00Z",
+      "bucket": "wants"
+    },
+    {
+      "id": "tx_008",
+      "account_id": "acc_checking_001",
+      "date": "2026-02-01T00:00:00Z",
+      "merchant": "Employer Inc",
+      "category": "salary",
+      "amount": 2750.00,
+      "is_recurring": true,
+      "next_expected_date": "2026-02-15T00:00:00Z",
+      "bucket": "income"
+    },
+    {
+      "id": "tx_009",
+      "account_id": "acc_checking_001",
+      "date": "2026-01-31T10:00:00Z",
+      "merchant": "Shell Gas",
+      "category": "transportation",
+      "amount": -52.30,
+      "is_recurring": false,
+      "bucket": "needs"
+    },
+    {
+      "id": "tx_010",
+      "account_id": "acc_checking_001",
+      "date": "2026-01-30T12:00:00Z",
+      "merchant": "Chipotle",
+      "category": "dining",
+      "amount": -14.25,
+      "is_recurring": false,
+      "bucket": "wants"
+    },
+    {
+      "id": "tx_011",
+      "account_id": "acc_credit_001",
+      "date": "2026-01-29T18:00:00Z",
+      "merchant": "Amazon",
+      "category": "shopping",
+      "amount": -67.89,
+      "is_recurring": false,
+      "bucket": "wants"
+    },
+    {
+      "id": "tx_012",
+      "account_id": "acc_checking_001",
+      "date": "2026-01-28T09:00:00Z",
+      "merchant": "CVS Pharmacy",
+      "category": "medical",
+      "amount": -23.45,
+      "is_recurring": false,
+      "bucket": "needs"
+    },
+    {
+      "id": "tx_013",
+      "account_id": "acc_checking_001",
+      "date": "2026-01-27T20:00:00Z",
+      "merchant": "Grubhub",
+      "category": "dining",
+      "amount": -38.99,
+      "is_recurring": false,
+      "bucket": "wants"
+    },
+    {
+      "id": "tx_014",
+      "account_id": "acc_checking_001",
+      "date": "2026-01-25T00:00:00Z",
+      "merchant": "Apartment Complex",
+      "category": "rent",
+      "amount": -1650.00,
+      "is_recurring": true,
+      "next_expected_date": "2026-02-25T00:00:00Z",
+      "bucket": "needs"
+    },
+    {
+      "id": "tx_015",
+      "account_id": "acc_checking_001",
+      "date": "2026-01-24T14:00:00Z",
+      "merchant": "Target",
+      "category": "shopping",
+      "amount": -89.23,
+      "is_recurring": false,
+      "bucket": "wants"
+    },
+    {
+      "id": "tx_016",
+      "account_id": "acc_checking_001",
+      "date": "2026-01-22T12:00:00Z",
+      "merchant": "Thai Kitchen",
+      "category": "dining",
+      "amount": -28.50,
+      "is_recurring": false,
+      "bucket": "wants"
+    },
+    {
+      "id": "tx_017",
+      "account_id": "acc_checking_001",
+      "date": "2026-01-20T10:00:00Z",
+      "merchant": "Electric Company",
+      "category": "utilities",
+      "amount": -95.00,
+      "is_recurring": true,
+      "next_expected_date": "2026-02-20T10:00:00Z",
+      "bucket": "needs"
+    },
+    {
+      "id": "tx_018",
+      "account_id": "acc_savings_001",
+      "date": "2026-01-15T00:00:00Z",
+      "merchant": "Savings Transfer",
+      "category": "savings_transfer",
+      "amount": 500.00,
+      "is_recurring": true,
+      "next_expected_date": "2026-02-15T00:00:00Z",
+      "bucket": "savings"
+    },
+    {
+      "id": "tx_019",
+      "account_id": "acc_checking_001",
+      "date": "2026-01-15T00:00:00Z",
+      "merchant": "Employer Inc",
+      "category": "salary",
+      "amount": 2750.00,
+      "is_recurring": true,
+      "next_expected_date": "2026-02-01T00:00:00Z",
+      "bucket": "income"
+    },
+    {
+      "id": "tx_020",
+      "account_id": "acc_credit_001",
+      "date": "2026-01-14T19:00:00Z",
+      "merchant": "Sushi Palace",
+      "category": "dining",
+      "amount": -72.00,
+      "is_recurring": false,
+      "bucket": "wants"
+    },
+    {
+      "id": "tx_021",
+      "account_id": "acc_checking_001",
+      "date": "2026-01-12T08:00:00Z",
+      "merchant": "Trader Joes",
+      "category": "groceries",
+      "amount": -112.34,
+      "is_recurring": false,
+      "bucket": "needs"
+    },
+    {
+      "id": "tx_022",
+      "account_id": "acc_credit_001",
+      "date": "2026-01-10T16:00:00Z",
+      "merchant": "Best Buy",
+      "category": "shopping",
+      "amount": -199.99,
+      "is_recurring": false,
+      "bucket": "wants"
+    },
+    {
+      "id": "tx_023",
+      "account_id": "acc_checking_001",
+      "date": "2026-01-08T20:00:00Z",
+      "merchant": "Pizza Hut",
+      "category": "dining",
+      "amount": -24.99,
+      "is_recurring": false,
+      "bucket": "wants"
+    },
+    {
+      "id": "tx_024",
+      "account_id": "acc_checking_001",
+      "date": "2026-01-05T11:00:00Z",
+      "merchant": "Costco",
+      "category": "groceries",
+      "amount": -234.56,
+      "is_recurring": false,
+      "bucket": "needs"
+    },
+    {
+      "id": "tx_025",
+      "account_id": "acc_checking_001",
+      "date": "2026-01-03T09:00:00Z",
+      "merchant": "State Farm",
+      "category": "insurance",
+      "amount": -145.00,
+      "is_recurring": true,
+      "next_expected_date": "2026-02-03T09:00:00Z",
+      "bucket": "needs"
+    }
+  ],
+  "total_net_worth": 14902.68,
+  "monthly_income": 5500.00,
+  "monthly_spending": 4127.00,
+  "snapshot_timestamp": "2026-02-06T12:00:00Z"
+}

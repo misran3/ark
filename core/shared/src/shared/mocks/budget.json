@@ -1,0 +1,64 @@
+{
+  "monthly_income": 5500.00,
+  "needs": {
+    "target_pct": 0.50,
+    "target_amount": 2750.00,
+    "actual_amount": 2400.08,
+    "actual_pct": 0.436,
+    "status": "on_track",
+    "breakdown": {
+      "rent": 1650.00,
+      "groceries": 434.33,
+      "utilities": 95.00,
+      "transportation": 52.30,
+      "insurance": 145.00,
+      "medical": 23.45
+    }
+  },
+  "wants": {
+    "target_pct": 0.30,
+    "target_amount": 1650.00,
+    "actual_amount": 2343.04,
+    "actual_pct": 0.426,
+    "status": "critical",
+    "breakdown": {
+      "dining": 256.22,
+      "subscriptions": 51.97,
+      "shopping": 357.11,
+      "coffee": 6.75,
+      "gym": 24.99,
+      "entertainment": 450.00,
+      "clothing": 380.00,
+      "travel": 300.00,
+      "personal_care": 150.00,
+      "hobbies": 200.00,
+      "alcohol": 166.00
+    }
+  },
+  "savings": {
+    "target_pct": 0.20,
+    "target_amount": 1100.00,
+    "actual_amount": 500.00,
+    "actual_pct": 0.091,
+    "status": "warning",
+    "breakdown": {
+      "savings_transfer": 500.00
+    }
+  },
+  "overall_health": 58.0,
+  "overspend_categories": [
+    {
+      "category": "dining",
+      "amount": 256.22,
+      "budget": 180.00,
+      "pct_over": 42.3
+    },
+    {
+      "category": "shopping",
+      "amount": 357.11,
+      "budget": 250.00,
+      "pct_over": 42.8
+    }
+  ],
+  "credit_card_impact": 1847.32
+}
