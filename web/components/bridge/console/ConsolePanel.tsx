@@ -233,11 +233,11 @@ export function ConsolePanel({
             <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
 
             {/* Module header label */}
-            <div className="relative px-4 pt-3 pb-1">
-              <div className="font-mono text-[10px] tracking-[2px] text-cyan-400/50 uppercase">
+            <div className="relative px-3 pt-2 pb-0.5">
+              <div className="font-mono text-[9px] tracking-[2px] text-cyan-400/50 uppercase">
                 {moduleId}: {label}
               </div>
-              <div className="font-mono text-[7px] text-cyan-400/25 uppercase tracking-wider">
+              <div className="font-mono text-[6.5px] text-cyan-400/25 uppercase tracking-wider">
                 CLASS: {classification}
               </div>
             </div>

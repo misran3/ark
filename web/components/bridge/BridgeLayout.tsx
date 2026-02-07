@@ -22,13 +22,13 @@ export function BridgeLayout() {
   const consoleIntensity = useBootStore((state) => state.consoleIntensity);
   const isComplete = phase === 'complete';
 
-  // Apply console intensity to entire layout
-  // No CSS transition — the 60fps setInterval animation is already smooth
-  // and adding a transition causes double-interpolation (visible jumps)
+  // Base layout dimming — opacity controls overall visibility
   const layoutStyle = {
     opacity: consoleIntensity,
-    filter: `brightness(${consoleIntensity})`,
   };
+
+  // Boot lighting: normalized reveal progress (0 = dark, 1 = fully lit)
+  const reveal = Math.min(consoleIntensity / 0.96, 1);
 
   // Fire Captain API scans when boot completes
   useCaptainScans();
@@ -36,58 +36,85 @@ export function BridgeLayout() {
   useNovaHoverSpeech();
 
   return (
-    <div style={layoutStyle} className="relative w-full h-screen">
-    <div className="fixed inset-0 bg-space-black overflow-hidden">
-      {/* Layer 1: Full-screen 3D viewport (behind everything) */}
-      <div className="absolute inset-0 z-0">
-        <Viewport3D />
+    <>
+      <div style={layoutStyle} className="relative w-full h-screen">
+      <div className="fixed inset-0 bg-space-black overflow-hidden">
+        {/* Layer 1: Full-screen 3D viewport (behind everything) */}
+        <div className="absolute inset-0 z-0">
+          <Viewport3D />
+        </div>
+
+        {/* Glass layers: z-5 through z-8 between viewport and frame */}
+        <ViewportGlass />
+
+        {/* Dashboard projection: top surface + shadow gap (z-9, between glass and frame) */}
+        <DashboardProjection />
+
+        {/* Layer 2: Cockpit frame (structural hull overlay) */}
+        <CockpitFrame />
+        <LeftDataStrip />
+
+        {/* Layer 3: Captain Nova station (inside right frame area) */}
+        <div
+          className="absolute top-6 right-0 w-[180px] z-20 pointer-events-none"
+          style={{ bottom: '220px' }}
+        >
+          <CaptainNovaStation />
+        </div>
+
+        {/* Layer 4: HUD overlays (floating holographic elements) */}
+        {/* Top bar - floating above frame */}
+        <div className="absolute top-0 left-0 right-0 z-30">
+          <HUDTopBar />
+        </div>
+
+        {/* Threats list - inside viewscreen, upper-left */}
+        <div className="absolute top-12 left-14 z-30">
+          <HUDThreats />
+        </div>
+
+        {/* Nova dialogue overlay — comm panel next to Nova station */}
+        <NovaDialogueOverlay />
+
+        {/* Ambient HUD elements */}
+        <HUDAmbient />
+
+        {/* Environmental cohesion: AO, dust, specular (z-11, above frame) */}
+        <EnvironmentalCohesion />
+
+        {/* Layer 5: Console dashboard (bottom, integrated into frame) */}
+        <div className="absolute bottom-0 left-0 right-0 h-[220px] z-20">
+          <CommandConsole />
+        </div>
+        {/* Dev: Performance monitor (enable with ?perf) */}
+        <PerfMonitor />
+      </div>
       </div>
 
-      {/* Glass layers: z-5 through z-8 between viewport and frame */}
-      <ViewportGlass />
+      {/* Boot lighting effects — outside opacity wrapper for correct compositing */}
 
-      {/* Dashboard projection: top surface + shadow gap (z-9, between glass and frame) */}
-      <DashboardProjection />
+      {/* Console glow: cyan light source emanating from bottom */}
+      {!isComplete && consoleIntensity > 0 && (
+        <div
+          className="fixed inset-x-0 bottom-0 z-[35] pointer-events-none"
+          style={{
+            height: '50%',
+            background: `radial-gradient(ellipse 100% 50% at 50% 100%, rgba(0, 240, 255, ${(0.07 * (1 - reveal)).toFixed(4)}) 0%, transparent 100%)`,
+          }}
+        />
+      )}
 
-      {/* Layer 2: Cockpit frame (structural hull overlay) */}
-      <CockpitFrame />
-      <LeftDataStrip />
-
-      {/* Layer 3: Captain Nova station (inside right frame area) */}
-      <div
-        className="absolute top-6 right-0 w-[180px] z-20 pointer-events-none"
-        style={{ bottom: '220px' }}
-      >
-        <CaptainNovaStation />
-      </div>
-
-      {/* Layer 4: HUD overlays (floating holographic elements) */}
-      {/* Top bar - floating above frame */}
-      <div className="absolute top-0 left-0 right-0 z-30">
-        <HUDTopBar />
-      </div>
-
-      {/* Threats list - inside viewscreen, upper-left */}
-      <div className="absolute top-12 left-14 z-30">
-        <HUDThreats />
-      </div>
-
-      {/* Nova dialogue overlay — comm panel next to Nova station */}
-      <NovaDialogueOverlay />
-
-      {/* Ambient HUD elements */}
-      <HUDAmbient />
-
-      {/* Environmental cohesion: AO, dust, specular (z-11, above frame) */}
-      <EnvironmentalCohesion />
-
-      {/* Layer 5: Console dashboard (bottom, integrated into frame) */}
-      <div className="absolute bottom-0 left-0 right-0 h-[280px] z-20">
-        <CommandConsole />
-      </div>
-      {/* Dev: Performance monitor (enable with ?perf) */}
-      <PerfMonitor />
-    </div>
-    </div>
+      {/* Bottom-up lighting sweep: darkness recedes from console upward */}
+      {!isComplete && (
+        <div
+          className="fixed inset-0 z-[36] pointer-events-none"
+          style={{
+            background: consoleIntensity <= 0
+              ? 'black'
+              : `linear-gradient(to bottom, rgba(0,0,0,${((1 - reveal) * 0.85).toFixed(4)}) 0%, rgba(0,0,0,${((1 - reveal) * 0.45).toFixed(4)}) ${(30 + reveal * 25).toFixed(1)}%, transparent ${(55 + reveal * 45).toFixed(1)}%)`,
+          }}
+        />
+      )}
+    </>
   );
 }

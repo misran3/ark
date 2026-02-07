@@ -46,8 +46,8 @@ export function ShieldGaugeFace() {
       <div
         className="relative"
         style={{
-          width: '140px',
-          height: '140px',
+          width: '125px',
+          height: '125px',
         }}
       >
         {/* Outer ring — dark metal bezel */}
@@ -102,7 +102,7 @@ export function ShieldGaugeFace() {
               left: '50%',
               top: '10px',
               marginLeft: '-1px',
-              transformOrigin: `center ${140 / 2 - 10}px`,
+              transformOrigin: `center ${125 / 2 - 10}px`,
               transform: `rotate(${tick.angle}deg)`,
               background: tick.isRedZone
                 ? 'rgba(239, 68, 68, 0.6)'
@@ -148,11 +148,11 @@ export function ShieldGaugeFace() {
           className="absolute"
           style={{
             width: '2px',
-            height: '50px',
+            height: '43px',
             left: '50%',
             top: '20px',
             marginLeft: '-1px',
-            transformOrigin: 'center 50px',
+            transformOrigin: 'center 43px',
             transform: `rotate(${displayAngle}deg)`,
             background: 'linear-gradient(to bottom, rgba(255,200,50,0.9) 0%, rgba(255,120,20,0.7) 100%)',
             borderRadius: '1px',
