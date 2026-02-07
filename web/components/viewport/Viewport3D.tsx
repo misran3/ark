@@ -3,6 +3,7 @@
 import { Canvas } from '@react-three/fiber';
 import { StarfieldBackground } from './StarfieldBackground';
 import { Planet } from './Planet';
+import { NebulaBackground } from './NebulaBackground';
 import { ThreatsLayer } from './ThreatsLayer';
 import SceneEffects from '@/components/three/SceneEffects';
 import { CanopyStruts } from './CanopyStruts';
@@ -33,6 +34,9 @@ export function Viewport3D() {
           alpha: true,
         }}
       >
+        {/* Deep space nebula clouds */}
+        <NebulaBackground />
+
         {/* Ambient lighting */}
         <ambientLight intensity={0.2} />
 
