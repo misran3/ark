@@ -81,20 +81,4 @@ export const RingSegmentMaterial = shaderMaterial(
 import { extend } from '@react-three/fiber';
 extend({ RingSegmentMaterial });
 
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      ringSegmentMaterial: React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
-        uTime?: number;
-        uColor?: Color;
-        uFillLevel?: number;
-        uOpacity?: number;
-        uHighlight?: number;
-        uDistress?: number;
-        transparent?: boolean;
-        depthWrite?: boolean;
-        side?: number;
-      };
-    }
-  }
-}
+// JSX types declared in ./jsx-types.d.ts

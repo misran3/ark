@@ -70,22 +70,4 @@ export const HologramMaterial = shaderMaterial(
 import { extend } from '@react-three/fiber';
 extend({ HologramMaterial });
 
-// Type declaration for JSX
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      hologramMaterial: React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
-        uTime?: number;
-        uColor?: Color;
-        uOpacity?: number;
-        uScanlineIntensity?: number;
-        uFresnelPower?: number;
-        uFlicker?: number;
-        transparent?: boolean;
-        depthWrite?: boolean;
-        blending?: number;
-        side?: number;
-      };
-    }
-  }
-}
+// JSX types declared in ./jsx-types.d.ts
