@@ -2,8 +2,10 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useShieldStore } from '@/lib/stores/shield-store';
+import { useInstrumentPower } from '@/hooks/useInstrumentPower';
 import { ShieldGauge3D } from './ShieldGauge3D';
 import { CircularGaugeFallback } from './fallbacks';
+import { InstrumentMalfunction } from './InstrumentMalfunction';
 
 /**
  * INST-01: Shield Status → Gauge Cluster
@@ -11,11 +13,15 @@ import { CircularGaugeFallback } from './fallbacks';
  * Primary: Circular dial gauge (3D) — overall shield integrity
  * Secondary: Three tube gauges (CSS) — Life Support, Recreation Deck, Warp Fuel
  * Warning lamp (CSS) — glows red when integrity < 25%
+ *
+ * Power lifecycle: off → boot → running
+ * On boot: needle sweeps from 0, tube gauges fill from 0
  */
 export function ShieldCluster() {
   const overallPercent = useShieldStore((s) => s.overallPercent);
   const shields = useShieldStore((s) => s.shields);
   const [canvasReady, setCanvasReady] = useState(false);
+  const { isRunning, isOff, hasError } = useInstrumentPower('inst-01');
 
   // Check if WebGL is available
   useEffect(() => {
@@ -28,24 +34,46 @@ export function ShieldCluster() {
     }
   }, []);
 
-  const isDanger = overallPercent < 25;
+  // When off or error, show 0 values; spring physics create natural sweep on transition
+  // Error state: needle drops to 0 and trembles erratically (handled by spring physics at 0)
+  const displayPercent = isOff || hasError ? 0 : overallPercent;
+  const isDanger = displayPercent < 25 && isRunning;
   const shieldList = [
     { id: 'life-support', label: 'LS', color: '#22c55e' },
     { id: 'recreation-deck', label: 'RD', color: '#a855f7' },
     { id: 'warp-fuel', label: 'WF', color: '#f59e0b' },
   ] as const;
 
+  const shieldNames: Record<string, string> = {
+    'life-support': 'Life Support',
+    'recreation-deck': 'Recreation Deck',
+    'warp-fuel': 'Warp Fuel',
+  };
+
   return (
-    <div className="flex flex-col h-full gap-1 py-1">
+    <InstrumentMalfunction active={hasError}>
+    <div className="flex flex-col h-full gap-1 py-1" role="group" aria-label="Shield Status">
+      {/* Screen reader text */}
+      <span className="sr-only">
+        {hasError
+          ? 'Shield status: instrument malfunction.'
+          : `Shield integrity: ${Math.round(overallPercent)} percent. ${
+              shieldList.map(({ id }) => {
+                const s = shields[id];
+                return s ? `${shieldNames[id]}: ${Math.round(s.currentPercent)} percent` : '';
+              }).filter(Boolean).join('. ')
+            }. ${isDanger ? 'Warning: shield integrity critical.' : ''}`
+        }
+      </span>
       {/* Primary: Circular dial gauge — fixed height prevents resize loop under CSS perspective */}
       <div className="relative" style={{ height: '90px' }}>
         {canvasReady ? (
           <Suspense fallback={
             <div className="flex items-center justify-center h-full">
-              <CircularGaugeFallback value={overallPercent} label={`${Math.round(overallPercent)}%`} />
+              <CircularGaugeFallback value={displayPercent} label={`${Math.round(displayPercent)}%`} />
             </div>
           }>
-            <ShieldGauge3D value={overallPercent} />
+            <ShieldGauge3D value={displayPercent} />
           </Suspense>
         ) : (
           <div className="flex items-center justify-center h-full">
@@ -59,7 +87,7 @@ export function ShieldCluster() {
         {shieldList.map(({ id, label, color }) => {
           const shield = shields[id];
           if (!shield) return null;
-          const pct = shield.currentPercent;
+          const pct = isOff ? 0 : shield.currentPercent;
           const isLow = pct < 25;
           const barColor = isLow ? '#ef4444' : color;
 
@@ -139,5 +167,6 @@ export function ShieldCluster() {
         />
       </div>
     </div>
+    </InstrumentMalfunction>
   );
 }

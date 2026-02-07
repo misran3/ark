@@ -1,6 +1,7 @@
 'use client';
 
 import { useConsoleStore, type PanelType } from '@/lib/stores/console-store';
+import { useAlertStore, ALERT_COLORS } from '@/lib/stores/alert-store';
 import { useState, useEffect } from 'react';
 import { ShieldsContent } from './panels/ShieldsContent';
 import { NetWorthContent } from './panels/NetWorthContent';
@@ -34,8 +35,16 @@ export function ConsolePanel({
   backlightTint = 'rgba(0, 240, 255, 0.03)',
 }: ConsolePanelProps) {
   const { setOpenPanel } = useConsoleStore();
+  const alertLevel = useAlertStore((state) => state.level);
+  const cascadeStage = useAlertStore((state) => state.cascadeStage);
   const [isPowered, setIsPowered] = useState(false);
   const [showStatic, setShowStatic] = useState(false);
+
+  // Backlight responds at cascade stage 'backlight' (stage 4)
+  const backlightReached = cascadeStage === 'idle' || ['backlight', 'instruments'].includes(cascadeStage);
+  const alertBacklight = backlightReached && alertLevel !== 'normal'
+    ? ALERT_COLORS[alertLevel].glow
+    : backlightTint;
 
   useEffect(() => {
     if (isPoweringOn) {
@@ -143,11 +152,12 @@ export function ConsolePanel({
 
         {/* ===== INSTRUMENT CONTENT (inside well, on backplate) ===== */}
         <div className="absolute inset-[5px] relative overflow-hidden rounded-sm">
-          {/* Backlight warmup — per-panel aged bulb tint */}
+          {/* Backlight warmup — per-panel aged bulb tint, shifts on alert cascade stage 4 */}
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
-              background: `radial-gradient(ellipse at 50% 30%, ${backlightTint} 0%, transparent 70%)`,
+              background: `radial-gradient(ellipse at 50% 30%, ${alertBacklight} 0%, transparent 70%)`,
+              transition: 'background 0.3s ease-out',
             }}
           />
 

@@ -29,47 +29,39 @@ const PHASES: BootPhase[] = [
  * Phases: loading → eyelid → blur → blink → console-boot → hud-rise → complete
  *
  * Features:
- * - LocalStorage skip on repeat visits
+ * - First visit: full speed boot
+ * - Repeat visits: 2x speed (halved durations)
+ * - Click/tap to skip: instantly jumps to complete
  * - Phase-based timing (defined in PHASE_DURATIONS)
  * - Automatic phase transitions
  * - Progress tracking (0-100% per phase)
- *
- * @returns {Object} Current phase and progress
- * @returns {BootPhase} phase - Current boot phase
- * @returns {number} progress - Progress percentage (0-100) for current phase
- *
- * @example
- * const { phase, progress } = useBootSequence();
- * if (phase === 'complete') {
- *   // Boot sequence finished
- * }
  */
 export function useBootSequence() {
-  // Use individual selectors to avoid unnecessary re-renders
   const phase = useBootStore((s) => s.phase);
   const progress = useBootStore((s) => s.progress);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isRepeatVisitRef = useRef(false);
 
-  // Stable references to store actions (zustand actions are stable by default)
   const setPhase = useBootStore.getState().setPhase;
   const setProgress = useBootStore.getState().setProgress;
 
+  // Detect repeat visit on mount
   useEffect(() => {
-    // Check localStorage for skip flag
-    const shouldSkip = storage.getItem('skipBootSequence') === 'true';
-    if (shouldSkip && phase === 'loading') {
-      setPhase('complete');
-      return;
-    }
+    const bootCount = parseInt(storage.getItem('bootCount') ?? '0', 10);
+    isRepeatVisitRef.current = bootCount > 0;
+  }, []);
 
+  // Phase progression with 2x speed on repeat visits
+  useEffect(() => {
     if (phase === 'complete') return;
 
-    const duration = PHASE_DURATIONS[phase];
-    if (!duration) return;
+    const baseDuration = PHASE_DURATIONS[phase];
+    if (!baseDuration) return;
 
+    // Repeat visits play at 2x speed
+    const duration = isRepeatVisitRef.current ? baseDuration / 2 : baseDuration;
     const startTime = Date.now();
 
-    // Clear any existing interval
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
@@ -84,14 +76,13 @@ export function useBootSequence() {
           clearInterval(intervalRef.current);
           intervalRef.current = null;
         }
-        // Advance to next phase
         const currentIndex = PHASES.indexOf(phase);
         const nextPhase = PHASES[currentIndex + 1];
         if (nextPhase) {
           setPhase(nextPhase);
         }
       }
-    }, 16); // ~60fps
+    }, 16);
 
     return () => {
       if (intervalRef.current) {
@@ -99,14 +90,26 @@ export function useBootSequence() {
         intervalRef.current = null;
       }
     };
-  }, [phase]); // Only re-run when phase changes, not on progress updates
+  }, [phase]);
 
+  // Increment boot count on completion
   useEffect(() => {
-    // Save skip preference when complete
     if (phase === 'complete') {
-      storage.setItem('skipBootSequence', 'true');
+      const bootCount = parseInt(storage.getItem('bootCount') ?? '0', 10);
+      storage.setItem('bootCount', String(bootCount + 1));
     }
   }, [phase]);
 
-  return { phase, progress };
+  // Click/tap to skip handler
+  const skipBoot = useCallback(() => {
+    if (phase !== 'complete') {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      setPhase('complete');
+    }
+  }, [phase, setPhase]);
+
+  return { phase, progress, skipBoot, isRepeatVisit: isRepeatVisitRef.current };
 }

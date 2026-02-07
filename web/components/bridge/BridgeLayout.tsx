@@ -1,6 +1,8 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { useBootStore } from '@/lib/stores/boot-store';
+import { usePowerStore } from '@/lib/stores/power-store';
 import { HUDTopBar } from './hud/HUDTopBar';
 import { HUDThreats } from './hud/HUDThreats';
 import { HUDAmbient } from './hud/HUDAmbient';
@@ -18,6 +20,27 @@ export function BridgeLayout() {
   const showHUD = phase === 'hud-rise' || phase === 'complete';
   const showConsole = phase === 'console-boot' || phase === 'hud-rise' || phase === 'complete';
   const showFrame = phase === 'console-boot' || phase === 'hud-rise' || phase === 'complete';
+
+  // Trigger power lifecycle cold start when console-boot phase begins
+  const coldStartTriggered = useRef(false);
+  const coldStart = usePowerStore((s) => s.coldStart);
+
+  useEffect(() => {
+    if (phase === 'console-boot' && !coldStartTriggered.current) {
+      coldStartTriggered.current = true;
+      coldStart();
+    }
+    // Handle skip-boot case: if we jump straight to complete, ensure power is running
+    if (phase === 'complete' && !coldStartTriggered.current) {
+      coldStartTriggered.current = true;
+      // Instantly set all elements to running
+      const store = usePowerStore.getState();
+      store.setPowerState('running');
+      ['inst-01', 'inst-02', 'inst-03', 'inst-04', 'left-strip', 'hud-top', 'hud-threats', 'glass'].forEach(
+        (id) => store.setElementPower(id, 'running')
+      );
+    }
+  }, [phase, coldStart]);
 
   return (
     <div className="fixed inset-0 bg-space-black overflow-hidden">

@@ -3,15 +3,6 @@
 import { useEffect, useState, useRef, useMemo, memo } from 'react';
 import { useAlertStore, ALERT_COLORS } from '@/lib/stores/alert-store';
 
-/**
- * HUDTopBar - Optimized to prevent unnecessary re-renders
- *
- * Systematic Debugging Results:
- * - Root Cause: Clock updates (every 1000ms) triggered full component re-renders
- * - Solution: Isolated stardate clock, memoized static elements, memoized styles
- * - Performance: Reduced from 60 re-renders/min to 1-2 re-renders/min for static elements
- */
-
 // Isolated stardate component - only this re-renders every second
 const StardateClock = memo(function StardateClock({
   textStyle
@@ -56,18 +47,16 @@ const ShipName = memo(function ShipName({
     if (isTyped) return;
     const text = 'USS PROSPERITY';
     let i = 0;
-    const timer = setTimeout(() => {
-      const typeTimer = setInterval(() => {
-        if (i <= text.length) {
-          setDisplayedShip(text.slice(0, i));
-          i++;
-        } else {
-          clearInterval(typeTimer);
-          setIsTyped(true);
-        }
-      }, 35);
-    }, 400);
-    return () => clearTimeout(timer);
+    const timer = setInterval(() => {
+      if (i <= text.length) {
+        setDisplayedShip(text.slice(0, i));
+        i++;
+      } else {
+        clearInterval(timer);
+        setIsTyped(true);
+      }
+    }, 35);
+    return () => clearInterval(timer);
   }, [isTyped]);
 
   const statusLightStyle = useMemo(
@@ -125,11 +114,7 @@ const StatusText = memo(function StatusText({
 
 export function HUDTopBar() {
   const alertLevel = useAlertStore((state) => state.level);
-  const cascadeStage = useAlertStore((state) => state.cascadeStage);
-
-  // HUD responds at cascade stage 'hud' (stage 2)
-  const hudReached = cascadeStage === 'idle' || ['hud', 'glass', 'backlight', 'instruments'].includes(cascadeStage);
-  const colors = ALERT_COLORS[hudReached ? alertLevel : 'normal'];
+  const colors = ALERT_COLORS[alertLevel];
   const [isTyped, setIsTyped] = useState(false);
   const flickerRef = useRef<HTMLDivElement>(null);
 

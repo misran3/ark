@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useCallback } from 'react';
+import { useAlertStore, type AlertLevel } from '@/lib/stores/alert-store';
 
 /**
  * Layer C — Parallax Reflection (z-6)
@@ -13,9 +14,23 @@ import { useEffect, useRef, useCallback } from 'react';
  * - Double reflection: second layer at 30-40% opacity, offset 2-3px
  * - Static fallback: centered when mouse outside viewport
  */
+// Alert tint colors per level (subtle overlay on glass)
+const ALERT_GLASS_TINT: Record<AlertLevel, string> = {
+  normal: 'transparent',
+  caution: 'rgba(251, 191, 36, 0.015)',
+  alert: 'rgba(249, 115, 22, 0.02)',
+  'red-alert': 'rgba(239, 68, 68, 0.025)',
+};
+
 export function ParallaxReflection() {
   const primaryRef = useRef<HTMLDivElement>(null);
   const secondaryRef = useRef<HTMLDivElement>(null);
+
+  // Glass responds at cascade stage 'glass' (stage 3)
+  const alertLevel = useAlertStore((state) => state.level);
+  const cascadeStage = useAlertStore((state) => state.cascadeStage);
+  const glassReached = cascadeStage === 'idle' || ['glass', 'backlight', 'instruments'].includes(cascadeStage);
+  const glassTint = ALERT_GLASS_TINT[glassReached ? alertLevel : 'normal'];
   const targetX = useRef(0);
   const targetY = useRef(0);
   const currentX = useRef(0);
@@ -171,6 +186,16 @@ export function ParallaxReflection() {
           filter: 'blur(16px)',
           opacity: 0.35,
           willChange: 'transform',
+        }}
+      />
+
+      {/* Alert tint overlay — glass gains faint color during alerts (cascade stage 3) */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: glassTint,
+          transition: 'background 0.4s ease-out',
+          pointerEvents: 'none',
         }}
       />
     </div>

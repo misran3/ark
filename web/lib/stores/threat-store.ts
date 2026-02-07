@@ -11,6 +11,7 @@ export interface Threat {
   amount: number;
   severity: 'danger' | 'warning' | 'info';
   deflected: boolean;
+  createdAt: number;
   seed?: number;
   angularVelocity?: [number, number, number];
 }
@@ -27,6 +28,7 @@ export const DEMO_THREATS: Threat[] = [
     amount: 49.99,
     severity: 'danger',
     deflected: false,
+    createdAt: Date.now() - 3600_000, // 1 hour ago
     seed: 42,
     angularVelocity: [0.35, 0.5, 0.2],
   },
@@ -41,6 +43,7 @@ export const DEMO_THREATS: Threat[] = [
     amount: 284,
     severity: 'warning',
     deflected: false,
+    createdAt: Date.now() - 7200_000, // 2 hours ago
   },
   {
     id: 'streaming',
@@ -53,6 +56,7 @@ export const DEMO_THREATS: Threat[] = [
     amount: 31.98,
     severity: 'danger',
     deflected: false,
+    createdAt: Date.now() - 1800_000, // 30 min ago
   },
   {
     id: 'missed-rewards',
@@ -65,6 +69,7 @@ export const DEMO_THREATS: Threat[] = [
     amount: 12,
     severity: 'info',
     deflected: false,
+    createdAt: Date.now() - 86400_000, // 1 day ago
     seed: 137,
     angularVelocity: [0.25, 0.4, 0.15],
   },
@@ -79,6 +84,7 @@ export const DEMO_THREATS: Threat[] = [
     amount: 2400,
     severity: 'danger',
     deflected: false,
+    createdAt: Date.now() - 172800_000, // 2 days ago
   },
   {
     id: 'savings-opportunity',
@@ -91,6 +97,7 @@ export const DEMO_THREATS: Threat[] = [
     amount: 180,
     severity: 'info',
     deflected: false,
+    createdAt: Date.now() - 43200_000, // 12 hours ago
   },
   {
     id: 'fraud-alert',
@@ -103,6 +110,7 @@ export const DEMO_THREATS: Threat[] = [
     amount: 892,
     severity: 'danger',
     deflected: false,
+    createdAt: Date.now() - 600_000, // 10 min ago
   },
 ];
 
@@ -123,7 +131,7 @@ export const useThreatStore = create<ThreatState>((set) => ({
 
   addThreat: (threat) =>
     set((state) => ({
-      threats: [...state.threats, threat],
+      threats: [...state.threats, { ...threat, createdAt: threat.createdAt || Date.now() }],
     })),
 
   removeThreat: (id) =>

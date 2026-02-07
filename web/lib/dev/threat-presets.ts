@@ -12,6 +12,7 @@ export const THREAT_PRESETS: Record<Threat['type'], Omit<Threat, 'id'>> = {
     amount: 49.99,
     severity: 'danger',
     deflected: false,
+    createdAt: Date.now(),
   },
   ion_storm: {
     type: 'ion_storm',
@@ -23,6 +24,7 @@ export const THREAT_PRESETS: Record<Threat['type'], Omit<Threat, 'id'>> = {
     amount: 284,
     severity: 'warning',
     deflected: false,
+    createdAt: Date.now(),
   },
   solar_flare: {
     type: 'solar_flare',
@@ -34,6 +36,7 @@ export const THREAT_PRESETS: Record<Threat['type'], Omit<Threat, 'id'>> = {
     amount: 31.98,
     severity: 'danger',
     deflected: false,
+    createdAt: Date.now(),
   },
   black_hole: {
     type: 'black_hole',
@@ -45,6 +48,7 @@ export const THREAT_PRESETS: Record<Threat['type'], Omit<Threat, 'id'>> = {
     amount: 4500,
     severity: 'danger',
     deflected: false,
+    createdAt: Date.now(),
   },
   wormhole: {
     type: 'wormhole',
@@ -56,6 +60,7 @@ export const THREAT_PRESETS: Record<Threat['type'], Omit<Threat, 'id'>> = {
     amount: 12,
     severity: 'info',
     deflected: false,
+    createdAt: Date.now(),
   },
   enemy_cruiser: {
     type: 'enemy_cruiser',
@@ -67,6 +72,7 @@ export const THREAT_PRESETS: Record<Threat['type'], Omit<Threat, 'id'>> = {
     amount: 847.99,
     severity: 'danger',
     deflected: false,
+    createdAt: Date.now(),
   },
 };
 
@@ -83,6 +89,7 @@ export const DEMO_SCENE_THREATS: Threat[] = [
     amount: 49.99,
     severity: 'danger',
     deflected: false,
+    createdAt: Date.now() - 3600_000,
   },
   {
     id: 'demo-ion-storm',
@@ -95,6 +102,7 @@ export const DEMO_SCENE_THREATS: Threat[] = [
     amount: 284,
     severity: 'warning',
     deflected: false,
+    createdAt: Date.now() - 7200_000,
   },
   {
     id: 'demo-solar-flare',
@@ -107,6 +115,7 @@ export const DEMO_SCENE_THREATS: Threat[] = [
     amount: 31.98,
     severity: 'danger',
     deflected: false,
+    createdAt: Date.now() - 1800_000,
   },
   {
     id: 'demo-black-hole',
@@ -119,6 +128,7 @@ export const DEMO_SCENE_THREATS: Threat[] = [
     amount: 4500,
     severity: 'danger',
     deflected: false,
+    createdAt: Date.now() - 172800_000,
   },
   {
     id: 'demo-wormhole',
@@ -131,5 +141,6 @@ export const DEMO_SCENE_THREATS: Threat[] = [
     amount: 156,
     severity: 'info',
     deflected: false,
+    createdAt: Date.now() - 43200_000,
   },
 ];

@@ -9,7 +9,7 @@ import '@/lib/materials/VolumetricGlowMaterial';
 import '@/lib/materials/EnergyFlowMaterial';
 import { InstancedParticleSystem, TrailRibbon } from '@/lib/particles';
 
-interface AsteroidProps {
+export interface AsteroidProps {
   position: [number, number, number];
   size?: number;
   color?: string;
@@ -18,6 +18,26 @@ interface AsteroidProps {
   angularVelocity?: [number, number, number];
   onHover?: (hovered: boolean) => void;
   onClick?: () => void;
+
+  // Field-mode props (all optional — standalone mode works without them)
+  /** Current HP. When provided, enables damage visuals. */
+  hp?: number;
+  /** Maximum HP for this rock. Used to compute damageLevel (0-1). */
+  maxHp?: number;
+  /** Called when this rock is clicked in field mode (parent manages HP). */
+  onHit?: () => void;
+  /** Sympathetic glow intensity from field instability (0-1). */
+  sympatheticGlow?: number;
+  /** Field instability drives pulse rate on remaining rocks (0-1). */
+  fieldInstability?: number;
+  /** Trail tier for performance budgeting. */
+  trailTier?: 'full' | 'reduced' | 'none';
+  /** When true, triggers the collapse/shatter animation externally (for cascade). */
+  collapsed?: boolean;
+  /** Called when collapse animation finishes. */
+  onCollapseComplete?: () => void;
+  /** When true, the impact flash plays first (for cascade timing). */
+  impactFlash?: boolean;
 }
 
 /**
@@ -25,8 +45,10 @@ interface AsteroidProps {
  * 1. Outer Heat Haze (VolumetricGlowMaterial atmosphere)
  * 2. Rocky Shell (IcosahedronGeometry + Voronoi crack shader)
  * 3. Inner Core Glow (visible through cracks)
- * 4. Particle Systems (ember trail, smoke ribbon, molten chunks)
+ * 4. Particle Systems (ember trail, smoke ribbon, molten chunks) — tiered by trailTier
  * 5. Interaction Overlays (targeting brackets + EnergyFlow scan ring)
+ *
+ * Supports both standalone mode (original behavior) and field mode (HP, damage, cascade).
  */
 export default function Asteroid({
   position,
@@ -37,6 +59,15 @@ export default function Asteroid({
   angularVelocity = [0.3, 0.5, 0.2],
   onHover,
   onClick,
+  hp,
+  maxHp,
+  onHit,
+  sympatheticGlow = 0,
+  fieldInstability = 0,
+  trailTier = 'full',
+  collapsed = false,
+  onCollapseComplete,
+  impactFlash = false,
 }: AsteroidProps) {
   const groupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
@@ -51,6 +82,19 @@ export default function Asteroid({
   const collapseStartTimeRef = useRef(0);
   const flashSphereRef = useRef<THREE.Mesh>(null);
   const shockwaveRingRef = useRef<THREE.Mesh>(null);
+  const collapseCompleteCalledRef = useRef(false);
+
+  // Shudder animation state
+  const shudderTimeRef = useRef(0);
+  const isShudderingRef = useRef(false);
+  const shudderOriginRef = useRef(new THREE.Vector3());
+
+  // Track previous collapsed prop to detect transitions
+  const prevCollapsedRef = useRef(false);
+
+  // Compute damage level from HP
+  const isFieldMode = hp !== undefined && maxHp !== undefined;
+  const damageLevel = isFieldMode ? 1 - Math.max(0, hp) / maxHp : 0;
 
   // Generate procedural asteroid geometry with seeded simplex noise
   const geometry = useMemo(() => {
@@ -119,6 +163,16 @@ export default function Asteroid({
     };
   }, [geometry, bracketGeometry]);
 
+  // Detect external collapse trigger
+  useEffect(() => {
+    if (collapsed && !prevCollapsedRef.current && !isCollapsingRef.current) {
+      isCollapsingRef.current = true;
+      collapseStartTimeRef.current = 0;
+      collapseCompleteCalledRef.current = false;
+    }
+    prevCollapsedRef.current = collapsed;
+  }, [collapsed]);
+
   const handlePointerOver = useCallback(() => {
     isHoveredRef.current = true;
     onHover?.(true);
@@ -129,13 +183,29 @@ export default function Asteroid({
     onHover?.(false);
   }, [onHover]);
 
+  const triggerShudder = useCallback(() => {
+    isShudderingRef.current = true;
+    shudderTimeRef.current = 0;
+    if (groupRef.current) {
+      shudderOriginRef.current.copy(groupRef.current.position);
+    }
+  }, []);
+
   const handleClick = useCallback(() => {
-    if (!isCollapsingRef.current) {
+    if (isCollapsingRef.current) return;
+
+    if (onHit) {
+      // Field mode: notify parent, trigger shudder
+      onHit();
+      triggerShudder();
+    } else {
+      // Standalone mode: trigger collapse directly
       isCollapsingRef.current = true;
       collapseStartTimeRef.current = 0;
+      collapseCompleteCalledRef.current = false;
       onClick?.();
     }
-  }, [onClick]);
+  }, [onClick, onHit, triggerShudder]);
 
   useFrame(({ clock }, delta) => {
     if (!groupRef.current) return;
@@ -150,6 +220,25 @@ export default function Asteroid({
     let collapseProgress = 0;
     if (isCollapsingRef.current) {
       collapseProgress = Math.min((time - collapseStartTimeRef.current) / 2.0, 1);
+    }
+
+    // ---- Shudder animation (0.3s) ----
+    if (isShudderingRef.current) {
+      shudderTimeRef.current += delta;
+      const shudderDuration = 0.3;
+      if (shudderTimeRef.current < shudderDuration) {
+        const t = shudderTimeRef.current / shudderDuration;
+        const intensity = (1 - t) * size * 0.08; // Decaying shake
+        const freq = 40; // High frequency vibration
+        groupRef.current.position.set(
+          shudderOriginRef.current.x + Math.sin(t * freq) * intensity,
+          shudderOriginRef.current.y + Math.cos(t * freq * 1.3) * intensity,
+          shudderOriginRef.current.z + Math.sin(t * freq * 0.7) * intensity * 0.5,
+        );
+      } else {
+        isShudderingRef.current = false;
+        groupRef.current.position.copy(shudderOriginRef.current);
+      }
     }
 
     // ---- Layer 1: Heat Haze atmosphere ----
@@ -177,6 +266,11 @@ export default function Asteroid({
 
     if (materialRef.current) {
       materialRef.current.time = time;
+
+      // Feed damage and sympathetic glow into shader
+      materialRef.current.damageLevel = damageLevel;
+      materialRef.current.sympatheticGlow = sympatheticGlow;
+
       if (!isCollapsingRef.current) {
         materialRef.current.heatIntensity = hovered ? 1.5 : 1.0;
         materialRef.current.emissiveStrength = hovered ? 3.5 : 3.0;
@@ -185,8 +279,18 @@ export default function Asteroid({
 
     // ---- Layer 3: Inner core glow ----
     if (coreRef.current && !isCollapsingRef.current) {
-      const corePulse = 0.2 + (Math.sin(time * 2 * Math.PI * 2) * 0.5 + 0.5) * 0.3;
+      // Pulse rate increases with field instability
+      const pulseFreq = 2 + fieldInstability * 4; // 2 Hz normal → 6 Hz at max instability
+      const corePulse = 0.2 + (Math.sin(time * pulseFreq * Math.PI * 2) * 0.5 + 0.5) * 0.3;
       (coreRef.current.material as THREE.MeshBasicMaterial).opacity = corePulse;
+
+      // Core gets brighter with damage (exposed inner glow)
+      if (damageLevel > 0.6) {
+        const coreExposure = (damageLevel - 0.6) / 0.4; // 0-1 over last 40% of damage
+        (coreRef.current.material as THREE.MeshBasicMaterial).opacity =
+          corePulse + coreExposure * 0.4;
+        coreRef.current.scale.setScalar(1 + coreExposure * 0.3);
+      }
     }
 
     // ---- Layer 5: Scan ring material ----
@@ -196,7 +300,7 @@ export default function Asteroid({
 
     // ---- Collapse animation ----
     if (isCollapsingRef.current && collapseProgress < 1) {
-      // Phase 1 (0–0.25): Inner core flares to white, flash sphere
+      // Phase 1 (0-0.25): Inner core flares to white, flash sphere
       if (collapseProgress < 0.25) {
         const p1 = collapseProgress / 0.25;
 
@@ -214,7 +318,7 @@ export default function Asteroid({
           (flashSphereRef.current.material as THREE.MeshBasicMaterial).opacity = 1 - p1;
         }
       }
-      // Phase 2 (0.25–0.6): Rock shrinks, shockwave ring
+      // Phase 2 (0.25-0.6): Rock shrinks, shockwave ring
       else if (collapseProgress < 0.6) {
         const p2 = (collapseProgress - 0.25) / 0.35;
 
@@ -231,7 +335,7 @@ export default function Asteroid({
           materialRef.current.emissiveStrength = 7.0 * (1 - p2);
         }
       }
-      // Phase 3 (0.6–1.0): Volumetric glow expands and fades
+      // Phase 3 (0.6-1.0): Volumetric glow expands and fades
       else {
         const p3 = (collapseProgress - 0.6) / 0.4;
 
@@ -252,18 +356,27 @@ export default function Asteroid({
       }
     }
 
-    // Reset after collapse
+    // Complete collapse — in field mode, notify parent; in standalone, reset
     if (isCollapsingRef.current && collapseProgress >= 1) {
-      isCollapsingRef.current = false;
-      if (meshRef.current) {
-        meshRef.current.visible = true;
-        meshRef.current.scale.setScalar(1);
+      if (!collapseCompleteCalledRef.current) {
+        collapseCompleteCalledRef.current = true;
+        onCollapseComplete?.();
       }
-      if (coreRef.current) coreRef.current.visible = true;
-      if (flashSphereRef.current) flashSphereRef.current.visible = false;
-      if (shockwaveRingRef.current) shockwaveRingRef.current.visible = false;
-      if (hazeMeshRef.current) hazeMeshRef.current.scale.setScalar(1);
-      if (hazeRef.current) hazeRef.current.opacity = 1.0;
+
+      if (!isFieldMode) {
+        // Standalone mode: reset for re-use
+        isCollapsingRef.current = false;
+        if (meshRef.current) {
+          meshRef.current.visible = true;
+          meshRef.current.scale.setScalar(1);
+        }
+        if (coreRef.current) coreRef.current.visible = true;
+        if (flashSphereRef.current) flashSphereRef.current.visible = false;
+        if (shockwaveRingRef.current) shockwaveRingRef.current.visible = false;
+        if (hazeMeshRef.current) hazeMeshRef.current.scale.setScalar(1);
+        if (hazeRef.current) hazeRef.current.opacity = 1.0;
+      }
+      // Field mode: stay collapsed (parent will unmount)
     }
 
     // Targeting brackets
@@ -274,6 +387,9 @@ export default function Asteroid({
       }
     }
   });
+
+  // Don't render anything after collapse in field mode
+  const isDestroyed = isFieldMode && collapsed && isCollapsingRef.current;
 
   return (
     <group ref={groupRef} position={position}>
@@ -310,6 +426,8 @@ export default function Asteroid({
           seed={seed}
           heatIntensity={1.0}
           emissiveStrength={3.0}
+          damageLevel={damageLevel}
+          sympatheticGlow={sympatheticGlow}
           toneMapped={false}
         />
       </mesh>
@@ -327,49 +445,83 @@ export default function Asteroid({
         />
       </mesh>
 
-      {/* ===== Layer 4: Particle Systems ===== */}
+      {/* ===== Layer 4: Particle Systems (tiered) ===== */}
 
-      {/* Ember Trail — 200 particles drifting backward */}
-      <InstancedParticleSystem
-        count={200}
-        color="#f97316"
-        colorEnd="#1a1a1a"
-        velocityMin={[-0.3, -0.3, 0.5]}
-        velocityMax={[0.3, 0.3, 1.5]}
-        lifespan={[1.0, 2.5]}
-        gravity={[0, -0.1, 0]}
-        emitRate={80}
-        size={size * 0.06}
-        spawnRadius={size * 0.3}
-        loop
-      />
+      {/* Full trail: 200 ember particles + ribbon + molten chunks */}
+      {trailTier === 'full' && (
+        <>
+          <InstancedParticleSystem
+            count={200}
+            color="#f97316"
+            colorEnd="#1a1a1a"
+            velocityMin={[-0.3, -0.3, 0.5]}
+            velocityMax={[0.3, 0.3, 1.5]}
+            lifespan={[1.0, 2.5]}
+            gravity={[0, -0.1, 0]}
+            emitRate={80}
+            size={size * 0.06}
+            spawnRadius={size * 0.3}
+            loop
+          />
+          <TrailRibbon
+            targetRef={groupRef}
+            color="#f97316"
+            colorEnd="#333333"
+            width={size * 0.2}
+            lifetime={1.5}
+            maxPoints={40}
+            opacity={0.5}
+          />
+          <InstancedParticleSystem
+            count={15}
+            color="#dc2626"
+            colorEnd="#1a1a1a"
+            velocityMin={[-0.1, -0.1, 0.2]}
+            velocityMax={[0.1, 0.1, 0.5]}
+            lifespan={[2.0, 4.0]}
+            emitRate={3}
+            size={size * 0.15}
+            spawnRadius={size * 0.2}
+            loop
+          />
+        </>
+      )}
 
-      {/* Smoke Trail Ribbon — attached to group */}
-      <TrailRibbon
-        targetRef={groupRef}
-        color="#f97316"
-        colorEnd="#333333"
-        width={size * 0.2}
-        lifetime={1.5}
-        maxPoints={40}
-        opacity={0.5}
-      />
+      {/* Reduced trail: 30 ember particles only (no ribbon, no chunks) */}
+      {trailTier === 'reduced' && (
+        <InstancedParticleSystem
+          count={30}
+          color="#f97316"
+          colorEnd="#1a1a1a"
+          velocityMin={[-0.2, -0.2, 0.3]}
+          velocityMax={[0.2, 0.2, 1.0]}
+          lifespan={[0.8, 2.0]}
+          gravity={[0, -0.1, 0]}
+          emitRate={12}
+          size={size * 0.05}
+          spawnRadius={size * 0.2}
+          loop
+        />
+      )}
 
-      {/* Molten Chunks — sparse, larger, slower */}
-      <InstancedParticleSystem
-        count={15}
-        color="#dc2626"
-        colorEnd="#1a1a1a"
-        velocityMin={[-0.1, -0.1, 0.2]}
-        velocityMax={[0.1, 0.1, 0.5]}
-        lifespan={[2.0, 4.0]}
-        emitRate={3}
-        size={size * 0.15}
-        spawnRadius={size * 0.2}
-        loop
-      />
+      {/* trailTier === 'none': no particles */}
 
       {/* ===== Layer 5: Interaction Overlays ===== */}
+
+      {/* Impact flash — white-hot flash for cascade timing */}
+      {impactFlash && (
+        <mesh>
+          <sphereGeometry args={[size * 1.2, 16, 16]} />
+          <meshBasicMaterial
+            color="#ffffff"
+            transparent
+            opacity={0.8}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+            toneMapped={false}
+          />
+        </mesh>
+      )}
 
       {/* Flash sphere — collapse phase 1 */}
       <mesh ref={flashSphereRef} visible={false}>

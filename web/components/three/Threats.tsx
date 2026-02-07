@@ -1,6 +1,7 @@
 'use client';
 
 import Asteroid from './threats/Asteroid';
+import AsteroidField from './threats/AsteroidField';
 import IonStorm from './threats/IonStorm';
 import SolarFlare from './threats/SolarFlare';
 import BlackHole from './threats/BlackHole';
@@ -28,12 +29,20 @@ export default function Threats() {
     switch (threat.type) {
       case 'asteroid':
         return (
-          <Asteroid
+          <AsteroidField
             key={threat.id}
-            {...commonProps}
+            position={threat.position}
+            size={threat.size}
+            color={threat.color}
             label={threat.label}
+            amount={threat.amount}
             seed={threat.seed}
-            angularVelocity={threat.angularVelocity}
+            createdAt={threat.createdAt}
+            onHover={(hovered: boolean) => setHoveredThreat(hovered ? threat.id : null)}
+            onDeflect={() => {
+              console.log('Deflecting threat:', threat.id);
+              deflectThreat(threat.id);
+            }}
           />
         );
       case 'ion_storm':
@@ -48,12 +57,17 @@ export default function Threats() {
         return <EnemyCruiser key={threat.id} {...commonProps} />;
       default:
         return (
-          <Asteroid
+          <AsteroidField
             key={threat.id}
-            {...commonProps}
+            position={threat.position}
+            size={threat.size}
+            color={threat.color}
             label={threat.label}
+            amount={threat.amount}
             seed={threat.seed}
-            angularVelocity={threat.angularVelocity}
+            createdAt={threat.createdAt}
+            onHover={(hovered: boolean) => setHoveredThreat(hovered ? threat.id : null)}
+            onDeflect={() => deflectThreat(threat.id)}
           />
         );
     }

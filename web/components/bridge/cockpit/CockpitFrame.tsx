@@ -1,11 +1,17 @@
 // web/components/bridge/cockpit/CockpitFrame.tsx
 'use client';
 
-import { useAlertStore, ALERT_COLORS } from '@/lib/stores/alert-store';
+import { useAlertStore, ALERT_COLORS, type CascadeStage } from '@/lib/stores/alert-store';
 
 export function CockpitFrame() {
   const alertLevel = useAlertStore((state) => state.level);
-  const colors = ALERT_COLORS[alertLevel];
+  const cascadeStage = useAlertStore((state) => state.cascadeStage);
+
+  // Frame responds at cascade stage 'frame' (stage 1) — first to react
+  // During cascade, show previous colors until our stage is reached
+  const CASCADE_ORDER: CascadeStage[] = ['frame', 'hud', 'glass', 'backlight', 'instruments'];
+  const frameReached = cascadeStage === 'idle' || CASCADE_ORDER.indexOf(cascadeStage) >= CASCADE_ORDER.indexOf('frame');
+  const colors = ALERT_COLORS[frameReached ? alertLevel : 'normal'];
 
   return (
     <div className="fixed inset-0 z-10 pointer-events-none" aria-hidden="true">
