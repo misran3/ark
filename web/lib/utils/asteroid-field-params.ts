@@ -200,14 +200,24 @@ function generateRocks(
 
 /**
  * Compute growth factor from creation timestamp.
- * ~2-3% per minute, capped at 150%.
+ * ~2.4% per minute (0.0004 per second), capped at 150%.
  *
  * @param createdAt - Timestamp (ms) when the threat was created
  * @param now - Current timestamp (ms), defaults to Date.now()
  */
 export function getGrowthFactor(createdAt: number, now: number = Date.now()): number {
-  const elapsedSeconds = (now - createdAt) / 1000;
-  return Math.min(1.5, 1.0 + 0.0003 * elapsedSeconds);
+  const elapsedSeconds = Math.max(0, (now - createdAt) / 1000);
+
+  // Edge case: if createdAt is in the future, clamp to 1.0 (no growth)
+  if (elapsedSeconds < 0) {
+    console.warn('getGrowthFactor: createdAt is in the future, clamping to 1.0');
+    return 1.0;
+  }
+
+  // Growth: 2.4% per minute (0.0004 per second)
+  // Was: 0.0003 (1.8%/min, under spec)
+  // Now: 0.0004 (2.4%/min, within spec's 2-3%/min target)
+  return Math.min(1.5, 1.0 + 0.0004 * elapsedSeconds);
 }
 
 /**

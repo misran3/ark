@@ -224,10 +224,11 @@ export default function AsteroidField({
 
   if (fieldCleared) return null;
 
-  // Get alive rock indices for cascade
-  const aliveRockIndices = rockStates
-    .map((r, i) => (!r.destroyed ? i : -1))
-    .filter((i) => i >= 0);
+  // Get alive rock indices for cascade (memoized to prevent array filter every render)
+  const aliveRockIndices = useMemo(
+    () => rockStates.map((r, i) => (!r.destroyed ? i : -1)).filter((i) => i >= 0),
+    [rockStates]
+  );
 
   return (
     <group position={position}>
