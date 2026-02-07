@@ -24,6 +24,7 @@ export default function DevAsteroidPage() {
   const [driftEnabled, setDriftEnabled] = useState(true);
   const [growthEnabled, setGrowthEnabled] = useState(false);
   const [growthSpeed, setGrowthSpeed] = useState(1);
+  const [rockCountOverride, setRockCountOverride] = useState<number | null>(null);
   const [fieldKey, setFieldKey] = useState(0); // For remounting
 
   // Compute HP from preset (for single rock, maxHp = 3)
@@ -219,6 +220,50 @@ export default function DevAsteroidPage() {
                 )}
               </div>
 
+              {/* Rock Count Override */}
+              <div className="space-y-1">
+                <label className="text-xs text-cyan-400">
+                  Rock Count {rockCountOverride !== null && `(${rockCountOverride})`}
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="12"
+                  value={rockCountOverride ?? 0}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    setRockCountOverride(val === 0 ? null : val);
+                  }}
+                  className="w-full"
+                />
+                {rockCountOverride !== null && (
+                  <button
+                    onClick={() => setRockCountOverride(null)}
+                    className="text-xs text-orange-400 hover:text-orange-300"
+                  >
+                    Reset to auto (amount-based)
+                  </button>
+                )}
+              </div>
+
+              {/* Trigger Cascade Button */}
+              <button
+                onClick={() => {
+                  console.log('Trigger cascade: Destroy rocks manually to trigger cascade');
+                }}
+                className={`w-full mt-2 ${buttonClass} border-red-500/50 bg-red-500/20 text-red-300 hover:bg-red-500/30`}
+              >
+                Trigger Cascade (destroy rocks manually)
+              </button>
+
+              {/* Destroyed Count Display */}
+              <div className="text-xs text-cyan-400 border-t border-cyan-900/30 pt-2 mt-2">
+                <div>Destroyed: 0 / (varies by field size)</div>
+                <div className="text-cyan-600 text-[10px] mt-1">
+                  (Destroy threshold rocks to trigger cascade)
+                </div>
+              </div>
+
               {/* Regenerate */}
               <button
                 onClick={() => setFieldKey((k) => k + 1)}
@@ -258,6 +303,7 @@ export default function DevAsteroidPage() {
               amount={amount}
               seed={fieldSeed}
               createdAt={getCreatedAt()}
+              driftEnabled={driftEnabled}
               onHover={() => {}}
               onDeflect={() => {
                 console.log('Field cascade complete — threat deflected');

@@ -27,6 +27,8 @@ interface AsteroidFieldProps {
   seed?: number;
   /** Timestamp when this threat was created (for growth) */
   createdAt: number;
+  /** Enable/disable drift (defaults to true) */
+  driftEnabled?: boolean;
   /** Called when any rock is hovered */
   onHover?: (hovered: boolean) => void;
   /** Called when the threat is fully deflected (cascade complete) */
@@ -55,6 +57,7 @@ export default function AsteroidField({
   amount,
   seed = 42,
   createdAt,
+  driftEnabled = true,
   onHover,
   onDeflect,
 }: AsteroidFieldProps) {
@@ -200,21 +203,23 @@ export default function AsteroidField({
     // Apply growth to drift group scale
     driftGroupRef.current.scale.setScalar(growthFactor);
 
-    // --- Shared drift with deceleration ---
-    // Progress from 0 to ~0.3 then asymptotic ease-out
-    const driftSpeed = fieldParams.driftSpeed;
-    driftProgressRef.current += delta * driftSpeed * 0.05;
+    // --- Shared drift with deceleration (only if enabled) ---
+    if (driftEnabled) {
+      // Progress from 0 to ~0.3 then asymptotic ease-out
+      const driftSpeed = fieldParams.driftSpeed;
+      driftProgressRef.current += delta * driftSpeed * 0.05;
 
-    // Asymptotic ease-out: approaches 0.3 but never reaches it
-    const maxDrift = 0.3;
-    const easedProgress = maxDrift * (1 - Math.exp(-driftProgressRef.current * 3));
+      // Asymptotic ease-out: approaches 0.3 but never reaches it
+      const maxDrift = 0.3;
+      const easedProgress = maxDrift * (1 - Math.exp(-driftProgressRef.current * 3));
 
-    // Drift direction: from spawn toward convergence target
-    driftGroupRef.current.position.set(
-      driftTarget[0] * easedProgress,
-      driftTarget[1] * easedProgress,
-      driftTarget[2] * easedProgress
-    );
+      // Drift direction: from spawn toward convergence target
+      driftGroupRef.current.position.set(
+        driftTarget[0] * easedProgress,
+        driftTarget[1] * easedProgress,
+        driftTarget[2] * easedProgress
+      );
+    }
   });
 
   if (fieldCleared) return null;
