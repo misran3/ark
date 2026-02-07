@@ -98,6 +98,58 @@
   100% { background-position: 200% 0; }
 }
 
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes reduceBlur {
+  from {
+    backdrop-filter: blur(20px);
+  }
+  to {
+    backdrop-filter: blur(0px);
+  }
+}
+
+@keyframes quickBlink {
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes liftUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) translateY(100px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateY(0) scale(1);
+  }
+}
+
 * {
   margin: 0;
   padding: 0;
