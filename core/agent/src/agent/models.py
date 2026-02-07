@@ -188,6 +188,10 @@ class CaptainAnalysis(BaseModel):
     debt_spirals: BlackHoleAnalysis = Field(description="Black hole scan — compounding debt risks.")
     missed_rewards: WormholeAnalysis = Field(description="Wormhole scan — suboptimal card usage costing reward points.")
     fraud_alerts: EnemyCruiserAnalysis = Field(description="Enemy cruiser scan — potentially fraudulent transactions.")
+    vtc_enforcement: dict | None = Field(
+        default=None,
+        description="VTC enforcement result with rules, action, and API response"
+    )
 
 
 @dataclass
