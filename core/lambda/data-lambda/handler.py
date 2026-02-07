@@ -16,13 +16,15 @@ import os
 from typing import Any
 
 from aws_lambda_powertools import Logger, Tracer
-from aws_lambda_powertools.event_handler import APIGatewayRestResolver
+from aws_lambda_powertools.event_handler import APIGatewayRestResolver, CORSConfig
 from aws_lambda_powertools.logging import correlation_paths
 from aws_lambda_powertools.utilities.typing import LambdaContext
 
 logger = Logger(service="DataLambdaHandler")
 tracer = Tracer()
-app = APIGatewayRestResolver()
+
+cors_config = CORSConfig(allow_origin="*", max_age=300)
+app = APIGatewayRestResolver(cors=cors_config)
 
 DATA_SOURCE = os.getenv("DATA_SOURCE", "mock")
 

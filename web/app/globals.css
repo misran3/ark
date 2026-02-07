@@ -3,6 +3,20 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Space Theme Colors */
+  --color-space-bg: #020617;
+  --color-space-panel: rgba(0, 0, 0, 0.6);
+  --color-cyan-glow: rgba(6, 182, 212, 0.5);
+  --color-danger-glow: rgba(239, 68, 68, 0.5);
+  --color-warning-glow: rgba(245, 158, 11, 0.5);
+  --color-info-glow: rgba(6, 182, 212, 0.5);
+
+  /* Bucket Colors */
+  --color-bucket-needs: #06b6d4;
+  --color-bucket-wants: #d946ef;
+  --color-bucket-savings: #10b981;
+  --color-bucket-income: #f59e0b;
 }
 
 @theme inline {
@@ -10,6 +24,16 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Space Theme */
+  --color-space-bg: var(--color-space-bg);
+  --color-space-panel: var(--color-space-panel);
+
+  /* Bucket Colors for Tailwind */
+  --color-bucket-needs: var(--color-bucket-needs);
+  --color-bucket-wants: var(--color-bucket-wants);
+  --color-bucket-savings: var(--color-bucket-savings);
+  --color-bucket-income: var(--color-bucket-income);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -23,4 +47,45 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Orbital Animation Keyframes */
+@keyframes orbit {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orbit-reverse {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.4;
+    box-shadow: 0 0 20px var(--color-cyan-glow);
+  }
+  50% {
+    opacity: 0.8;
+    box-shadow: 0 0 40px var(--color-cyan-glow);
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

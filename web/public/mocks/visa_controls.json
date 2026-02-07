@@ -1,0 +1,11 @@
+[
+  {
+    "rule_id": "ctrl_001",
+    "card_id": "acc_credit_001",
+    "control_type": "spending_limit",
+    "threshold": 100.00,
+    "merchant_categories": null,
+    "is_active": false,
+    "created_by": "captain_nova"
+  }
+]
