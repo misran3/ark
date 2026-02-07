@@ -1,6 +1,7 @@
 # Claude
 .claude/settings.json
-docs/plans
+docs/plans/*
+!docs/plans/module-breakdown.md
 
 ## Local MCP servers
 .mcp.json
