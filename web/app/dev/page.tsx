@@ -49,13 +49,13 @@ const DEV_PAGES = [
 
 export default function DevHubPage() {
   return (
-    <div className="min-h-screen bg-black p-8">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-black p-8 flex items-center justify-center">
+      <div className="max-w-4xl w-full">
         {/* Header */}
         <div className="mb-8">
           <Link
             href="/"
-            className="font-rajdhani text-xs text-cyan-400/60 hover:text-cyan-400 transition-colors"
+            className="inline-block font-rajdhani text-2xl px-9 py-4.5 rounded border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 transition-colors"
           >
             &larr; Back to Bridge
           </Link>
@@ -73,16 +73,16 @@ export default function DevHubPage() {
             <Link
               key={page.slug}
               href={`/${page.slug}`}
-              className="block rounded-lg border border-gray-700/50 bg-gray-900/50 p-4 hover:bg-gray-800/50 transition-colors group"
+              className="block rounded-lg border border-gray-700/50 bg-gray-900/50 p-14 hover:bg-gray-800/50 transition-colors group"
               style={{ borderLeftColor: page.color, borderLeftWidth: '3px' }}
             >
               <h2
-                className="font-orbitron text-sm tracking-wider mb-1"
+                className="font-orbitron text-2xl tracking-wider mb-4"
                 style={{ color: page.color }}
               >
                 {page.name}
               </h2>
-              <p className="font-rajdhani text-xs text-gray-400 group-hover:text-gray-300 transition-colors">
+              <p className="font-rajdhani text-lg text-gray-400 group-hover:text-gray-300 transition-colors">
                 {page.description}
               </p>
             </Link>

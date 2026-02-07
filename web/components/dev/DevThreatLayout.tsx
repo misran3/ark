@@ -3,7 +3,8 @@
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import Link from 'next/link';
-import { useState, type ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState, type ReactNode } from 'react';
 
 interface ThreatControlState {
   size: number;
@@ -36,6 +37,16 @@ export default function DevThreatLayout({
   children,
   extraControls,
 }: DevThreatLayoutProps) {
+  const router = useRouter();
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') router.push('/dev');
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [router]);
+
   const [size, setSize] = useState(defaultSize);
   const [color, setColor] = useState(defaultColor);
   const [position, setPosition] = useState<[number, number, number]>([0, 0, 0]);
@@ -52,7 +63,7 @@ export default function DevThreatLayout({
       <div className="absolute top-0 left-0 right-0 z-10 p-4 bg-gradient-to-b from-black/80 to-transparent">
         <Link
           href="/dev"
-          className="font-rajdhani text-xs text-cyan-400/60 hover:text-cyan-400 transition-colors"
+          className="inline-block font-rajdhani text-2xl px-9 py-4.5 rounded border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 transition-colors"
         >
           &larr; Dev Hub
         </Link>

@@ -5,7 +5,9 @@ import { OrbitControls } from '@react-three/drei';
 import CaptainNova, {
   type NovaAnimationConfig,
 } from '@/components/three/captain-nova';
-import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 const defaultAnimConfig: NovaAnimationConfig = {
   breathing: { enabled: true, cycleDuration: 4, scaleAmount: 0.02 },
@@ -26,9 +28,18 @@ const defaultAnimConfig: NovaAnimationConfig = {
 };
 
 export default function DevCaptainNovaPage() {
+  const router = useRouter();
   const [position, setPosition] = useState<[number, number, number]>([0, 0, 0]);
   const [animConfig, setAnimConfig] =
     useState<NovaAnimationConfig>(defaultAnimConfig);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') router.push('/dev');
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [router]);
 
   const toggleAnim = (key: keyof NovaAnimationConfig) => {
     setAnimConfig((prev) => ({
@@ -41,7 +52,13 @@ export default function DevCaptainNovaPage() {
     <div className="fixed inset-0 bg-black">
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-10 p-4 bg-gradient-to-b from-black/80 to-transparent">
-        <h1 className="font-orbitron text-xl text-cyan-400 tracking-wider">
+        <Link
+          href="/dev"
+          className="inline-block font-rajdhani text-2xl px-9 py-4.5 rounded border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 transition-colors"
+        >
+          &larr; Dev Hub
+        </Link>
+        <h1 className="font-orbitron text-xl text-cyan-400 tracking-wider mt-2">
           DEV: Captain Nova
         </h1>
         <p className="font-rajdhani text-xs text-cyan-400/60 mt-1">
