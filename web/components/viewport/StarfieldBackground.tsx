@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
@@ -48,8 +48,8 @@ export function StarfieldBackground() {
     return { positions, sizes, twinkleOffsets };
   }, []);
 
-  // Set instance matrices once (never updated)
-  useMemo(() => {
+  // Set instance matrices once after mount (ref must be available)
+  useEffect(() => {
     if (!meshRef.current) return;
 
     const dummy = new THREE.Object3D();
@@ -75,8 +75,8 @@ export function StarfieldBackground() {
     return attribute;
   }, [twinkleOffsets]);
 
-  // Attach twinkle offset attribute to geometry
-  useMemo(() => {
+  // Attach twinkle offset attribute to geometry after mount
+  useEffect(() => {
     if (!meshRef.current) return;
     const geometry = meshRef.current.geometry as THREE.SphereGeometry;
     geometry.setAttribute('twinkleOffset', twinkleAttribute);
