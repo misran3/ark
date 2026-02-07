@@ -7,6 +7,7 @@ import { Mesh, ShaderMaterial, Color, AdditiveBlending, DoubleSide } from 'three
 interface RadarSweepProps {
   color: Color;
   radius?: number;
+  opacity?: number;
 }
 
 const vertexShader = /* glsl */ `
@@ -20,6 +21,7 @@ const vertexShader = /* glsl */ `
 const fragmentShader = /* glsl */ `
   uniform float uTime;
   uniform vec3 uColor;
+  uniform float uOpacity;
 
   varying vec2 vUv;
 
@@ -52,11 +54,11 @@ const fragmentShader = /* glsl */ `
 
     float alpha = (rings + radials + sweep + trail) * smoothstep(0.48, 0.4, dist);
 
-    gl_FragColor = vec4(uColor * 0.5, alpha);
+    gl_FragColor = vec4(uColor * 0.5, alpha * uOpacity);
   }
 `;
 
-export function RadarSweep({ color, radius = 4 }: RadarSweepProps) {
+export function RadarSweep({ color, radius = 4, opacity = 1 }: RadarSweepProps) {
   const meshRef = useRef<Mesh>(null);
 
   const material = useMemo(
@@ -67,6 +69,7 @@ export function RadarSweep({ color, radius = 4 }: RadarSweepProps) {
         uniforms: {
           uTime: { value: 0 },
           uColor: { value: color },
+          uOpacity: { value: opacity },
         },
         transparent: true,
         blending: AdditiveBlending,
@@ -78,6 +81,7 @@ export function RadarSweep({ color, radius = 4 }: RadarSweepProps) {
 
   useFrame(({ clock }) => {
     material.uniforms.uTime.value = clock.getElapsedTime();
+    material.uniforms.uOpacity.value = opacity;
   });
 
   return (

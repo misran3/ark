@@ -13,8 +13,16 @@ import { HologramParticles } from '@/components/bridge/hologram/HologramParticle
 import { SlotNumber } from '@/components/bridge/hologram/SlotNumber';
 import { ScanPulse } from '@/components/bridge/hologram/ScanPulse';
 
+/** Returns 0-1 for a layer that starts appearing at `start` and is fully visible at `start + span` */
+function layerAlpha(progress: number, start: number, span: number): number {
+  if (progress <= start) return 0;
+  if (progress >= start + span) return 1;
+  return (progress - start) / span;
+}
+
 export function DefenseGrid() {
   const health = useConsoleStore((s) => s.panelHealth.shields);
+  const revealProgress = useConsoleStore((s) => s.revealProgress);
   const shields = useShieldStore((s) => s.shields);
   const overallPercent = useShieldStore((s) => s.overallPercent);
 
@@ -69,81 +77,110 @@ export function DefenseGrid() {
 
   return (
     <group scale={0.55}>
-      {/* Background: Radar sweep */}
-      <RadarSweep color={systemColor} radius={3.2} />
+      {/* Center emblem — appears first (0% - 25%) */}
+      <group scale={0.3 + layerAlpha(revealProgress, 0, 0.25) * 0.7}>
+        <ShieldEmblem health={health} color={systemColor} size={0.6} />
+      </group>
 
-      {/* Outer ring: Emergency Fund (6 month segments) */}
-      <ShieldRing
-        innerRadius={3.0}
-        outerRadius={3.4}
-        segments={emergencySegments}
-        color={systemColor}
-        label="EMERGENCY RESERVES"
-      />
+      {/* Inner ring: Debt Shields — appears second (10% - 40%) */}
+      <group scale={layerAlpha(revealProgress, 0.1, 0.3)}>
+        <ShieldRing
+          innerRadius={1.0}
+          outerRadius={1.4}
+          segments={debtSegments}
+          color={systemColor}
+          label="DEBT STATUS"
+        />
+      </group>
 
-      {/* Middle ring: Budget Categories */}
-      <ShieldRing
-        innerRadius={2.0}
-        outerRadius={2.4}
-        segments={budgetSegments}
-        color={systemColor}
-        rotationSpeed={0.3}
-        label="BUDGET ALLOCATION"
-      />
+      {/* Middle ring: Budget Categories — appears third (25% - 55%) */}
+      <group scale={layerAlpha(revealProgress, 0.25, 0.3)}>
+        <ShieldRing
+          innerRadius={2.0}
+          outerRadius={2.4}
+          segments={budgetSegments}
+          color={systemColor}
+          rotationSpeed={0.3}
+          label="BUDGET ALLOCATION"
+        />
+      </group>
 
-      {/* Inner ring: Debt Shields */}
-      <ShieldRing
-        innerRadius={1.0}
-        outerRadius={1.4}
-        segments={debtSegments}
-        color={systemColor}
-        label="DEBT STATUS"
-      />
+      {/* Outer ring: Emergency Fund — appears fourth (40% - 70%) */}
+      <group scale={layerAlpha(revealProgress, 0.4, 0.3)}>
+        <ShieldRing
+          innerRadius={3.0}
+          outerRadius={3.4}
+          segments={emergencySegments}
+          color={systemColor}
+          label="EMERGENCY RESERVES"
+        />
+      </group>
 
-      {/* Center emblem */}
-      <ShieldEmblem health={health} color={systemColor} size={0.6} />
+      {/* Background: Radar sweep — fades in with outer ring (40% - 80%) */}
+      <RadarSweep color={systemColor} radius={3.2} opacity={layerAlpha(revealProgress, 0.4, 0.4)} />
 
-      {/* Ambient particles */}
-      <HologramParticles count={40} color={systemColor} spread={[2.8, 2.8, 0.4]} />
+      {/* Ambient particles — appear late (60% - 100%) */}
+      {revealProgress > 0.5 && (
+        <HologramParticles count={40} color={systemColor} spread={[2.8, 2.8, 0.4]} />
+      )}
 
-      {/* Scan pulse */}
-      <ScanPulse color={systemColor} interval={4} maxRadius={2.8} />
+      {/* Scan pulse — appears last (70% - 100%) */}
+      {revealProgress > 0.6 && (
+        <ScanPulse color={systemColor} interval={4} maxRadius={2.8} />
+      )}
 
-      {/* HTML Data Readouts */}
-      <Html center position={[0, 3.8, 0]} style={{ pointerEvents: 'none' }}>
-        <div
-          className="text-center font-mono"
-          style={{ color: cssColor, textShadow: `0 0 12px ${cssGlow}` }}
-        >
-          <div className="text-[10px] tracking-[0.3em] opacity-70 mb-1">DEFENSE GRID</div>
-          <div className="text-3xl font-bold">
-            <SlotNumber value={integrityPercent} format={(n) => `${n}%`} />
-          </div>
-          <div className="text-xs tracking-widest mt-1">{statusLabel}</div>
-        </div>
-      </Html>
+      {/* HTML Data Readouts — appear with emblem (15% - 45%) */}
+      {revealProgress > 0.15 && (
+        <>
+          <Html center position={[0, 3.8, 0]} style={{ pointerEvents: 'none' }}>
+            <div
+              className="text-center font-mono transition-opacity duration-300"
+              style={{
+                color: cssColor,
+                textShadow: `0 0 12px ${cssGlow}`,
+                opacity: layerAlpha(revealProgress, 0.15, 0.3),
+              }}
+            >
+              <div className="text-[10px] tracking-[0.3em] opacity-70 mb-1">DEFENSE GRID</div>
+              <div className="text-3xl font-bold">
+                <SlotNumber value={integrityPercent} format={(n) => `${n}%`} />
+              </div>
+              <div className="text-xs tracking-widest mt-1">{statusLabel}</div>
+            </div>
+          </Html>
 
-      {/* Ring labels */}
-      <Html center position={[0, 3.2, 0.1]} style={{ pointerEvents: 'none' }}>
-        <div className="text-[8px] font-mono tracking-[0.2em] opacity-50" style={{ color: cssColor }}>
-          EMERGENCY RESERVES
-        </div>
-      </Html>
+          {/* Ring labels — appear with their respective rings */}
+          <Html center position={[0, 3.2, 0.1]} style={{ pointerEvents: 'none' }}>
+            <div
+              className="text-[8px] font-mono tracking-[0.2em]"
+              style={{ color: cssColor, opacity: layerAlpha(revealProgress, 0.4, 0.3) * 0.5 }}
+            >
+              EMERGENCY RESERVES
+            </div>
+          </Html>
 
-      <Html center position={[0, 2.2, 0.1]} style={{ pointerEvents: 'none' }}>
-        <div className="text-[8px] font-mono tracking-[0.2em] opacity-50" style={{ color: cssColor }}>
-          BUDGET ALLOCATION
-        </div>
-      </Html>
+          <Html center position={[0, 2.2, 0.1]} style={{ pointerEvents: 'none' }}>
+            <div
+              className="text-[8px] font-mono tracking-[0.2em]"
+              style={{ color: cssColor, opacity: layerAlpha(revealProgress, 0.25, 0.3) * 0.5 }}
+            >
+              BUDGET ALLOCATION
+            </div>
+          </Html>
 
-      <Html center position={[0, 1.2, 0.1]} style={{ pointerEvents: 'none' }}>
-        <div className="text-[8px] font-mono tracking-[0.2em] opacity-50" style={{ color: cssColor }}>
-          DEBT STATUS
-        </div>
-      </Html>
+          <Html center position={[0, 1.2, 0.1]} style={{ pointerEvents: 'none' }}>
+            <div
+              className="text-[8px] font-mono tracking-[0.2em]"
+              style={{ color: cssColor, opacity: layerAlpha(revealProgress, 0.1, 0.3) * 0.5 }}
+            >
+              DEBT STATUS
+            </div>
+          </Html>
+        </>
+      )}
 
-      {/* Alert banner (only when critical) */}
-      {integrityPercent < 40 && (
+      {/* Alert banner (only when critical + fully revealed) */}
+      {integrityPercent < 40 && revealProgress > 0.9 && (
         <Html center position={[0, -3.5, 0.1]} style={{ pointerEvents: 'none' }}>
           <div
             className="px-4 py-1 font-mono text-xs tracking-widest animate-pulse"
