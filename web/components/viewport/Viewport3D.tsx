@@ -22,7 +22,7 @@ export function Viewport3D() {
           far: 2000,
         }}
         gl={{
-          antialias: true,
+          antialias: false,
           alpha: true,
         }}
       >
