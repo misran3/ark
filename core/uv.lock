@@ -6,6 +6,7 @@ requires-python = ">=3.12"
 members = [
     "agent",
     "core",
+    "data-lambda",
     "database",
     "shared",
     "user-lambda",
@@ -277,6 +278,23 @@ dev = [
 dev = [
     { name = "black", specifier = ">=26.1.0" },
     { name = "pytest", specifier = ">=9.0.2" },
+]
+
+[[package]]
+name = "data-lambda"
+version = "0.1.0"
+source = { virtual = "lambda/data-lambda" }
+dependencies = [
+    { name = "aws-lambda-powertools" },
+    { name = "aws-xray-sdk" },
+    { name = "httpx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aws-lambda-powertools", specifier = ">=3.24.0" },
+    { name = "aws-xray-sdk", specifier = ">=2.15.0" },
+    { name = "httpx", specifier = ">=0.27.0" },
 ]
 
 [[package]]
