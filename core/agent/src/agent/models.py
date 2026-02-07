@@ -2,6 +2,7 @@
 Models for Captain Nova agent.
 """
 
+from dataclasses import dataclass
 from typing import Literal
 
 from pydantic import BaseModel
@@ -44,8 +45,6 @@ class CaptainOutput(BaseModel):
 # =============================================================================
 # Multi-Agent Specialist Models
 # =============================================================================
-
-from dataclasses import dataclass
 
 
 class SpecialistDeps(BaseModel):
