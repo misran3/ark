@@ -11,6 +11,7 @@ from aws_lambda_powertools import Logger, Tracer
 from aws_lambda_powertools.event_handler import APIGatewayRestResolver, Response
 from aws_lambda_powertools.logging import correlation_paths
 from aws_lambda_powertools.utilities.typing import LambdaContext
+from pydantic import ValidationError
 
 from agent import QueryRequest, run_captain_nova
 
@@ -75,6 +76,19 @@ def captain_query() -> Response:
 
         return Response(status_code=200, body=response.model_dump(), content_type="application/json")
 
+    except ValidationError as ve:
+        logger.warning("Invalid captain query payload", extra={"errors": ve.errors(include_input=False)})
+        return Response(
+            status_code=400,
+            body={
+                "message": "Invalid request payload.",
+                "tools_used": [],
+                "confidence": 0.0,
+                "suggested_visa_controls": None,
+            },
+            content_type="application/json",
+        )
+    
     except Exception as e:
         logger.exception(f"Error processing captain query: {e}")
         return Response(
