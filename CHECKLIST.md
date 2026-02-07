@@ -23,10 +23,13 @@
 | [ ] | Captain Nova panel UI |
 | [ ] | Shield bars component |
 | [ ] | Cognito auth integration |
-| [ ] | Balance HUD component |
-| [ ] | Bottom metrics bar |
-| [ ] | Transaction log component |
-| [ ] | Asteroid UI component |
+| [x] | Balance HUD component |
+| [x] | Bottom metrics bar |
+| [x] | Transaction log component |
+| [x] | Asteroid UI component |
+| [x] | Create web/public/mocks/ with official shared data |
+| [x] | Implement type-safe API hooks (useFinance, useSecurity, useAI) |
+| [x] | Isolation test page (/test/bridge-data) |
 | [ ] | Frontend → API Gateway integration |
 | [ ] | Captain Nova tools → real endpoints |
 | [ ] | VISA sandbox authentication (mTLS) |
@@ -36,8 +39,8 @@
 | [ ] | VISA shield activation UI |
 | [ ] | VISA controls display (stretch) |
 | [ ] | Mobile responsiveness pass |
-| [ ] | Loading states + error handling |
-| [ ] | Animation polish |
+| [x] | Loading states + error handling |
+| [x] | Animation polish |
 | [ ] | Captain Nova prompt tuning |
 | [ ] | Demo rehearsal #1 |
 | [ ] | Pitch deck (5-6 slides) |
@@ -85,3 +88,37 @@
 6. **Regenerate types** after any Pydantic model changes by running `./scripts/generate-types.sh`
 7. **Captain Nova** must return `CaptainResponse` format with optional `suggested_visa_controls`
 8. **VISA Integration** must use `VisaControlRule` and `VisaAlert` schemas
+
+---
+
+### Module 6: Bridge UI Data Implementation
+
+**What was added:**
+- **Dumb Components (Presentational):**
+  - `BalanceHUD.tsx`: Orbital net worth display with animated rings and account breakdown.
+  - `TransactionLog.tsx`: Categorized list of recent transmissions with bucket color-coding.
+  - `BottomMetricsBar.tsx`: 4-card grid for Income, Spending, Savings Rate, and Net Worth Delta.
+  - `AsteroidCard.tsx`: Expandable threat cards with severity-based glow and action buttons.
+- **Smart Components (Containers):**
+  - `BridgeDataContainer.tsx`: Orchestrates HUD, Metrics, and Transactions.
+  - `AsteroidsContainer.tsx`: Manages threat list and removal animations.
+  - `VisaShieldsContainer.tsx`: Displays active VISA transaction controls.
+- **Isolation Test Page:**
+  - Accessible at `/test/bridge-data` for rapid UI development and testing.
+- **Official Mock Sync:**
+  - Synced `web/public/mocks/` with `core/shared/src/shared/mocks/` to ensure frontend/backend data alignment.
+
+### API Hooks & Integration Layer
+
+**What was added:**
+- **Centralized Axios Client:** `web/src/lib/api.ts` configured with base URLs and ready for Cognito JWT injection.
+- **Feature-specific Hooks:**
+  - `useFinance.ts`: `useFinancialSnapshot()`, `useTransactions()`
+  - `useSecurity.ts`: `useAsteroids()`, `useVisaControls()`
+  - `useAI.ts`: `useCaptainNova()`
+
+**How the Hooks Work:**
+- **Dual-Mode Logic:** Every hook contains both "Mock Mode" (active) using local JSON files and "Production Mode" (commented out) using Axios.
+- **Type Safety:** Hooks are strictly typed using the generated `web/src/types/api.ts` interfaces.
+- **Abstraction:** Containers now consume data through hooks rather than direct `fetch` calls, making the eventual swap to real APIs a single-line change per hook.
+- **Documentation:** Added `web/src/hooks/README.md` for developer guidance.
