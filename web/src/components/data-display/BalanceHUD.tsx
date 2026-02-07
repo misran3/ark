@@ -84,7 +84,7 @@ export function BalanceHUD({
               balanceChange >= 0 ? 'text-emerald-400' : 'text-red-400'
             }`}
           >
-            {balanceChange >= 0 ? '+' : '-'}
+            {balanceChange >= 0 ? '+' : ''}
             {formatCurrency(balanceChange)}
           </div>
         )}

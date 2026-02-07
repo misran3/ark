@@ -1,5 +1,6 @@
 import { BridgeDataContainer } from '@/src/containers/BridgeDataContainer';
 import { AsteroidsContainer } from '@/src/containers/AsteroidsContainer';
+import { VisaShieldsContainer } from '@/src/containers/VisaShieldsContainer';
 
 export const metadata = {
   title: 'Module 6: Bridge Data Isolation Test',
@@ -81,12 +82,25 @@ export default function BridgeDataTestPage() {
           <AsteroidsContainer />
         </section>
 
+        {/* Section 3: Visa Shields */}
+        <section className="mb-16">
+          <div className="text-center mb-6">
+            <h2 className="text-xs font-bold tracking-[0.2em] uppercase text-fuchsia-500/80 mb-1">
+              Section 3: Security Systems
+            </h2>
+            <p className="text-[10px] text-gray-600 font-mono">
+              VisaShieldsContainer → VisaControlRule[]
+            </p>
+          </div>
+          <VisaShieldsContainer />
+        </section>
+
         {/* Footer */}
         <footer className="text-center mt-16 pb-8">
           <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent mb-6 max-w-md mx-auto" />
           <div className="text-[10px] font-mono text-gray-600 space-y-1">
             <div>BUILD VERSION: 0.1.0-ALPHA</div>
-            <div>DATA SOURCE: MOCK JSON</div>
+            <div>DATA SOURCE: OFFICIAL SHARED MOCKS</div>
             <div className="text-cyan-500/50">
               MODULE 6 // AKSHAT // BRIDGE UI DATA
             </div>

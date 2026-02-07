@@ -10,7 +10,7 @@ interface BridgeDataContainerProps {
 }
 
 export function BridgeDataContainer({
-  dataUrl = '/mocks/financial-snapshot.json',
+  dataUrl = '/mocks/snapshot.json',
 }: BridgeDataContainerProps) {
   const [data, setData] = useState<FinancialSnapshot | null>(null);
   const [loading, setLoading] = useState(true);

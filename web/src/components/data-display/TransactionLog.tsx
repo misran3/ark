@@ -94,7 +94,7 @@ export function TransactionLog({
                     tx.bucket === 'income' ? 'text-emerald-400' : 'text-white'
                   }`}
                 >
-                  {tx.bucket === 'income' ? '+' : '-'}
+                  {tx.bucket === 'income' ? '+' : ''}
                   {formatCurrency(tx.amount)}
                 </div>
                 <div className="text-[10px] text-gray-500 font-mono">
