@@ -4,6 +4,7 @@ import { Canvas } from '@react-three/fiber';
 import { StarfieldBackground } from './StarfieldBackground';
 import { Planet } from './Planet';
 import { NebulaBackground } from './NebulaBackground';
+import { SpaceDust } from './SpaceDust';
 import { ThreatsLayer } from './ThreatsLayer';
 import SceneEffects from '@/components/three/SceneEffects';
 import { CanopyStruts } from './CanopyStruts';
@@ -45,6 +46,9 @@ export function Viewport3D() {
 
         {/* Blue planet backdrop */}
         <Planet />
+
+        {/* Sparse drifting dust particles */}
+        <SpaceDust />
 
         {/* Threat objects */}
         <ThreatsLayer threats={threats} />
