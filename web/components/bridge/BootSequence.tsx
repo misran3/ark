@@ -1,9 +1,8 @@
 'use client';
 
 import { useBootSequence } from '@/hooks/useBootSequence';
-import { LoadingBar } from './boot/LoadingBar';
+import { TrueBlack } from './boot/TrueBlack';
 import { EyelidReveal } from './boot/EyelidReveal';
-import { VisionBlur } from './boot/VisionBlur';
 
 interface BootSequenceProps {
   children: React.ReactNode;
@@ -21,8 +20,8 @@ export function BootSequence({ children }: BootSequenceProps) {
       {showBootOverlay && (
         // Click/tap anywhere to skip boot sequence
         <div className="fixed inset-0 bg-black cursor-pointer z-[9999]" onClick={skipBoot}>
-          {/* Beat 0: True Black (temporary placeholder - will be implemented in Task 2) */}
-          {phase === 'black' && <div className="fixed inset-0 bg-black z-[9999]" />}
+          {/* Beat 0: True Black */}
+          {phase === 'black' && <TrueBlack />}
 
           {/* Beat 1: Emergency lighting - TODO */}
           {/* Beat 2: Power surge - TODO */}
