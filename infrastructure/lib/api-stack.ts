@@ -71,6 +71,9 @@ export class ApiStack extends cdk.Stack {
             cloudWatchRole: true,
         });
 
+        // Shared /api resource for data and captain lambdas
+        this.apiResource = this.api.root.addResource('api');
+
         // =============================================================
         // User Lambda Function
         // =============================================================
@@ -97,30 +100,22 @@ export class ApiStack extends cdk.Stack {
         const dataLambdaFn = this.createLambdaFunction({
             name: 'data-lambda',
             handler: 'handler.lambda_handler',
-            description: 'Financial data: Nessie integration, budget engine, asteroid detection, VISA controls',
+            description: 'Financial data: Nessie integration, budget engine, asteroid detection',
             additionalDeps: ['./shared', './database'],
             copySourceFiles: true,
             additionalEnv: {
                 USERS_TABLE_NAME: props.usersTable.tableName,
                 NESSIE_API_KEY: process.env.NESSIE_API_KEY || '',
                 DATA_SOURCE: process.env.DATA_SOURCE || 'mock',
-                VISA_USER_ID: process.env.VISA_USER_ID || '',
-                VISA_PASSWORD: process.env.VISA_PASSWORD || '',
             },
             tableGrants: [props.usersTable],
             timeout: cdk.Duration.seconds(30),
         });
 
-        // Shared /api resource for data and captain lambdas
-        this.apiResource = this.api.root.addResource('api');
-        
-        // Grant S3 read access for VISA certificates
-        const visaCertsBucket = s3.Bucket.fromBucketName(
-            this,
-            'VisaCertsBucket',
-            'synesthesia-pay-artifacts'
-        );
-        visaCertsBucket.grantRead(dataLambdaFn, 'visa/*');
+        // =============================================================
+        // Data API Resources and Methods
+        // =============================================================
+        this.createDataAPIResources(dataLambdaFn, cognitoAuthorizer);
 
         // =============================================================
         // VISA Lambda Function
@@ -133,17 +128,14 @@ export class ApiStack extends cdk.Stack {
             copySourceFiles: true,
             additionalEnv: {
                 USERS_TABLE_NAME: props.usersTable.tableName,
-                // NOTE: For X-Pay-Token auth:
-                // - VISA_USER_ID is the Visa API Key (apiKey)
-                // - VISA_PASSWORD is the Visa Shared Secret
                 VISA_USER_ID: process.env.VISA_USER_ID || '',
                 VISA_PASSWORD: process.env.VISA_PASSWORD || '',
             },
             tableGrants: [props.usersTable],
             timeout: cdk.Duration.seconds(30),
         });
-
-        // Grant S3 read access for VISA certificates to VISA Lambda
+        
+        // Grant S3 read access for VISA certificates
         const visaCertsBucket = s3.Bucket.fromBucketName(
             this,
             'VisaCertsBucket',
@@ -152,9 +144,9 @@ export class ApiStack extends cdk.Stack {
         visaCertsBucket.grantRead(visaLambdaFn, 'visa/*');
 
         // =============================================================
-        // Data API Resources and Methods
+        // VISA API Resources and Methods
         // =============================================================
-        this.createDataAPIResources(dataLambdaFn, cognitoAuthorizer);
+        this.createVisaAPIResources(visaLambdaFn, cognitoAuthorizer);
         
         // =============================================================
         // Captain Nova Lambda Function
@@ -186,11 +178,6 @@ export class ApiStack extends cdk.Stack {
         // Captain Nova API Resources
         // =============================================================
         this.createCaptainAPIResources(captainLambdaFn, cognitoAuthorizer);
-
-        // =============================================================
-        // VISA API Resources and Methods
-        // =============================================================
-        this.createVisaAPIResources(visaLambdaFn, cognitoAuthorizer);
 
         // CloudFormation Outputs
         new cdk.CfnOutput(this, 'ApiUrl', {
@@ -273,21 +260,13 @@ export class ApiStack extends cdk.Stack {
         asteroidIdResource.addResource('action').addMethod('POST', lambdaIntegration);
 
         apiResource.addResource('transactions').addMethod('GET', lambdaIntegration);
-
-        // VISA Transaction Controls endpoints
-        const visaResource = apiResource.addResource('visa');
-        const visaControlsResource = visaResource.addResource('controls');
-        visaControlsResource.addMethod('POST', lambdaIntegration);
-        const visaControlIdResource = visaControlsResource.addResource('{document_id}');
-        visaControlIdResource.addMethod('GET', lambdaIntegration);
-        visaControlIdResource.addMethod('DELETE', lambdaIntegration);
     }
 
     /**
      * Creates API Gateway resources and methods for VISA operations.
      */
     private createVisaAPIResources(visaLambdaFn: lambda.Function, authorizer: apigateway.CognitoUserPoolsAuthorizer) {
-        const apiResource = this.api.root.getResource('api') || this.api.root.addResource('api');
+        const apiResource = this.apiResource;
         const visaResource = apiResource.getResource('visa') || apiResource.addResource('visa');
         const lambdaIntegration = new apigateway.LambdaIntegration(visaLambdaFn);
 
