@@ -3,37 +3,31 @@
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, useGLTF, useProgress, Html } from '@react-three/drei';
 import CaptainNova, {
-  type NovaAnimationConfig,
+  type CaptainNovaHandle,
+  type AnimationConfig,
 } from '@/components/three/captain-nova';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 
 const MODEL_OPTIONS = [
-  { id: 'nova', label: 'A: Captain Nova', description: 'Current primitives + hologram shader' },
+  { id: 'nova', label: 'A: Captain Nova v3', description: 'Low-poly holographic officer' },
   { id: 'caucasian-man', label: 'B: Caucasian Man', description: 'GLB model (14MB)', path: '/models/caucasian-man.glb' },
   { id: 'vinayagar', label: 'C: Vinayagar', description: 'GLB model (21MB)', path: '/models/vinayagar.glb' },
 ] as const;
 
 type ModelId = (typeof MODEL_OPTIONS)[number]['id'];
 
-const defaultAnimConfig: NovaAnimationConfig = {
-  breathing: { enabled: true, cycleDuration: 4, scaleAmount: 0.02 },
-  weightShift: {
-    enabled: true,
-    minInterval: 8,
-    maxInterval: 16,
-    rotationAmount: 0.05,
-  },
+const defaultAnimConfig: AnimationConfig = {
+  breathing: { enabled: true, cycleDuration: 4, scaleAmount: 0.015 },
   headTracking: {
     enabled: true,
     maxRotationY: 0.15,
     maxRotationX: 0.1,
     lerpSpeed: 0.05,
   },
-  glitch: { enabled: true, frequency: 0.002, intensity: 0.5, cooldownMs: 100 },
-  idleSway: { enabled: true, speed: 0.3, amount: 0.03 },
+  idleSway: { enabled: true, speed: 0.3, amount: 0.02 },
 };
 
 function LoadingIndicator() {
@@ -59,11 +53,8 @@ function GLBModel({ path, scale, rotationY }: { path: string; scale: number; rot
 
   const clonedScene = useMemo(() => {
     const clone = scene.clone(true);
-    // Auto-center the model
     const box = new THREE.Box3().setFromObject(clone);
     const center = box.getCenter(new THREE.Vector3());
-    const size = box.getSize(new THREE.Vector3());
-    // Shift so feet are at y=0 and model is centered on x/z
     clone.position.set(-center.x, -box.min.y, -center.z);
     return clone;
   }, [scene]);
@@ -77,17 +68,17 @@ function GLBModel({ path, scale, rotationY }: { path: string; scale: number; rot
 
 export default function DevCaptainNovaPage() {
   const router = useRouter();
+  const novaRef = useRef<CaptainNovaHandle>(null);
   const [activeModel, setActiveModel] = useState<ModelId>('nova');
   const [position, setPosition] = useState<[number, number, number]>([0, 0, 0]);
   const [modelScale, setModelScale] = useState(1);
   const [modelRotationY, setModelRotationY] = useState(0);
   const [animConfig, setAnimConfig] =
-    useState<NovaAnimationConfig>(defaultAnimConfig);
+    useState<AnimationConfig>(defaultAnimConfig);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') router.push('/dev');
-      // Quick switch: 1/2/3 keys
       if (e.key === '1') setActiveModel('nova');
       if (e.key === '2') setActiveModel('caucasian-man');
       if (e.key === '3') setActiveModel('vinayagar');
@@ -96,7 +87,7 @@ export default function DevCaptainNovaPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [router]);
 
-  const toggleAnim = (key: keyof NovaAnimationConfig) => {
+  const toggleAnim = (key: keyof AnimationConfig) => {
     setAnimConfig((prev) => ({
       ...prev,
       [key]: { ...(prev[key] as Record<string, unknown>), enabled: !(prev[key] as { enabled?: boolean })?.enabled },
@@ -119,7 +110,7 @@ export default function DevCaptainNovaPage() {
               &larr; Dev Hub
             </Link>
             <h1 className="font-orbitron text-xl text-cyan-400 tracking-wider mt-2">
-              DEV: Captain Nova — A/B/C Testing
+              DEV: Captain Nova v3.0
             </h1>
             <p className="font-rajdhani text-xs text-cyan-400/60 mt-1">
               {activeOption.description} &middot; Press 1/2/3 to quick-switch
@@ -168,7 +159,11 @@ export default function DevCaptainNovaPage() {
         <Suspense fallback={<LoadingIndicator />}>
           <group position={position}>
             {activeModel === 'nova' && (
-              <CaptainNova position={[0, 0, 0]} animationConfig={animConfig} />
+              <CaptainNova
+                ref={novaRef}
+                position={[0, 0, 0]}
+                animationConfig={animConfig}
+              />
             )}
             {activeModel === 'caucasian-man' && (
               <GLBModel
@@ -198,9 +193,28 @@ export default function DevCaptainNovaPage() {
       {/* Controls Panel */}
       <div className="absolute bottom-0 left-0 right-0 z-10 p-4 bg-gradient-to-t from-black/80 to-transparent">
         <div className="max-w-2xl mx-auto space-y-3">
-          {/* Nova Animation Controls - only when Nova is active */}
+          {/* Nova Controls - only when Nova is active */}
           {activeModel === 'nova' && (
             <>
+              {/* Gesture Controls */}
+              <div>
+                <div className="font-rajdhani text-xs text-cyan-400/60 mb-2">
+                  Gesture Controls
+                </div>
+                <div className="flex gap-2">
+                  {(['point', 'salute', 'at-ease'] as const).map((gesture) => (
+                    <button
+                      key={gesture}
+                      onClick={() => novaRef.current?.playGesture(gesture)}
+                      className="px-4 py-2 rounded border border-cyan-500/50 bg-cyan-500/20 text-cyan-400 font-orbitron text-xs tracking-wider hover:bg-cyan-500/30 transition-colors"
+                    >
+                      {gesture.charAt(0).toUpperCase() + gesture.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Animation Toggles */}
               <div>
                 <div className="font-rajdhani text-xs text-cyan-400/60 mb-2">
                   Animation Controls
@@ -209,9 +223,7 @@ export default function DevCaptainNovaPage() {
                   {(
                     [
                       ['breathing', 'Breathing'],
-                      ['weightShift', 'Weight Shift'],
                       ['headTracking', 'Head Track'],
-                      ['glitch', 'Glitch'],
                       ['idleSway', 'Idle Sway'],
                     ] as const
                   ).map(([key, label]) => {
@@ -234,36 +246,10 @@ export default function DevCaptainNovaPage() {
                   })}
                 </div>
               </div>
-
-              <div className="flex items-center gap-2 text-xs text-cyan-400">
-                <span className="w-24 font-rajdhani text-cyan-400/60">
-                  Glitch Int:
-                </span>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.05"
-                  value={animConfig.glitch?.intensity ?? 0.5}
-                  onChange={(e) =>
-                    setAnimConfig((prev) => ({
-                      ...prev,
-                      glitch: {
-                        ...prev.glitch,
-                        intensity: parseFloat(e.target.value),
-                      },
-                    }))
-                  }
-                  className="flex-1"
-                />
-                <span className="w-10 text-right font-mono">
-                  {(animConfig.glitch?.intensity ?? 0.5).toFixed(2)}
-                </span>
-              </div>
             </>
           )}
 
-          {/* GLB Model Controls - only when a GLB is active */}
+          {/* GLB Model Controls */}
           {isGLB && (
             <div>
               <div className="font-rajdhani text-xs text-cyan-400/60 mb-2">
@@ -306,7 +292,7 @@ export default function DevCaptainNovaPage() {
             </div>
           )}
 
-          {/* Position Controls - always visible */}
+          {/* Position Controls */}
           <div>
             <div className="font-rajdhani text-xs text-cyan-400/60 mb-2">
               Position Controls
