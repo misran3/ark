@@ -5,6 +5,7 @@ import { TrueBlack } from './boot/TrueBlack';
 import { EmergencyLighting } from './boot/EmergencyLighting';
 import { PowerSurge } from './boot/PowerSurge';
 import { ViewportCalibration } from './boot/ViewportCalibration';
+import { HUDProjection } from './boot/HUDProjection';
 import { EyelidReveal } from './boot/EyelidReveal';
 
 interface BootSequenceProps {
@@ -40,6 +41,9 @@ export function BootSequence({ children }: BootSequenceProps) {
             phase === 'hud-rise' || phase === 'settling') && (
             <EyelidReveal isOpen={phase !== 'viewport-awake'} />
           )}
+
+          {/* Beat 5: HUD projection */}
+          {phase === 'hud-rise' && <HUDProjection />}
 
           {/* Skip hint */}
           <div
