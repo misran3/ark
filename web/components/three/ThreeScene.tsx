@@ -87,9 +87,9 @@ export default function ThreeScene() {
     <div className="fixed inset-0 z-0">
       <Canvas
         camera={{ position: [0, 0, 10], fov: 75 }}
-        dpr={[1, 2]}
+        dpr={[1, 1.5]}
         gl={{
-          antialias: true,
+          antialias: false,
           alpha: true,
           powerPreference: 'high-performance',
         }}
