@@ -23,9 +23,8 @@ const CAM_REST = new Vector3(0, 0, 5);
 /** Camera drift target (subtle lean forward + up) */
 const CAM_DRIFT = new Vector3(0, 0.1, 4.75);
 
-const BEAT1_DURATION = 400;
-const BEAT2_DURATION = 800;
-const DISMISS_DURATION = 400;
+const REVEAL_DURATION = 600; // ms — total iris reveal time
+const DISMISS_DURATION = 300; // ms — collapse time (faster out than in)
 
 interface HologramOverlayProps {
   children?: React.ReactNode;
@@ -37,7 +36,7 @@ export function HologramOverlay({ children }: HologramOverlayProps) {
   const glowLightRef = useRef<PointLight>(null);
   const phaseTimerRef = useRef(0);
 
-  const { expandedPanel, activationPhase, setActivationPhase, panelHealth } =
+  const { expandedPanel, activationPhase, setActivationPhase, panelHealth, setRevealProgress } =
     useConsoleStore();
 
   const camera = useThree((s) => s.camera);
@@ -72,46 +71,58 @@ export function HologramOverlay({ children }: HologramOverlayProps) {
     // --- Dim plane ---
     if (dimPlaneRef.current) {
       const targetOpacity =
-        activationPhase === 'beat1' || activationPhase === 'beat2' || activationPhase === 'active'
+        activationPhase !== 'idle' && activationPhase !== 'dismissing'
           ? 0.6
           : 0;
       dimMaterial.opacity += (targetOpacity - dimMaterial.opacity) * delta * 8;
     }
 
-    // --- Hologram group ---
+    // --- Hologram group: instant scale, no dead zone ---
     if (groupRef.current) {
-      const targetScale =
-        activationPhase === 'beat2' || activationPhase === 'active' ? 1.0 : 0.0;
+      const isShowing = activationPhase !== 'idle' && activationPhase !== 'dismissing';
 
-      // Scale animation
-      const scaleSpeed = activationPhase === 'dismissing' ? 10 : 5;
-      const currentScale = groupRef.current.scale.x;
-      const newScale = currentScale + (targetScale - currentScale) * delta * scaleSpeed;
-      groupRef.current.scale.setScalar(Math.max(0.001, newScale));
+      if (isShowing) {
+        // Snap to full scale immediately
+        const currentScale = groupRef.current.scale.x;
+        const newScale = currentScale + (1.0 - currentScale) * Math.min(1, delta * 12);
+        groupRef.current.scale.setScalar(Math.max(0.001, newScale));
+      } else {
+        // Dismiss: shrink out
+        const currentScale = groupRef.current.scale.x;
+        const newScale = currentScale + (0.0 - currentScale) * Math.min(1, delta * 10);
+        groupRef.current.scale.setScalar(Math.max(0.001, newScale));
+      }
 
       // Position above source panel
       const panelX = PANEL_X_OFFSETS[expandedPanel];
       groupRef.current.position.set(
-        panelX + (0 - panelX) * 0.7, // Drift toward center
+        panelX + (0 - panelX) * 0.7,
         HOLOGRAM_Y,
         HOLOGRAM_Z
       );
     }
 
+    // --- Reveal progress (iris animation) ---
+    if (activationPhase === 'beat1' || activationPhase === 'active') {
+      const progress = Math.min(1, t / REVEAL_DURATION);
+      setRevealProgress(progress);
+    } else if (activationPhase === 'dismissing') {
+      // Reverse reveal on dismiss
+      const progress = Math.max(0, 1 - t / DISMISS_DURATION);
+      setRevealProgress(progress);
+    }
+
     // --- Glow cast light ---
     if (glowLightRef.current) {
       const targetIntensity =
-        activationPhase === 'active' || activationPhase === 'beat2' ? 2.0 : 0;
+        activationPhase === 'active' || activationPhase === 'beat1' ? 2.0 : 0;
       glowLightRef.current.intensity +=
         (targetIntensity - glowLightRef.current.intensity) * delta * 6;
       glowLightRef.current.color.copy(systemColor);
     }
 
     // --- Phase transitions ---
-    if (activationPhase === 'beat1' && t >= BEAT1_DURATION) {
-      setActivationPhase('beat2');
-    }
-    if (activationPhase === 'beat2' && t >= BEAT2_DURATION) {
+    if (activationPhase === 'beat1' && t >= REVEAL_DURATION) {
       setActivationPhase('active');
     }
     if (activationPhase === 'dismissing' && t >= DISMISS_DURATION) {

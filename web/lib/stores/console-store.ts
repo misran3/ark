@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 export type PanelType = 'shields' | 'networth' | 'transactions' | 'cards';
-export type ActivationPhase = 'idle' | 'beat1' | 'beat2' | 'active' | 'dismissing';
+export type ActivationPhase = 'idle' | 'beat1' | 'active' | 'dismissing';
 
 /** Per-system signature colors: [healthy RGB, distress RGB] */
 export const SYSTEM_HUES: Record<PanelType, { healthy: [number, number, number]; distress: [number, number, number] }> = {
@@ -21,6 +21,9 @@ interface ConsoleStore {
   expandedPanel: PanelType | null;
   activationPhase: ActivationPhase;
   panelHealth: Record<PanelType, number>;
+  /** 0-1 progress of the iris reveal animation */
+  revealProgress: number;
+  setRevealProgress: (progress: number) => void;
 
   expandPanel: (panel: PanelType) => void;
   collapsePanel: () => void;
@@ -38,8 +41,10 @@ export const useConsoleStore = create<ConsoleStore>((set) => ({
   expandedPanel: null,
   activationPhase: 'idle',
   panelHealth: { shields: 0.72, networth: 0.85, transactions: 0.65, cards: 0.78 },
+  revealProgress: 0,
+  setRevealProgress: (progress) => set({ revealProgress: progress }),
 
-  expandPanel: (panel) => set({ expandedPanel: panel, activationPhase: 'beat1' }),
+  expandPanel: (panel) => set({ expandedPanel: panel, activationPhase: 'beat1', revealProgress: 0 }),
   collapsePanel: () => set({ activationPhase: 'dismissing' }),
   setActivationPhase: (phase) => {
     if (phase === 'idle') {
