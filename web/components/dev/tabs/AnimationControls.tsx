@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import gsap from 'gsap';
 import { useDevStore } from '@/lib/stores/dev-store';
+import { useBootStore } from '@/lib/stores/boot-store';
 
 export function AnimationControls() {
   const {
@@ -142,8 +143,60 @@ export function AnimationControls() {
     userSelect: 'none',
   };
 
+  const bootPhase = useBootStore((s) => s.phase);
+  const consoleIntensity = useBootStore((s) => s.consoleIntensity);
+
+  const replayBoot = () => {
+    localStorage.removeItem('synesthesiapay:hasSeenBoot');
+    useBootStore.getState().reset();
+  };
+
+  const skipToComplete = () => {
+    useBootStore.getState().skipBoot();
+  };
+
   return (
     <div style={containerStyle}>
+      {/* Boot Sequence */}
+      <div style={sectionStyle}>
+        <div style={sectionTitleStyle}>Boot Sequence</div>
+        <div style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 0.4)', marginBottom: '4px' }}>
+          Phase: <span style={{ color: '#a78bfa', fontWeight: 600 }}>{bootPhase}</span>
+          {' | '}
+          Intensity: <span style={{ color: '#a78bfa', fontWeight: 600 }}>{consoleIntensity.toFixed(2)}</span>
+        </div>
+        <div style={buttonRowStyle}>
+          <button
+            onClick={replayBoot}
+            style={presetButtonStyle(false)}
+            onMouseEnter={(e) => {
+              if (e.currentTarget instanceof HTMLElement)
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+            }}
+            onMouseLeave={(e) => {
+              if (e.currentTarget instanceof HTMLElement)
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+            }}
+          >
+            REPLAY BOOT
+          </button>
+          <button
+            onClick={skipToComplete}
+            style={presetButtonStyle(false)}
+            onMouseEnter={(e) => {
+              if (e.currentTarget instanceof HTMLElement)
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+            }}
+            onMouseLeave={(e) => {
+              if (e.currentTarget instanceof HTMLElement)
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+            }}
+          >
+            SKIP TO END
+          </button>
+        </div>
+      </div>
+
       {/* Speed Presets */}
       <div style={sectionStyle}>
         <div style={sectionTitleStyle}>Speed Presets</div>
