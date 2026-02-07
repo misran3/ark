@@ -5,7 +5,7 @@
 set -e
 
 # Config
-APP_NAME="Snatched"
+APP_NAME="Ark"
 AMPLIFY_STACK_NAME="${APP_NAME}AmplifyStack"
 AUTH_STACK_NAME="${APP_NAME}AuthStack"
 API_STACK_NAME="${APP_NAME}ApiStack"

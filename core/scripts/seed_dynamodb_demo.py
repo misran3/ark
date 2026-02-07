@@ -4,7 +4,7 @@ Seed DynamoDB with demo user profiles, snapshots, and budgets.
 Usage:
     cd core && python scripts/seed_dynamodb_demo.py [--user USER_ID]
 
-Seeds SnatchedUsersTable with:
+Seeds Users table with:
 - PROFILE#settings: User preferences and budget thresholds
 - SNAPSHOT#latest: Financial snapshot for each user
 - BUDGET#latest: Budget report for each user
@@ -20,7 +20,7 @@ from pathlib import Path
 
 import boto3
 
-TABLE_NAME = "SnatchedUsersTable"
+TABLE_NAME = "ArkUsersTable"
 FIXTURES_DIR = Path(__file__).parent.parent / "shared" / "src" / "shared" / "mocks" / "demo"
 
 # Cache TTL: 24 hours for demo data

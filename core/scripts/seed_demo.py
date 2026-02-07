@@ -24,7 +24,7 @@ def main():
     args = parser.parse_args()
 
     print("=" * 60)
-    print("SNATCHED DEMO DATA SEEDER")
+    print("ARK DEMO DATA SEEDER")
     print("=" * 60)
 
     if not args.skip_nessie:

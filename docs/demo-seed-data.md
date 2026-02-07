@@ -133,7 +133,7 @@ uv run python scripts/seed_demo.py --skip-dynamodb  # Nessie only
 - **Purchases:** ~335 transactions over 90 days
 - **Deposits:** Income deposits for each user
 
-### DynamoDB (SnatchedUsersTable)
+### DynamoDB (ArkUsersTable)
 - `PROFILE#settings` - User preferences and budget thresholds
 - `SNAPSHOT#latest` - Financial snapshot with accounts and transactions
 - `BUDGET#latest` - 50/30/20 budget report with health score

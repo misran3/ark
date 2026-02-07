@@ -1,9 +1,9 @@
-# Snatched - Project Guidelines
+# Ark - Project Guidelines
 
 ## Project Structure
 
 ```
-snatched/
+ark/
 ├── web/            # Next.js 16 frontend (React 19, TailwindCSS 4)
 ├── infrastructure/ # AWS CDK stacks (TypeScript)
 ├── core/           # Python backend modules (uv workspace)

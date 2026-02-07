@@ -1,7 +1,7 @@
 """
 DynamoDB client for caching financial data: snapshots, budgets, and asteroid states.
 
-Reuses the SnatchedUsersTable with new SK patterns:
+Reuses the Users table with new SK patterns:
 - SNAPSHOT#latest: Cached FinancialSnapshot (TTL: 5 min)
 - BUDGET#latest: Cached BudgetReport (TTL: 5 min)
 - ASTEROID#{id}: Persisted asteroid action states
@@ -21,7 +21,7 @@ CACHE_TTL_SECONDS = 300  # 5 minutes
 
 
 class DataTableClient(DynamoDBClient):
-    """Client for caching financial data in SnatchedUsersTable."""
+    """Client for caching financial data in Users table."""
 
     def __init__(self):
         super().__init__(table_name=os.environ["USERS_TABLE_NAME"])
