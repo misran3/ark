@@ -1,0 +1,98 @@
+{
+  "user_id": "user_james_chen",
+  "display_name": "James Chen",
+  "email": "james.chen@email.com",
+  "persona": "warning",
+  "monthly_income": 5800.00,
+  "profile": {
+    "budget_plan": {
+      "needs_pct": 0.50,
+      "wants_pct": 0.30,
+      "savings_pct": 0.20,
+      "category_limits": {
+        "dining": 300.00,
+        "entertainment": 200.00
+      }
+    },
+    "alert_preferences": {
+      "debt_spirals": "warning",
+      "wasteful_subscriptions": "weekly",
+      "fraud_detection": "all",
+      "budget_overruns": "warning"
+    }
+  },
+  "accounts": [
+    {
+      "id": "acc_james_checking",
+      "type": "Checking",
+      "nickname": "Main Checking",
+      "balance": 3420.00,
+      "rewards": 0,
+      "card_number": null
+    },
+    {
+      "id": "acc_james_savings",
+      "type": "Savings",
+      "nickname": "Emergency Fund",
+      "balance": 8500.00,
+      "rewards": 0,
+      "card_number": null
+    },
+    {
+      "id": "acc_james_quicksilver",
+      "type": "Credit Card",
+      "nickname": "Quicksilver",
+      "balance": 1247.00,
+      "rewards": 340,
+      "credit_limit": 8000,
+      "card_number": "4147201085634832",
+      "reward_rate": {"default": 1.5}
+    },
+    {
+      "id": "acc_james_savorone",
+      "type": "Credit Card",
+      "nickname": "SavorOne",
+      "balance": 2180.00,
+      "rewards": 520,
+      "credit_limit": 10000,
+      "card_number": "5278643019827291",
+      "reward_rate": {"dining": 3.0, "entertainment": 3.0, "groceries": 3.0, "default": 1.0}
+    }
+  ],
+  "recurring_charges": [
+    {"merchant": "Netflix", "amount": 15.99, "day_of_month": 10, "account": "acc_james_checking"},
+    {"merchant": "Spotify", "amount": 10.99, "day_of_month": 12, "account": "acc_james_checking"},
+    {"merchant": "Amazon Prime", "amount": 14.99, "day_of_month": 5, "account": "acc_james_quicksilver"},
+    {"merchant": "Audible", "amount": 14.95, "day_of_month": 8, "account": "acc_james_quicksilver", "wasteful": true, "last_used_days_ago": 120},
+    {"merchant": "ClassPass", "amount": 49.00, "day_of_month": 1, "account": "acc_james_savorone", "wasteful": true, "last_used_days_ago": 90},
+    {"merchant": "iCloud Storage", "amount": 2.99, "day_of_month": 15, "account": "acc_james_checking"},
+    {"merchant": "Google One", "amount": 2.99, "day_of_month": 18, "account": "acc_james_checking", "wasteful": true, "duplicate_of": "iCloud Storage"},
+    {"merchant": "Sunrise Apartments", "amount": 1850.00, "day_of_month": 1, "account": "acc_james_checking"},
+    {"merchant": "Electric Company", "amount": 120.00, "day_of_month": 18, "account": "acc_james_checking"},
+    {"merchant": "Comcast Xfinity", "amount": 79.00, "day_of_month": 22, "account": "acc_james_checking"},
+    {"merchant": "Verizon", "amount": 85.00, "day_of_month": 25, "account": "acc_james_checking"},
+    {"merchant": "GEICO", "amount": 125.00, "day_of_month": 3, "account": "acc_james_checking"}
+  ],
+  "spending_patterns": {
+    "dining_monthly": 480.00,
+    "groceries_monthly": 320.00,
+    "shopping_monthly": 280.00,
+    "transportation_monthly": 150.00,
+    "entertainment_monthly": 180.00,
+    "coffee_weekly": 30.00
+  },
+  "fraud_transactions": [
+    {
+      "merchant": "CloudServ Pro",
+      "amount": 89.00,
+      "days_ago": 5,
+      "account": "acc_james_quicksilver",
+      "risk_indicators": ["new_merchant"]
+    }
+  ],
+  "card_misuse": [
+    {"category": "dining", "uses_account": "acc_james_quicksilver", "optimal_account": "acc_james_savorone"},
+    {"category": "groceries", "uses_account": "acc_james_quicksilver", "optimal_account": "acc_james_savorone"},
+    {"category": "entertainment", "uses_account": "acc_james_quicksilver", "optimal_account": "acc_james_savorone"}
+  ]
+}
