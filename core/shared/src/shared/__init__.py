@@ -14,6 +14,7 @@ from shared.categories import (
     BucketType,
     categorize_transaction,
 )
+from shared.budget_engine import calculate as calculate_budget
 from shared.models import (
     AccountSummary,
     Asteroid,
@@ -25,6 +26,7 @@ from shared.models import (
     VisaAlert,
     VisaControlRule,
 )
+from shared.nessie_service import NessieApiError, NessieService
 
 __all__ = [
     # Models
@@ -37,6 +39,9 @@ __all__ = [
     "VisaControlRule",
     "VisaAlert",
     "CaptainResponse",
+    "NessieService",
+    "NessieApiError",
+    "calculate_budget",
     # Categories
     "NEEDS",
     "WANTS",
