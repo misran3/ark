@@ -6,6 +6,7 @@ import { ShieldsContent } from './panels/ShieldsContent';
 import { NetWorthContent } from './panels/NetWorthContent';
 import { TransactionsContent } from './panels/TransactionsContent';
 import { CardsContent } from './panels/CardsContent';
+import { TestWellCanvas } from './TestWellCanvas';
 
 interface ConsolePanelProps {
   type: PanelType;
@@ -175,6 +176,9 @@ export function ConsolePanel({
           {isWarning && (
             <div className="absolute top-0 left-0 right-0 h-[3px] caution-stripe z-10" />
           )}
+
+          {/* Phase 2 test: R3F canvas inside well (shields only, remove for Phase 3) */}
+          {type === 'shields' && <TestWellCanvas />}
 
           {/* CRT Screen area (clickable) */}
           <button
