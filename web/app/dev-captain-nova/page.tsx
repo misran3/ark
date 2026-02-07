@@ -53,6 +53,28 @@ function GLBModel({ path, scale, rotationY }: { path: string; scale: number; rot
     return clone;
   }, [scene]);
 
+  // Cleanup: dispose of cloned scene when component unmounts or variant changes
+  useEffect(() => {
+    return () => {
+      clonedScene.traverse((obj) => {
+        if (obj instanceof THREE.Mesh) {
+          // Dispose geometry
+          if (obj.geometry) {
+            obj.geometry.dispose();
+          }
+          // Dispose materials (can be single or array)
+          if (obj.material) {
+            if (Array.isArray(obj.material)) {
+              obj.material.forEach((mat) => mat.dispose());
+            } else {
+              obj.material.dispose();
+            }
+          }
+        }
+      });
+    };
+  }, [clonedScene]);
+
   return (
     <group scale={scale} rotation-y={rotationY}>
       <primitive object={clonedScene} />
