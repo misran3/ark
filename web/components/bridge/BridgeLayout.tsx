@@ -15,6 +15,7 @@ import { ViewportGlass } from './cockpit/ViewportGlass';
 import { EnvironmentalCohesion } from './cockpit/EnvironmentalCohesion';
 import { DashboardProjection } from './cockpit/DashboardProjection';
 import { PerfMonitor } from './cockpit/PerfMonitor';
+import { useCaptainScans } from '@/hooks/useCaptainScans';
 
 export function BridgeLayout() {
   const phase = useBootStore((state) => state.phase);
@@ -29,6 +30,9 @@ export function BridgeLayout() {
   const showViewport = phase === 'viewport-awake' || phase === 'console-boot' ||
                        phase === 'hud-rise' || phase === 'settling' || phase === 'complete';
   const isEmergencyPhase = phase === 'emergency';
+
+  // Fire Captain API scans when boot completes
+  useCaptainScans();
 
   // Trigger power lifecycle cold start when console-boot phase begins
   const coldStartTriggered = useRef(false);
