@@ -6,6 +6,7 @@ import { Sun } from './Sun';
 import { ThreatsLayer } from './ThreatsLayer';
 import SceneEffects from '@/components/three/SceneEffects';
 import { CanopyStruts } from './CanopyStruts';
+import { SceneHeartbeat } from './SceneHeartbeat';
 import { useThreatStore } from '@/lib/stores/threat-store';
 import { HologramOverlay } from '@/components/bridge/hologram/HologramOverlay';
 import { DefenseGrid } from '@/components/bridge/hologram/panels/DefenseGrid';
@@ -23,6 +24,7 @@ export function Viewport3D() {
   return (
     <div className="w-full h-full">
       <Canvas
+        frameloop="demand"
         camera={{
           position: [0, 0, 5],
           fov: 75,
@@ -34,6 +36,9 @@ export function Viewport3D() {
           alpha: true,
         }}
       >
+        {/* Render loop throttle — drives demand-mode invalidation */}
+        <SceneHeartbeat />
+
         {/* Ambient lighting */}
         <ambientLight intensity={0.2} />
 
