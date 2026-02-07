@@ -92,7 +92,7 @@ export function NovaVariantDropdown({
                 </div>
                 {variant.type === 'community' && (
                   <div className="text-xs text-cyan-400/50 mt-0.5 ml-5">
-                    {variant.path.split('/').pop()}
+                    {variant.path?.split('/').pop() ?? 'Unknown'}
                   </div>
                 )}
               </button>
