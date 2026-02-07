@@ -107,7 +107,8 @@ async def get_savings_projection(
         additional_monthly: Extra amount to save per month beyond current rate
 
     Returns:
-        Projection including months to emergency fund goal and growth trajectory
+        Projection including months to emergency fund goal and growth trajectory.
+        months_to_goal is None if total_monthly_savings <= 0 (unreachable goal).
     """
     budget = get_mock_budget()
     snapshot = get_mock_snapshot()
@@ -123,18 +124,20 @@ async def get_savings_projection(
 
     total_monthly_savings = current_savings + additional_monthly
 
+    # Calculate months to goal (None if unreachable due to zero/negative savings)
+    months_to_goal: float | None
     if total_monthly_savings <= 0:
-        months_to_goal = float("inf")
+        months_to_goal = None  # Unreachable - JSON serializes as null
     else:
         remaining = emergency_fund_goal - savings_balance
-        months_to_goal = max(0, remaining / total_monthly_savings)
+        months_to_goal = round(max(0, remaining / total_monthly_savings), 1)
 
     return {
         "current_monthly_savings": current_savings,
         "proposed_monthly_savings": total_monthly_savings,
         "current_savings_balance": savings_balance,
         "emergency_fund_goal": emergency_fund_goal,
-        "months_to_goal": round(months_to_goal, 1),
+        "months_to_goal": months_to_goal,
         "monthly_expenses": monthly_expenses,
     }
 
