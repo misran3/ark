@@ -7,6 +7,14 @@ export const metadata = {
   description: 'Isolation test page for SynesthesiaPay Bridge UI Data components',
 };
 
+/**
+ * Renders the "Module 6: Data Display" isolation test page for Bridge UI data components.
+ *
+ * The page composes the BridgeDataContainer, AsteroidsContainer, and VisaShieldsContainer into a full-screen,
+ * styled test layout with a starfield background, scanline overlay, sectioned headers, and a footer with build info.
+ *
+ * @returns The React element tree representing the Bridge Data Isolation Test UI page.
+ */
 export default function BridgeDataTestPage() {
   return (
     <main className="min-h-screen bg-[#020617] text-white">

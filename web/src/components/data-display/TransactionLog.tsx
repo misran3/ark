@@ -22,6 +22,18 @@ const bucketLabels: Record<NonNullable<Transaction['bucket']>, string> = {
   income: 'INCOMING',
 };
 
+/**
+ * Render a stylized, scrollable list of recent transactions.
+ *
+ * Displays each transaction's merchant, optional "RECURRING" badge, bucket label, formatted amount
+ * (prefixed with '+' for income) and formatted date. The list is limited to `maxItems`; when no
+ * transactions are provided an empty-state message is shown. If more transactions exist than are
+ * displayed, a footer indicates how many additional items remain.
+ *
+ * @param transactions - Array of transactions to display in the log (most recent first).
+ * @param maxItems - Maximum number of transactions to render (defaults to 10).
+ * @returns The transaction log as a JSX element.
+ */
 export function TransactionLog({
   transactions,
   maxItems = 10,

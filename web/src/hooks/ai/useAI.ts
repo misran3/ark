@@ -3,10 +3,16 @@ import api from '@/src/lib/api';
 import type { CaptainResponse } from '@/src/types/api';
 
 /**
- * Hook to interact with the Captain Nova AI Agent.
- * 
- * Note: Captain Nova endpoint (/api/captain/query) is not yet deployed.
- * This hook is prepared for future integration with mock fallback.
+ * Provides state and an action for querying the Captain Nova AI agent.
+ *
+ * Exposes the latest agent response, loading and error states, and a `queryCaptain` action
+ * that requests a specific report type from Captain Nova (currently returns a mocked response).
+ *
+ * @returns An object with:
+ * - `response` — the most recent `CaptainResponse` returned by the agent or `null` if none.
+ * - `loading` — `true` while a query is in progress, `false` otherwise.
+ * - `error` — an `Error` instance if the last query failed, or `null`.
+ * - `queryCaptain(type, message?)` — action to request a report from Captain Nova. `type` is a string specifying the report kind (commonly `"bridge_briefing"`, `"budget_scan"`, `"threat_report"`, `"savings_eta"`, or `"custom"`); `message` is an optional free-form prompt. Currently the action returns a mocked response with simulated latency and will be wired to POST `/api/captain/query` in the future.
  */
 export function useCaptainNova() {
   const [response, setResponse] = useState<CaptainResponse | null>(null);
@@ -57,10 +63,15 @@ export function useCaptainNova() {
 }
 
 /**
- * Hook to check API health status.
- * 
- * Endpoint: GET /api/health
- * Returns: { status: "ok", data_source: "mock" | "nessie" }
+ * Provide API health state and a function to refresh it.
+ *
+ * Performs a GET to /api/health and stores the resulting `{ status, data_source }` in `health`.
+ * If the request fails, `health` becomes `{ status: 'error', data_source: 'unknown' }`.
+ *
+ * @returns An object containing:
+ *  - `health` — the latest health info (`{ status: string; data_source: string }`) or `null` if unset
+ *  - `loading` — `true` while a health check is in progress, `false` otherwise
+ *  - `checkHealth` — a function that triggers a health check and updates `health` and `loading`
  */
 export function useApiHealth() {
   const [health, setHealth] = useState<{ status: string; data_source: string } | null>(null);

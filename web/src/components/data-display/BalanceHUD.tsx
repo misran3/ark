@@ -22,6 +22,19 @@ const accountTypeLabels: Record<AccountSummary['type'], string> = {
   credit_card: 'CC',
 };
 
+/**
+ * Render a circular, orbit-themed HUD showing net worth and a compact account summary.
+ *
+ * When `isLoading` is true, displays a scanning indicator instead of balances. When not
+ * loading, shows the formatted `totalNetWorth`, an optional color-coded `balanceChange`,
+ * and a list of accounts with type badges, nicknames, and formatted balances.
+ *
+ * @param totalNetWorth - Aggregate net worth value to display (in USD).
+ * @param accounts - Array of account summaries to list (each must include `account_id`, `type`, `nickname`, and `balance`).
+ * @param balanceChange - Optional change in balance to display alongside the total; shown in green if >= 0, red if negative.
+ * @param isLoading - If true, render the scanning/loading UI instead of account and balance details.
+ * @returns The Balance HUD React element.
+ */
 export function BalanceHUD({
   totalNetWorth,
   accounts,

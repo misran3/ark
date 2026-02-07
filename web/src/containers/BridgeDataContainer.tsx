@@ -5,8 +5,13 @@ import { BalanceHUD, TransactionLog, BottomMetricsBar } from '@/src/components/d
 import { useFinancialSnapshot } from '@/src/hooks/finance/useFinance';
 
 /**
- * Smart container that orchestrates the Bridge Data display.
- * Fetches data from the real API via useFinancialSnapshot hook.
+ * Container component that displays a user's financial snapshot and associated UI sections.
+ *
+ * Renders a BalanceHUD, a BottomMetricsBar, and a TransactionLog using available snapshot data.
+ * Shows a centered error panel when an error is present, displays loading skeletons for metrics
+ * and transactions while data is loading, and falls back to zeros or empty arrays when data is missing.
+ *
+ * @returns The rendered JSX element for the Bridge Data container.
  */
 export function BridgeDataContainer() {
   const { data, loading, error } = useFinancialSnapshot();

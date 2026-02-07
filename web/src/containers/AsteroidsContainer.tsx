@@ -6,8 +6,15 @@ import { useAsteroids } from '@/src/hooks/security/useSecurity';
 import type { Asteroid } from '@/src/types/api';
 
 /**
- * Smart container that manages asteroid threat display and actions.
- * Fetches data from the real API via useAsteroids hook.
+ * Render a container showing incoming asteroid threats and allow resolving them.
+ *
+ * Displays an error banner when the API is offline, loading skeletons while data
+ * is being fetched, a "Sector Clear" empty state when there are no threats,
+ * or a severity-sorted list of asteroids. Each asteroid can be expanded and
+ * acted on (deflect, absorb, redirect); performing an action triggers the
+ * resolve operation and a short removal animation for that item.
+ *
+ * @returns The component's rendered UI: an error view, loading placeholders, an empty state, or a sorted list of AsteroidCard items with expand and action callbacks.
  */
 export function AsteroidsContainer() {
   const { asteroids, loading, error, resolveAsteroid } = useAsteroids();

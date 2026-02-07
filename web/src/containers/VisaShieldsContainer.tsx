@@ -7,6 +7,12 @@ interface VisaShieldsContainerProps {
   dataUrl?: string;
 }
 
+/**
+ * Render a list of active visa control rules fetched from a JSON endpoint.
+ *
+ * @param dataUrl - Endpoint URL to load visa control rules JSON (defaults to '/mocks/visa_controls.json')
+ * @returns The component UI: a titled list where each item shows the control type, rule ID, and an optional threshold; returns `null` when no controls are available.
+ */
 export function VisaShieldsContainer({
   dataUrl = '/mocks/visa_controls.json',
 }: VisaShieldsContainerProps) {
