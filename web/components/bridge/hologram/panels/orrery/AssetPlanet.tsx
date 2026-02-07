@@ -75,10 +75,15 @@ export function AssetPlanet({
     [color]
   );
 
-  // Saturn ring (torus) for cargo
-  const ringGeo = useMemo(
-    () => (hasRing ? new TorusGeometry(size * 1.8, 0.02, 4, 32) : null),
-    [size, hasRing]
+  // Saturn ring (torus wireframe) for cargo
+  const ringWireGeo = useMemo(() => {
+    if (!hasRing) return null;
+    const torus = new TorusGeometry(size * 1.8, 0.02, 4, 32);
+    return new WireframeGeometry(torus);
+  }, [size, hasRing]);
+  const ringMat = useMemo(
+    () => new LineBasicMaterial({ color, transparent: true, opacity: 0.35 }),
+    [color]
   );
 
   useFrame(() => {
@@ -107,11 +112,8 @@ export function AssetPlanet({
       <group ref={wireGroupRef}>
         <lineSegments geometry={wireGeo} material={wireMat} />
         <mesh geometry={fillGeo} material={fillMat} />
-        {hasRing && ringGeo && (
-          <lineSegments rotation-x={Math.PI / 3}>
-            <wireframeGeometry args={[ringGeo]} />
-            <lineBasicMaterial color={color} transparent opacity={0.3} />
-          </lineSegments>
+        {hasRing && ringWireGeo && (
+          <lineSegments geometry={ringWireGeo} material={ringMat} rotation-x={Math.PI / 3} />
         )}
       </group>
 

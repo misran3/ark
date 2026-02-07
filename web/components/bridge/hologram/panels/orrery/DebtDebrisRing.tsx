@@ -7,7 +7,6 @@ import {
   Color,
   InstancedMesh,
   OctahedronGeometry,
-  WireframeGeometry,
   ShaderMaterial,
   AdditiveBlending,
   Object3D,
@@ -54,11 +53,8 @@ export function DebtDebrisRing({
   const groupRef = useRef<Group>(null);
   const meshRef = useRef<InstancedMesh>(null);
 
-  // Wireframe octahedron geometry (tiny shards)
-  const geo = useMemo(() => {
-    const oct = new OctahedronGeometry(0.06, 0);
-    return new WireframeGeometry(oct);
-  }, []);
+  // Octahedron geometry (tiny shards, rendered as wireframe via material)
+  const geo = useMemo(() => new OctahedronGeometry(0.06, 0), []);
 
   const mat = useMemo(
     () =>
@@ -72,6 +68,7 @@ export function DebtDebrisRing({
         transparent: true,
         blending: AdditiveBlending,
         depthWrite: false,
+        wireframe: true,
       }),
     [color]
   );
