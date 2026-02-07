@@ -5,6 +5,7 @@ import { useBootStore } from '@/lib/stores/boot-store';
 import { ConsolePanel } from './ConsolePanel';
 import { DashboardMicroCreaks } from './DashboardMicroCreaks';
 import { useShieldStore } from '@/lib/stores/shield-store';
+import { useConsoleStore, type PanelType } from '@/lib/stores/console-store';
 
 export function CommandConsole() {
   const phase = useBootStore((state) => state.phase);
@@ -12,6 +13,15 @@ export function CommandConsole() {
   const shieldsMap = useShieldStore((state) => state.shields);
   const recDeck = shieldsMap['recreation-deck'];
   const isRecWarning = recDeck && (recDeck.status === 'warning' || recDeck.status === 'critical' || recDeck.status === 'breached');
+
+  const { expandedPanel, activationPhase } = useConsoleStore();
+  const isExpanded = expandedPanel !== null && activationPhase !== 'idle';
+
+  const getPanelStyle = (panelType: PanelType, bootOpacity: number, defaultTransition: string): React.CSSProperties => {
+    if (!isExpanded) return { opacity: bootOpacity, transition: defaultTransition };
+    if (expandedPanel === panelType) return { opacity: bootOpacity, transition: 'all 0.3s ease-out' };
+    return { opacity: bootOpacity * 0.3, transform: 'translateY(20px)', transition: 'all 0.3s ease-out' };
+  };
 
   const [panelOpacity, setPanelOpacity] = useState({ 1: 0, 2: 0, 3: 0, 4: 0 });
 
@@ -97,7 +107,7 @@ export function CommandConsole() {
         }}
       >
         {/* Panel 1: Shields */}
-        <div className="flex-1 px-1.5" style={{ opacity: panelOpacity[1], transition: 'opacity 0.4s' }}>
+        <div className="flex-1 px-1.5" style={getPanelStyle('shields', panelOpacity[1], 'opacity 0.4s')}>
           <ConsolePanel
             type="shields"
             label="Shield Status"
@@ -118,7 +128,7 @@ export function CommandConsole() {
         </div>
 
         {/* Panel 2: Net Worth */}
-        <div className="flex-1 px-1.5" style={{ opacity: panelOpacity[2], transition: 'opacity 0.4s' }}>
+        <div className="flex-1 px-1.5" style={getPanelStyle('networth', panelOpacity[2], 'opacity 0.4s')}>
           <ConsolePanel
             type="networth"
             label="Net Worth"
@@ -143,7 +153,7 @@ export function CommandConsole() {
         </div>
 
         {/* Panel 3: Transactions */}
-        <div className="flex-1 px-1.5" style={{ opacity: panelOpacity[3], transition: 'opacity 0.2s' }}>
+        <div className="flex-1 px-1.5" style={getPanelStyle('transactions', panelOpacity[3], 'opacity 0.2s')}>
           <ConsolePanel
             type="transactions"
             label="Transactions"
@@ -164,7 +174,7 @@ export function CommandConsole() {
         </div>
 
         {/* Panel 4: Cards */}
-        <div className="flex-1 px-1.5" style={{ opacity: panelOpacity[4], transition: 'opacity 0.4s' }}>
+        <div className="flex-1 px-1.5" style={getPanelStyle('cards', panelOpacity[4], 'opacity 0.4s')}>
           <ConsolePanel
             type="cards"
             label="Card Intelligence"
