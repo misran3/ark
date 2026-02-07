@@ -3,10 +3,6 @@
 import { useConsoleStore, type PanelType } from '@/lib/stores/console-store';
 import { useAlertStore, ALERT_COLORS } from '@/lib/stores/alert-store';
 import { useState, useEffect } from 'react';
-import { ShieldsContent } from './panels/ShieldsContent';
-import { NetWorthContent } from './panels/NetWorthContent';
-import { TransactionsContent } from './panels/TransactionsContent';
-import { CardsContent } from './panels/CardsContent';
 
 interface ConsolePanelProps {
   type: PanelType;
@@ -236,13 +232,8 @@ export function ConsolePanel({
               </div>
             </div>
 
-            {/* Panel content */}
-            <div className="relative flex-1 flex items-center justify-center px-3 pb-2">
-              {type === 'shields' && <ShieldsContent />}
-              {type === 'networth' && <NetWorthContent />}
-              {type === 'transactions' && <TransactionsContent />}
-              {type === 'cards' && <CardsContent />}
-            </div>
+            {/* Panel content — placeholder until face designs are finalized */}
+            <div className="relative flex-1 flex items-center justify-center px-3 pb-2" />
 
             {/* Revision stamp */}
             <div className="absolute bottom-1 right-2 hull-stencil" style={{ fontSize: '5px', color: 'rgba(255,255,255,0.06)' }}>
