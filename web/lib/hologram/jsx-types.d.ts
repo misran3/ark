@@ -5,6 +5,7 @@ declare module 'react' {
     interface IntrinsicElements {
       hologramMaterial: any;
       ringSegmentMaterial: any;
+      cardHologramMaterial: any;
     }
   }
 }
