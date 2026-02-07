@@ -10,6 +10,7 @@ import { CockpitFrame } from './cockpit/CockpitFrame';
 import { LeftDataStrip } from './cockpit/LeftDataStrip';
 import { Viewport3D } from '../viewport/Viewport3D';
 import { ViewportGlass } from './cockpit/ViewportGlass';
+import { EnvironmentalCohesion } from './cockpit/EnvironmentalCohesion';
 import { PerfMonitor } from './cockpit/PerfMonitor';
 
 export function BridgeLayout() {
@@ -86,6 +87,16 @@ export function BridgeLayout() {
 
       {/* Ambient HUD elements */}
       {showHUD && <HUDAmbient />}
+
+      {/* Environmental cohesion: AO, dust, specular (z-11, above frame) */}
+      <div
+        style={{
+          opacity: showFrame ? 1 : 0,
+          transition: 'opacity 1s ease-out 0.5s',
+        }}
+      >
+        <EnvironmentalCohesion />
+      </div>
 
       {/* Layer 5: Console dashboard (bottom, integrated into frame) */}
       <div
