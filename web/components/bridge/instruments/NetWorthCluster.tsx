@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { Suspense } from 'react';
 import { useFinancialSnapshot } from '@/hooks/useFinancialData';
 import { useInstrumentPower } from '@/hooks/useInstrumentPower';
+import { useWebGLAvailable } from '@/hooks/useWebGLAvailable';
 import { NetWorthOdometer3D } from './NetWorthOdometer3D';
 import { DualNeedleGauge3D } from './DualNeedleGauge3D';
 import { OdometerFallback } from './fallbacks';
@@ -20,17 +21,8 @@ import { InstrumentMalfunction } from './InstrumentMalfunction';
  */
 export function NetWorthCluster() {
   const { data } = useFinancialSnapshot();
-  const [canvasReady, setCanvasReady] = useState(false);
+  const canvasReady = useWebGLAvailable();
   const { isOff, hasError } = useInstrumentPower('inst-02');
-
-  useEffect(() => {
-    try {
-      const c = document.createElement('canvas');
-      setCanvasReady(!!(c.getContext('webgl2') || c.getContext('webgl')));
-    } catch {
-      setCanvasReady(false);
-    }
-  }, []);
 
   const rawNetWorth = data?.total_net_worth ?? 47832;
   const rawIncome = data?.monthly_income ?? 6240;

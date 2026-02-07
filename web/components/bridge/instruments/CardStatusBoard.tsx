@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { Suspense } from 'react';
 import { useInstrumentPower } from '@/hooks/useInstrumentPower';
+import { useWebGLAvailable } from '@/hooks/useWebGLAvailable';
 import { CardCounter3D } from './CardCounter3D';
 import { MiniUtilizationDial3D } from './MiniUtilizationDial3D';
 import { CounterFallback } from './fallbacks';
@@ -21,17 +22,8 @@ const MOCK_CARDS = [
  * Utilization mini-dials (3D): Tiny circular gauges per card
  */
 export function CardStatusBoard() {
-  const [canvasReady, setCanvasReady] = useState(false);
+  const canvasReady = useWebGLAvailable();
   const { isOff, hasError } = useInstrumentPower('inst-04');
-
-  useEffect(() => {
-    try {
-      const c = document.createElement('canvas');
-      setCanvasReady(!!(c.getContext('webgl2') || c.getContext('webgl')));
-    } catch {
-      setCanvasReady(false);
-    }
-  }, []);
 
   const cards = MOCK_CARDS;
   // When off or error, counter shows 0 and dials show 0; drums roll on power-on

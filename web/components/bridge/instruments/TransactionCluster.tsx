@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { Suspense } from 'react';
 import { useInstrumentPower } from '@/hooks/useInstrumentPower';
+import { useWebGLAvailable } from '@/hooks/useWebGLAvailable';
 import { TransactionDrum3D } from './TransactionDrum3D';
 import { DrumDisplayFallback } from './fallbacks';
 import { InstrumentMalfunction } from './InstrumentMalfunction';
@@ -30,17 +31,8 @@ const CATEGORY_COLORS: Record<string, string> = {
  * Secondary: Category lamps (CSS) — merchant category indicator circles
  */
 export function TransactionCluster() {
-  const [canvasReady, setCanvasReady] = useState(false);
+  const canvasReady = useWebGLAvailable();
   const { isOff, hasError } = useInstrumentPower('inst-03');
-
-  useEffect(() => {
-    try {
-      const c = document.createElement('canvas');
-      setCanvasReady(!!(c.getContext('webgl2') || c.getContext('webgl')));
-    } catch {
-      setCanvasReady(false);
-    }
-  }, []);
 
   // When off or error, show empty transactions; drum rolls in data on power-on
   const transactions = isOff || hasError ? [] : MOCK_TRANSACTIONS;

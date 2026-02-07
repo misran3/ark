@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { Suspense } from 'react';
 import { useShieldStore } from '@/lib/stores/shield-store';
 import { useInstrumentPower } from '@/hooks/useInstrumentPower';
+import { useWebGLAvailable } from '@/hooks/useWebGLAvailable';
 import { ShieldGauge3D } from './ShieldGauge3D';
 import { CircularGaugeFallback } from './fallbacks';
 import { InstrumentMalfunction } from './InstrumentMalfunction';
@@ -20,19 +21,8 @@ import { InstrumentMalfunction } from './InstrumentMalfunction';
 export function ShieldCluster() {
   const overallPercent = useShieldStore((s) => s.overallPercent);
   const shields = useShieldStore((s) => s.shields);
-  const [canvasReady, setCanvasReady] = useState(false);
+  const canvasReady = useWebGLAvailable();
   const { isRunning, isOff, hasError } = useInstrumentPower('inst-01');
-
-  // Check if WebGL is available
-  useEffect(() => {
-    try {
-      const canvas = document.createElement('canvas');
-      const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
-      setCanvasReady(!!gl);
-    } catch {
-      setCanvasReady(false);
-    }
-  }, []);
 
   // When off or error, show 0 values; spring physics create natural sweep on transition
   // Error state: needle drops to 0 and trembles erratically (handled by spring physics at 0)
