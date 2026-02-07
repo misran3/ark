@@ -18,6 +18,7 @@ name = "agent"
 version = "0.1.0"
 source = { editable = "agent" }
 dependencies = [
+    { name = "aws-lambda-powertools" },
     { name = "boto3" },
     { name = "botocore" },
     { name = "pydantic-ai-slim", extra = ["bedrock", "logfire"] },
@@ -31,6 +32,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aws-lambda-powertools", specifier = ">=3.24.0" },
     { name = "boto3", specifier = ">=1.42.43" },
     { name = "botocore", specifier = ">=1.42.43" },
     { name = "pydantic-ai-slim", extras = ["bedrock", "logfire"], specifier = ">=1.56.0" },
