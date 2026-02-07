@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SynesthesiaPay — Bridge Command v2</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --cyan:#00f0ff;--mag:#ff00e5;--gold:#ffd700;--green:#00ff88;--red:#ff3355;
+  --blue:#6c63ff;--orange:#ff8a50;--pink:#ff6b9d;--lime:#b8ff57;
+  --dark:#05071a;--panel:rgba(10,14,40,0.82);--border:rgba(0,240,255,0.12);
+}
+html,body{height:100%;overflow:hidden;background:var(--dark);font-family:'Space Grotesk',sans-serif;color:#d0dfff}
+canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0}
+
+/* SCANLINES */
+.scan{position:fixed;inset:0;z-index:9999;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,240,255,0.006) 2px,rgba(0,240,255,0.006) 4px)}
+
+/* LAYOUT */
+.app{position:relative;z-index:1;height:100vh;display:flex;flex-direction:column}
+
+/* TOP BAR */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:52px;
+  background:linear-gradient(90deg,rgba(108,99,255,0.08),rgba(255,0,229,0.06),rgba(0,240,255,0.08));
+  border-bottom:1px solid var(--border);backdrop-filter:blur(20px);flex-shrink:0}
+.logo{font-family:'Orbitron';font-weight:900;font-size:15px;
+  background:linear-gradient(90deg,var(--cyan),var(--mag),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo sub{font-size:8px;letter-spacing:5px;display:block;-webkit-text-fill-color:rgba(0,240,255,0.5);font-weight:400}
+.topbar-r{display:flex;align-items:center;gap:16px}
+.stardate{font-family:'Orbitron';font-size:10px;color:var(--cyan);opacity:0.5}
+.cmdr-pill{display:flex;align-items:center;gap:8px;padding:4px 12px 4px 4px;border-radius:20px;
+  background:linear-gradient(135deg,rgba(108,99,255,0.15),rgba(255,0,229,0.1));border:1px solid rgba(108,99,255,0.2);cursor:pointer}
+.cmdr-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;
+  background:linear-gradient(135deg,#2a1854,#0a2a4a);border:1.5px solid var(--blue)}
+.cmdr-name{font-size:11px;font-weight:600;color:var(--cyan)}
+.cmdr-rank{font-size:9px;opacity:0.4}
+
+/* TABS */
+.tabs{display:flex;gap:2px;padding:0 20px;background:rgba(5,7,26,0.6);border-bottom:1px solid var(--border);flex-shrink:0}
+.tab{padding:10px 18px;font-size:12px;font-weight:600;letter-spacing:0.5px;cursor:pointer;
+  border-bottom:2px solid transparent;transition:all 0.3s;opacity:0.5;position:relative}
+.tab:hover{opacity:0.8;background:rgba(0,240,255,0.02)}
+.tab.active{opacity:1;border-bottom-color:var(--cyan);color:var(--cyan)}
+.tab .badge{position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--red);box-shadow:0 0 6px var(--red)}
+.tab-icon{margin-right:6px;font-size:14px}
+
+/* CONTENT */
+.content{flex:1;overflow:hidden;position:relative}
+.view{position:absolute;inset:0;display:none;overflow-y:auto;padding:16px;gap:16px}
+.view.active{display:flex}
+.view::-webkit-scrollbar{width:4px}
+.view::-webkit-scrollbar-thumb{background:rgba(0,240,255,0.15);border-radius:4px}
+
+/* PANELS */
+.pnl{background:var(--panel);border:1px solid var(--border);border-radius:8px;backdrop-filter:blur(16px);
+  position:relative;overflow:hidden}
+.pnl::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--cyan),transparent)}
+.pnl-t{font-family:'Orbitron';font-size:9px;letter-spacing:3px;color:var(--cyan);padding:14px 16px 6px;
+  text-transform:uppercase;opacity:0.6}
+.pnl-glow{box-shadow:0 0 30px rgba(0,240,255,0.04),inset 0 0 30px rgba(0,240,255,0.02)}
+
+/* ========== BRIDGE VIEW ========== */
+.bridge-view{flex-wrap:wrap;align-content:flex-start}
+.bridge-main{flex:1;min-width:400px;display:flex;flex-direction:column;gap:12px}
+.bridge-side{width:320px;display:flex;flex-direction:column;gap:12px}
+
+/* HUD */
+.hud{padding:30px;text-align:center;position:relative;min-height:260px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.hud canvas{position:absolute;inset:0;width:100%;height:100%}
+.hud-content{position:relative;z-index:2}
+.bal-label{font-family:'Orbitron';font-size:9px;letter-spacing:5px;color:var(--cyan);opacity:0.5}
+.bal-amt{font-family:'Orbitron';font-size:48px;font-weight:900;
+  background:linear-gradient(180deg,#fff 20%,var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 0 20px rgba(0,240,255,0.25));line-height:1.1}
+.bal-chg{font-size:14px;color:var(--green);font-weight:600;margin-top:4px}
+.bal-chg.neg{color:var(--red)}
+.orbit{position:absolute;border:1px solid rgba(0,240,255,0.04);border-radius:50%;animation:spin 80s linear infinite}
+.o1{width:200px;height:200px;top:50%;left:50%;transform:translate(-50%,-50%)}
+.o2{width:320px;height:320px;top:50%;left:50%;transform:translate(-50%,-50%);animation-duration:120s;animation-direction:reverse}
+.o3{width:440px;height:440px;top:50%;left:50%;transform:translate(-50%,-50%);animation-duration:160s}
+
+/* ASTEROIDS */
+.ast-zone{display:flex;flex-direction:column;gap:6px;padding:0 16px 12px}
+.ast{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:6px;cursor:pointer;
+  transition:all 0.3s;animation:slideR 0.5s ease-out}
+.ast.danger{background:rgba(255,51,85,0.08);border:1px solid rgba(255,51,85,0.15);color:var(--red)}
+.ast.warning{background:rgba(255,215,0,0.06);border:1px solid rgba(255,215,0,0.12);color:var(--gold)}
+.ast.info{background:rgba(0,240,255,0.05);border:1px solid rgba(0,240,255,0.1);color:var(--cyan)}
+.ast:hover{transform:translateX(4px);filter:brightness(1.15)}
+.ast-icon{font-size:20px}
+.ast-info{flex:1}
+.ast-info strong{display:block;font-size:13px}
+.ast-info small{font-size:11px;opacity:0.6}
+.ast-amt{font-family:'Orbitron';font-size:12px;font-weight:700}
+.ast-action{padding:4px 10px;border-radius:12px;border:1px solid currentColor;font-size:10px;
+  font-weight:700;letter-spacing:1px;cursor:pointer;opacity:0.7;background:transparent;color:inherit;transition:all 0.2s}
+.ast-action:hover{opacity:1;background:rgba(255,255,255,0.05)}
+
+/* METRICS ROW */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.metric{text-align:center;padding:14px 8px}
+.metric-l{font-family:'Orbitron';font-size:8px;letter-spacing:3px;opacity:0.4;margin-bottom:6px}
+.metric-v{font-family:'Orbitron';font-size:22px;font-weight:700}
+.metric-s{font-size:11px;opacity:0.4;margin-top:2px}
+.metric:nth-child(1) .metric-v{color:var(--cyan)}
+.metric:nth-child(2) .metric-v{color:var(--green)}
+.metric:nth-child(3) .metric-v{color:var(--mag)}
+.metric:nth-child(4) .metric-v{color:var(--gold)}
+.sparks{display:flex;align-items:end;justify-content:center;gap:2px;height:20px;margin-top:6px}
+.sparks div{width:3px;border-radius:2px;background:currentColor;opacity:0.25}
+
+/* CAPTAIN */
+.capt-hdr{display:flex;align-items:center;gap:10px;padding:12px 16px}
+.capt-av{width:44px;height:44px;border-radius:50%;border:2px solid var(--blue);
+  background:linear-gradient(135deg,#1a1040,#0a2844);display:flex;align-items:center;justify-content:center;
+  font-size:22px;box-shadow:0 0 12px rgba(108,99,255,0.25);position:relative}
+.capt-av::after{content:'';position:absolute;inset:-3px;border-radius:50%;border:1px solid rgba(108,99,255,0.15);animation:pulse 3s infinite}
+.capt-nm{font-family:'Orbitron';font-size:10px;color:var(--cyan)}
+.capt-rk{font-size:9px;opacity:0.35;letter-spacing:2px}
+.capt-msg{font-size:13px;line-height:1.65;padding:10px 16px;margin:0 12px 8px;
+  background:rgba(108,99,255,0.04);border-left:2px solid rgba(108,99,255,0.2);border-radius:0 6px 6px 0}
+.capt-msg .cur{display:inline-block;width:2px;height:13px;background:var(--cyan);animation:blink 0.7s infinite;vertical-align:middle;margin-left:2px}
+.capt-tools{display:flex;gap:4px;padding:0 16px 8px;flex-wrap:wrap}
+.tool-pill{padding:2px 8px;border-radius:10px;font-size:9px;letter-spacing:0.5px;
+  background:rgba(0,240,255,0.06);border:1px solid rgba(0,240,255,0.1);color:var(--cyan)}
+.capt-btns{display:flex;gap:6px;padding:4px 16px 14px;flex-wrap:wrap}
+.cbtn{padding:6px 14px;border-radius:16px;border:1px solid rgba(0,240,255,0.12);background:rgba(0,240,255,0.03);
+  color:var(--cyan);font-family:'Space Grotesk';font-size:11px;font-weight:600;cursor:pointer;transition:all 0.3s}
+.cbtn:hover{background:rgba(0,240,255,0.08);border-color:rgba(0,240,255,0.25);box-shadow:0 0 14px rgba(0,240,255,0.15)}
+.cbtn.mag{color:var(--mag);border-color:rgba(255,0,229,0.12)}
+.cbtn.mag:hover{background:rgba(255,0,229,0.08);border-color:rgba(255,0,229,0.25);box-shadow:0 0 14px rgba(255,0,229,0.15)}
+
+/* TX LOG */
+.tx-scroll{max-height:240px;overflow-y:auto;padding:4px 16px 12px}
+.tx-scroll::-webkit-scrollbar{width:3px}
+.tx-scroll::-webkit-scrollbar-thumb{background:rgba(0,240,255,0.15);border-radius:4px}
+.tx{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.025)}
+.tx-ic{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;
+  background:rgba(0,240,255,0.04);border:1px solid rgba(0,240,255,0.08)}
+.tx-d{flex:1}.tx-d .n{font-size:13px;font-weight:600}.tx-d .c{font-size:9px;opacity:0.35;letter-spacing:1px;text-transform:uppercase}
+.tx-a{font-family:'Orbitron';font-size:12px;font-weight:700}
+.tx-a.pos{color:var(--green)}.tx-a.neg{color:var(--red)}
+
+/* SHIELDS */
+.shield-group{padding:8px 16px 14px}
+.shield-row{margin-bottom:10px}
+.shield-lbl{display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px}
+.shield-lbl span:first-child{opacity:0.5}
+.shield-lbl span:last-child{font-family:'Orbitron';font-size:10px}
+.shield-bar{height:5px;background:rgba(255,255,255,0.04);border-radius:4px;overflow:hidden}
+.shield-fill{height:100%;border-radius:4px;transition:width 1.2s ease-out}
+
+/* ========== CARD INTEL VIEW ========== */
+.card-view{flex-direction:column}
+
+/* WALLET */
+.wallet{display:flex;gap:12px;overflow-x:auto;padding:4px 0 12px;flex-shrink:0}
+.wallet::-webkit-scrollbar{height:4px}
+.wallet::-webkit-scrollbar-thumb{background:rgba(0,240,255,0.15);border-radius:4px}
+.cc{width:280px;min-width:280px;height:170px;border-radius:14px;padding:20px;display:flex;flex-direction:column;
+  justify-content:space-between;cursor:pointer;transition:all 0.4s;position:relative;overflow:hidden;flex-shrink:0}
+.cc::before{content:'';position:absolute;inset:0;opacity:0.1;
+  background:radial-gradient(circle at 80% 20%,rgba(255,255,255,0.3),transparent 60%)}
+.cc::after{content:'';position:absolute;top:-50%;right:-50%;width:100%;height:100%;
+  background:radial-gradient(circle,rgba(255,255,255,0.08),transparent 70%);transition:all 0.5s}
+.cc:hover{transform:translateY(-4px) scale(1.02);box-shadow:0 12px 40px rgba(0,0,0,0.4)}
+.cc:hover::after{top:-30%;right:-30%}
+.cc.selected{outline:2px solid var(--cyan);outline-offset:3px}
+.cc-top{display:flex;justify-content:space-between;align-items:flex-start}
+.cc-issuer{font-family:'Orbitron';font-size:11px;font-weight:700;letter-spacing:1px}
+.cc-chip{width:32px;height:24px;border-radius:4px;background:linear-gradient(135deg,#d4af37,#f0e68c,#d4af37);opacity:0.7}
+.cc-num{font-family:'Orbitron';font-size:13px;letter-spacing:3px;opacity:0.5}
+.cc-bottom{display:flex;justify-content:space-between;align-items:flex-end}
+.cc-name{font-size:11px;letter-spacing:2px;opacity:0.7;text-transform:uppercase}
+.cc-net{font-family:'Orbitron';font-size:10px;opacity:0.5}
+
+.cc.sapphire{background:linear-gradient(135deg,#0a1628,#1a3a6a,#0d2040);color:#8bb8ff}
+.cc.gold-card{background:linear-gradient(135deg,#2a1a00,#5a3a00,#8a6a20);color:#ffd700}
+.cc.plat{background:linear-gradient(135deg,#1a1a2a,#3a3a4a,#5a5a6a);color:#c0c0c0}
+.cc.freedom{background:linear-gradient(135deg,#001a2a,#003a5a,#006a8a);color:#44ccff}
+.cc.amex{background:linear-gradient(135deg,#0a2a1a,#1a5a3a,#0a3a2a);color:#66ffaa}
+
+/* CARD DETAIL */
+.card-detail{display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:1}
+.cd-full{grid-column:1/-1}
+
+/* BENEFITS */
+.ben-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;padding:8px 16px 14px}
+.ben{padding:12px;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);
+  transition:all 0.3s;cursor:default}
+.ben:hover{background:rgba(0,240,255,0.03);border-color:rgba(0,240,255,0.1)}
+.ben-cat{font-size:9px;letter-spacing:2px;text-transform:uppercase;opacity:0.4;margin-bottom:4px}
+.ben-name{font-size:13px;font-weight:600;margin-bottom:2px}
+.ben-val{font-family:'Orbitron';font-size:16px;font-weight:700;margin-bottom:2px}
+.ben-val.high{color:var(--green)}.ben-val.med{color:var(--gold)}.ben-val.low{color:var(--cyan)}
+.ben-note{font-size:10px;opacity:0.35}
+
+/* TRAVEL INTEL */
+.travel-box{padding:14px 16px}
+.travel-form{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.t-input{padding:8px 14px;border-radius:8px;border:1px solid rgba(0,240,255,0.12);background:rgba(0,240,255,0.03);
+  color:var(--cyan);font-family:'Space Grotesk';font-size:13px;flex:1;min-width:100px;outline:none}
+.t-input::placeholder{color:rgba(0,240,255,0.3)}
+.t-input:focus{border-color:rgba(0,240,255,0.3);box-shadow:0 0 12px rgba(0,240,255,0.1)}
+.t-btn{padding:8px 20px;border-radius:8px;border:1px solid var(--mag);background:rgba(255,0,229,0.08);
+  color:var(--mag);font-family:'Orbitron';font-size:10px;font-weight:700;letter-spacing:2px;cursor:pointer;transition:all 0.3s}
+.t-btn:hover{background:rgba(255,0,229,0.15);box-shadow:0 0 20px rgba(255,0,229,0.2)}
+.lounge-results{display:flex;flex-direction:column;gap:8px}
+.lounge{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:8px;
+  background:rgba(108,99,255,0.04);border:1px solid rgba(108,99,255,0.1);transition:all 0.3s}
+.lounge:hover{background:rgba(108,99,255,0.08)}
+.lounge-icon{font-size:24px}
+.lounge-info{flex:1}
+.lounge-info strong{font-size:13px;display:block}
+.lounge-info small{font-size:11px;opacity:0.5}
+.lounge-card{padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;letter-spacing:0.5px}
+
+/* SHOPPING ADVISOR */
+.shop-box{padding:14px 16px}
+.shop-form{display:flex;gap:8px;margin-bottom:12px}
+.shop-result{padding:14px;border-radius:8px;background:rgba(0,255,136,0.03);border:1px solid rgba(0,255,136,0.1)}
+.shop-winner{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.shop-winner-card{font-family:'Orbitron';font-size:12px;font-weight:700;color:var(--green)}
+.shop-rate{font-family:'Orbitron';font-size:28px;font-weight:900;color:var(--green)}
+.shop-reason{font-size:12px;opacity:0.6;line-height:1.5}
+.shop-alts{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.04)}
+.shop-alt{display:flex;justify-content:space-between;padding:4px 0;font-size:12px;opacity:0.5}
+
+/* MAXIMIZE SCORE */
+.max-score{text-align:center;padding:20px}
+.max-ring{width:120px;height:120px;border-radius:50%;margin:0 auto 12px;position:relative;
+  display:flex;align-items:center;justify-content:center}
+.max-ring svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.max-ring circle{fill:none;stroke-width:6;stroke-linecap:round}
+.max-ring .bg{stroke:rgba(255,255,255,0.04)}
+.max-ring .fg{stroke:url(#scoreGrad);transition:stroke-dashoffset 1.5s ease-out}
+.max-val{font-family:'Orbitron';font-size:28px;font-weight:900;
+  background:linear-gradient(180deg,var(--green),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.max-label{font-size:10px;opacity:0.4;letter-spacing:2px;margin-top:8px}
+.max-tips{text-align:left;padding:12px 16px}
+.tip{display:flex;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.025);font-size:12px}
+.tip-icon{font-size:16px;flex-shrink:0}
+.tip-save{font-family:'Orbitron';font-size:11px;color:var(--green);white-space:nowrap;margin-left:auto}
+
+/* WARP BTN */
+.warp{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:10;
+  padding:10px 36px;border:1px solid var(--cyan);border-radius:24px;
+  background:linear-gradient(135deg,rgba(0,240,255,0.08),rgba(255,0,229,0.08));
+  color:#fff;font-family:'Orbitron';font-size:11px;letter-spacing:4px;cursor:pointer;
+  transition:all 0.4s;backdrop-filter:blur(10px)}
+.warp:hover{box-shadow:0 0 30px rgba(0,240,255,0.25),inset 0 0 30px rgba(0,240,255,0.04);
+  border-color:var(--mag);transform:translateX(-50%) scale(1.04)}
+
+/* ANIMATIONS */
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+@keyframes spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes slideR{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:translateX(0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes glow{0%,100%{box-shadow:0 0 8px rgba(0,240,255,0.2)}50%{box-shadow:0 0 20px rgba(0,240,255,0.4)}}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="scan"></div>
+<svg style="position:absolute;width:0;height:0"><defs>
+  <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stop-color="#00ff88"/><stop offset="100%" stop-color="#00f0ff"/>
+  </linearGradient>
+</defs></svg>
+
+<div class="app">
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="logo">SYNESTHESIAPAY<sub>BRIDGE COMMAND</sub></div>
+    <div class="topbar-r">
+      <div class="stardate" id="sd"></div>
+      <div class="cmdr-pill">
+        <div class="cmdr-av">🧑‍🚀</div>
+        <div><div class="cmdr-name">CMDR. NOVA-7</div><div class="cmdr-rank">LVL 12 CAPTAIN</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('bridge',this)"><span class="tab-icon">🌌</span>Bridge</div>
+    <div class="tab" onclick="switchTab('cards',this)"><span class="tab-icon">💳</span>Card Intelligence<span class="badge"></span></div>
+    <div class="tab" onclick="switchTab('travel',this)"><span class="tab-icon">✈️</span>Travel & Lounges</div>
+    <div class="tab" onclick="switchTab('shop',this)"><span class="tab-icon">🛒</span>Smart Spend</div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- ===== BRIDGE VIEW ===== -->
+    <div class="view active" id="v-bridge">
+      <div class="bridge-main">
+        <!-- HUD -->
+        <div class="pnl pnl-glow hud">
+          <div class="orbit o1"></div><div class="orbit o2"></div><div class="orbit o3"></div>
+          <canvas id="hudC"></canvas>
+          <div class="hud-content">
+            <div class="bal-label">TOTAL NET WORTH</div>
+            <div class="bal-amt" id="balAmt">$47,832</div>
+            <div class="bal-chg">▲ +$1,247 this cycle</div>
+          </div>
+        </div>
+        <!-- ASTEROIDS -->
+        <div class="pnl">
+          <div class="pnl-t">☄️ Incoming Threats</div>
+          <div class="ast-zone" id="astZone"></div>
+        </div>
+        <!-- METRICS -->
+        <div class="metrics">
+          <div class="pnl metric"><div class="metric-l">INCOME</div><div class="metric-v">$6,240</div><div class="metric-s">Monthly</div><div class="sparks" id="sp1"></div></div>
+          <div class="pnl metric"><div class="metric-l">SAVINGS</div><div class="metric-v">$18.4K</div><div class="metric-s">Reserve</div><div class="sparks" id="sp2"></div></div>
+          <div class="pnl metric"><div class="metric-l">SPENDING</div><div class="metric-v">$3,891</div><div class="metric-s">This Cycle</div><div class="sparks" id="sp3"></div></div>
+          <div class="pnl metric"><div class="metric-l">INVEST</div><div class="metric-v">$22.1K</div><div class="metric-s">▲ 12.4%</div><div class="sparks" id="sp4"></div></div>
+        </div>
+      </div>
+
+      <div class="bridge-side">
+        <!-- CAPTAIN -->
+        <div class="pnl">
+          <div class="pnl-t">Captain's Bridge</div>
+          <div class="capt-hdr">
+            <div class="capt-av">👨‍🚀</div>
+            <div><div class="capt-nm">CAPTAIN NOVA</div><div class="capt-rk">FINANCIAL AI · ONLINE</div></div>
+          </div>
+          <div class="capt-msg" id="captMsg">Scanning systems...</div>
+          <div class="capt-tools" id="captTools"></div>
+          <div class="capt-btns">
+            <button class="cbtn" onclick="captSpeak('budget')">📊 Budget</button>
+            <button class="cbtn" onclick="captSpeak('threats')">☄️ Threats</button>
+            <button class="cbtn" onclick="captSpeak('savings')">🚀 Savings</button>
+            <button class="cbtn mag" onclick="captSpeak('cards')">💳 Cards</button>
+          </div>
+        </div>
+        <!-- SHIELDS -->
+        <div class="pnl">
+          <div class="pnl-t">🛡️ Financial Shields</div>
+          <div class="shield-group" id="shields"></div>
+        </div>
+        <!-- TX LOG -->
+        <div class="pnl" style="flex:1">
+          <div class="pnl-t">Transaction Log</div>
+          <div class="tx-scroll" id="txList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== CARD INTEL VIEW ===== -->
+    <div class="view" id="v-cards" style="flex-direction:column">
+      <div class="pnl" style="flex-shrink:0">
+        <div class="pnl-t">🃏 Your Fleet — Select a Card</div>
+        <div style="padding:8px 16px 14px"><div class="wallet" id="wallet"></div></div>
+      </div>
+      <div class="card-detail" id="cardDetail">
+        <div class="pnl">
+          <div class="pnl-t">⭐ Benefits & Rewards</div>
+          <div class="ben-grid" id="benGrid"></div>
+        </div>
+        <div class="pnl">
+          <div class="pnl-t">📊 Optimization Score</div>
+          <div class="max-score">
+            <div class="max-ring">
+              <svg viewBox="0 0 120 120"><circle class="bg" cx="60" cy="60" r="52"/><circle class="fg" id="scoreArc" cx="60" cy="60" r="52" stroke-dasharray="327" stroke-dashoffset="327"/></svg>
+              <div class="max-val" id="scoreVal">0%</div>
+            </div>
+            <div class="max-label">CARD UTILIZATION</div>
+          </div>
+          <div class="max-tips" id="maxTips"></div>
+        </div>
+        <div class="pnl cd-full">
+          <div class="pnl-t">💡 Missed Rewards This Month</div>
+          <div id="missedRewards" style="padding:8px 16px 14px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== TRAVEL VIEW ===== -->
+    <div class="view" id="v-travel" style="flex-direction:column">
+      <div class="pnl">
+        <div class="pnl-t">✈️ Flight & Lounge Intelligence</div>
+        <div class="travel-box">
+          <div class="travel-form">
+            <input class="t-input" id="tFrom" placeholder="Flying from (e.g. PIT)">
+            <input class="t-input" id="tTo" placeholder="Flying to (e.g. LAX)">
+            <button class="t-btn" onclick="scanLounges()">SCAN</button>
+          </div>
+          <div class="lounge-results" id="loungeResults">
+            <div style="text-align:center;padding:20px;opacity:0.3;font-size:13px">Enter your route to scan available lounges and travel benefits across your card fleet</div>
+          </div>
+        </div>
+      </div>
+      <div class="pnl" style="flex:1">
+        <div class="pnl-t">🌍 Your Travel Perks Summary</div>
+        <div id="travelPerks" style="padding:8px 16px"></div>
+      </div>
+    </div>
+
+    <!-- ===== SMART SPEND VIEW ===== -->
+    <div class="view" id="v-shop" style="flex-direction:column">
+      <div class="pnl">
+        <div class="pnl-t">🛒 Smart Spend Advisor</div>
+        <div class="shop-box">
+          <div class="shop-form">
+            <input class="t-input" id="shopQ" placeholder="What are you buying? (e.g. groceries, gas, Amazon, restaurant)" style="flex:2">
+            <input class="t-input" id="shopAmt" placeholder="Amount ($)" style="flex:0.7">
+            <button class="t-btn" onclick="shopAdvise()">OPTIMIZE</button>
+          </div>
+          <div id="shopResult"></div>
+        </div>
+      </div>
+      <div class="pnl" style="flex:1">
+        <div class="pnl-t">📈 Monthly Card Strategy</div>
+        <div id="strategyView" style="padding:12px 16px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button class="warp" id="warpBtn" onclick="warp()">◆ INITIATE PAYMENT ◆</button>
+
+<script>
+// ===== BACKGROUND =====
+const bg=document.getElementById('bg'),bx=bg.getContext('2d');
+let stars=[];
+function initBg(){bg.width=innerWidth;bg.height=innerHeight;stars=[];
+  for(let i=0;i<250;i++)stars.push({x:Math.random()*bg.width,y:Math.random()*bg.height,s:Math.random()*1.5+0.3,v:Math.random()*0.25+0.03,o:Math.random()*6})}
+function drawBg(){bx.clearRect(0,0,bg.width,bg.height);
+  // nebula
+  const g1=bx.createRadialGradient(bg.width*0.2,bg.height*0.3,0,bg.width*0.2,bg.height*0.3,bg.width*0.4);
+  g1.addColorStop(0,'rgba(108,99,255,0.04)');g1.addColorStop(1,'transparent');bx.fillStyle=g1;bx.fillRect(0,0,bg.width,bg.height);
+  const g2=bx.createRadialGradient(bg.width*0.8,bg.height*0.7,0,bg.width*0.8,bg.height*0.7,bg.width*0.35);
+  g2.addColorStop(0,'rgba(255,0,229,0.03)');g2.addColorStop(1,'transparent');bx.fillStyle=g2;bx.fillRect(0,0,bg.width,bg.height);
+  stars.forEach(s=>{s.o+=0.01;const a=0.3+Math.abs(Math.sin(s.o))*0.7;
+    bx.beginPath();bx.arc(s.x,s.y,s.s,0,Math.PI*2);bx.fillStyle=`rgba(190,210,255,${a})`;bx.fill();
+    s.y+=s.v;if(s.y>bg.height){s.y=0;s.x=Math.random()*bg.width}});
+  requestAnimationFrame(drawBg)}
+initBg();drawBg();addEventListener('resize',initBg);
+
+// HUD particles
+const hc=document.getElementById('hudC'),hx=hc.getContext('2d');let pts=[];
+function initHud(){hc.width=hc.parentElement.clientWidth;hc.height=hc.parentElement.clientHeight;pts=[];
+  const cx=hc.width/2,cy=hc.height/2;
+  for(let i=0;i<40;i++)pts.push({x:cx+(Math.random()-0.5)*300,y:cy+(Math.random()-0.5)*200,
+    vx:(Math.random()-0.5)*0.3,vy:(Math.random()-0.5)*0.3,s:Math.random()*2+0.5,c:Math.random()>.5?'0,240,255':'108,99,255'})}
+function drawHud(){hx.clearRect(0,0,hc.width,hc.height);const cx=hc.width/2,cy=hc.height/2;
+  const g=hx.createRadialGradient(cx,cy,0,cx,cy,180);
+  g.addColorStop(0,'rgba(108,99,255,0.03)');g.addColorStop(0.5,'rgba(0,240,255,0.015)');g.addColorStop(1,'transparent');
+  hx.fillStyle=g;hx.fillRect(0,0,hc.width,hc.height);
+  pts.forEach((p,i)=>{p.x+=p.vx;p.y+=p.vy;const dx=p.x-cx,dy=p.y-cy,d=Math.sqrt(dx*dx+dy*dy);
+    if(d>200){p.vx-=dx*0.001;p.vy-=dy*0.001}
+    hx.beginPath();hx.arc(p.x,p.y,p.s,0,Math.PI*2);
+    hx.fillStyle=`rgba(${p.c},${0.2+Math.sin(Date.now()*0.002+i)*0.15})`;hx.fill();
+    pts.forEach((q,j)=>{if(j<=i)return;const dd=Math.hypot(p.x-q.x,p.y-q.y);
+      if(dd<70){hx.beginPath();hx.moveTo(p.x,p.y);hx.lineTo(q.x,q.y);
+        hx.strokeStyle=`rgba(0,240,255,${(1-dd/70)*0.06})`;hx.stroke()}})});
+  requestAnimationFrame(drawHud)}
+initHud();drawHud();
+
+// Stardate
+setInterval(()=>{const d=new Date();document.getElementById('sd').textContent=
+  `SD ${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} — ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`},1000);
+
+// ===== TABS =====
+function switchTab(id,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('v-'+id).classList.add('active');
+}
+
+// ===== ASTEROIDS =====
+const astData=[
+  {type:'danger',icon:'☄️',title:'Netflix + Hulu Renewal',detail:'Auto-renews in 2 days',amt:'$31.98',sev:'danger'},
+  {type:'warning',icon:'⚠️',title:'Dining Overspend',detail:'142% of monthly budget',amt:'$284',sev:'warning'},
+  {type:'danger',icon:'☄️',title:'Gym Membership',detail:'Unused 47 days — renews in 5d',amt:'$49.99',sev:'danger'},
+  {type:'info',icon:'💡',title:'Card Benefit Unused',detail:'Sapphire 3x dining — you used Freedom',amt:'+$12 missed',sev:'info'},
+];
+function renderAst(){const z=document.getElementById('astZone');z.innerHTML='';
+  astData.forEach((a,i)=>{setTimeout(()=>{const d=document.createElement('div');d.className=`ast ${a.sev}`;
+    d.innerHTML=`<span class="ast-icon">${a.icon}</span><div class="ast-info"><strong>${a.title}</strong><small>${a.detail}</small></div><span class="ast-amt">${a.amt}</span><button class="ast-action" onclick="deflect(this)">DEFLECT</button>`;
+    z.appendChild(d)},i*300)})}
+function deflect(btn){const a=btn.parentElement;a.style.opacity='0';a.style.transform='translateX(80px)';setTimeout(()=>a.remove(),400)}
+setTimeout(renderAst,600);
+
+// ===== TRANSACTIONS =====
+const txData=[
+  {i:'🛸',n:'Uber Ride',c:'Transport',a:-18.50},{i:'🍜',n:'Chipotle',c:'Dining',a:-12.40},
+  {i:'💰',n:'Payroll Deposit',c:'Income',a:+3120},{i:'🎮',n:'Steam Games',c:'Entertainment',a:-29.99},
+  {i:'🏠',n:'Rent Payment',c:'Housing',a:-1450},{i:'📡',n:'Verizon',c:'Utilities',a:-85},
+  {i:'☕',n:'Starbucks',c:'Dining',a:-6.75},{i:'📈',n:'AAPL Dividend',c:'Investment',a:+42.50},
+  {i:'🎵',n:'Spotify',c:'Subscription',a:-10.99},{i:'⛽',n:'Shell Gas',c:'Transport',a:-48.20},
+];
+const tl=document.getElementById('txList');
+txData.forEach(t=>{const d=document.createElement('div');d.className='tx';
+  d.innerHTML=`<div class="tx-ic">${t.i}</div><div class="tx-d"><div class="n">${t.n}</div><div class="c">${t.c}</div></div><div class="tx-a ${t.a>0?'pos':'neg'}">${t.a>0?'+':''}$${Math.abs(t.a).toFixed(2)}</div>`;
+  tl.appendChild(d)});
+
+// ===== SHIELDS =====
+const shData=[
+  {n:'Budget Integrity',v:72,c:'linear-gradient(90deg,#00ff88,#00f0ff)'},
+  {n:'Savings Trajectory',v:91,c:'linear-gradient(90deg,#ffd700,#ff00e5)'},
+  {n:'Spending Control',v:58,c:'linear-gradient(90deg,#ff3355,#ffd700)'},
+  {n:'VISA Shield',v:100,c:'linear-gradient(90deg,#6c63ff,#00f0ff)'},
+  {n:'Card Optimization',v:67,c:'linear-gradient(90deg,#ff8a50,#ff6b9d)'},
+];
+const sg=document.getElementById('shields');
+shData.forEach(s=>{const d=document.createElement('div');d.className='shield-row';
+  d.innerHTML=`<div class="shield-lbl"><span>${s.n}</span><span>${s.v}%</span></div><div class="shield-bar"><div class="shield-fill" style="width:0;background:${s.c}"></div></div>`;
+  sg.appendChild(d);setTimeout(()=>d.querySelector('.shield-fill').style.width=s.v+'%',300)});
+
+// ===== SPARKLINES =====
+function mkSp(id,n){const e=document.getElementById(id);for(let i=0;i<n;i++){const b=document.createElement('div');b.style.height=Math.random()*16+3+'px';e.appendChild(b)}}
+mkSp('sp1',14);mkSp('sp2',14);mkSp('sp3',14);mkSp('sp4',14);
+
+// ===== CAPTAIN =====
+const captMsgs={
+  init:"Commander, all systems nominal. I've detected 3 incoming asteroids and a card optimization opportunity. Your dining sector is running hot at 142% — recommend deflecting that gym asteroid to free up $49.99/month in shields. Also: you used your Freedom card at Chipotle, but Sapphire Reserve earns 3x there. Shall I adjust your card strategy?",
+  budget:"Budget scan complete. Life Support (Needs): 48% — on track. Recreation Deck (Wants): 67% — dining at 142%, entertainment at 89%. Warp Fuel (Savings): 22% — slightly ahead. Overall hull integrity at 72%. Recommend reducing dining by $84 to restore shields to 85%.",
+  threats:"Threat analysis: 3 active asteroids. Priority 1: Gym membership — zero usage, 47 days dormant, $49.99/mo drain. Priority 2: Dining overspend — $284 over budget this cycle. Priority 3: Streaming renewals — $31.98 in 48 hours. Total threat impact: $365.97/month. Recommend immediate deflection of gym, partial shield activation on dining via VISA controls.",
+  savings:"Savings trajectory: Emergency fund at $18,400 of $20,000 target. Current pace: 4.2 months to target. If you deflect the gym asteroid (+$49.99/mo) and optimize card rewards (+$35/mo estimated), arrival drops to 2.8 months. Warp speed achievable, Commander.",
+  cards:"Card fleet analysis: You're leaving approximately $47/month in rewards on the table. Primary leak: using Freedom Unlimited for dining instead of Sapphire Reserve (3x vs 1.5x). Your Amex Gold 4x groceries benefit is only 60% utilized. I've updated the Smart Spend advisor with optimized routing. Check the Card Intelligence tab for full breakdown."
+};
+function captSpeak(key){const el=document.getElementById('captMsg'),tl=document.getElementById('captTools');
+  el.innerHTML='<span class="cur"></span>';tl.innerHTML='';
+  const txt=captMsgs[key]||captMsgs.init;let i=0;
+  const iv=setInterval(()=>{if(i<txt.length){el.innerHTML=txt.slice(0,i+1)+'<span class="cur"></span>';i++}
+    else{clearInterval(iv);el.innerHTML=txt;
+      const tools=key==='cards'?['card_analyzer','rewards_optimizer','spending_router']:
+        key==='budget'?['budget_engine','category_scan']:
+        key==='threats'?['threat_detector','visa_controls','budget_engine']:
+        ['snapshot','budget_engine','threat_detector'];
+      tl.innerHTML=tools.map(t=>`<span class="tool-pill">${t}</span>`).join('')}},14)}
+setTimeout(()=>captSpeak('init'),800);
+
+// ===== CREDIT CARDS =====
+const cards=[
+  {id:'sapphire',name:'Chase Sapphire Reserve',last4:'4821',net:'VISA',cls:'sapphire',
+    benefits:[
+      {cat:'Dining',name:'3x Points on Dining',val:'3x',cls:'high',note:'$285 earned YTD'},
+      {cat:'Travel',name:'3x Points on Travel',val:'3x',cls:'high',note:'$420 earned YTD'},
+      {cat:'Lounge',name:'Priority Pass',val:'FREE',cls:'high',note:'Unlimited visits'},
+      {cat:'Credit',name:'$300 Travel Credit',val:'$300',cls:'high',note:'$180 remaining'},
+      {cat:'Insurance',name:'Trip Delay Insurance',val:'$500/d',cls:'med',note:'After 6hr delay'},
+      {cat:'Rental',name:'Car Rental CDW',val:'Primary',cls:'high',note:'Auto-enrolled'},
+    ],score:74,
+    tips:[{t:'Use for ALL dining — you missed 8 transactions',save:'+$24/mo',i:'🍽️'},
+      {t:'Book hotels through portal for 10x bonus',save:'+$15/mo',i:'🏨'},
+      {t:'Use $120 remaining travel credit before Dec',save:'$120',i:'✈️'}],
+    missed:[{where:'Chipotle (3 visits)',used:'Freedom 1.5x',shouldve:'Sapphire 3x',lost:'$4.20'},
+      {where:'Uber (6 rides)',used:'Debit Card',shouldve:'Sapphire 3x',lost:'$8.10'}]
+  },
+  {id:'gold',name:'Amex Gold Card',last4:'7744',net:'AMEX',cls:'gold-card',
+    benefits:[
+      {cat:'Groceries',name:'4x Points on Groceries',val:'4x',cls:'high',note:'Up to $25K/yr'},
+      {cat:'Dining',name:'4x Points on Restaurants',val:'4x',cls:'high',note:'Worldwide'},
+      {cat:'Credits',name:'$120 Dining Credit',val:'$10/mo',cls:'med',note:'$4 remaining this mo'},
+      {cat:'Credits',name:'$120 Uber Credit',val:'$10/mo',cls:'med',note:'Unused this month!'},
+      {cat:'Entertainment',name:'Disney+ Credit',val:'$7/mo',cls:'low',note:'Auto-applied'},
+    ],score:62,
+    tips:[{t:'Use $10 Uber credit before month end!',save:'$10',i:'🚗'},
+      {t:'Shift all grocery spend here from Freedom',save:'+$18/mo',i:'🛒'},
+      {t:'Use Dining credit at Shake Shack/Cheesecake',save:'$6/mo',i:'🍔'}],
+    missed:[{where:'Whole Foods (4 visits)',used:'Freedom 1.5x',shouldve:'Amex Gold 4x',lost:'$12.50'},
+      {where:'Uber Eats (2 orders)',used:'Sapphire 3x',shouldve:'Amex Gold 4x + Uber credit',lost:'$6.80'}]
+  },
+  {id:'freedom',name:'Chase Freedom Unlimited',last4:'3356',net:'VISA',cls:'freedom',
+    benefits:[
+      {cat:'Everything',name:'1.5% Unlimited Cashback',val:'1.5%',cls:'med',note:'No category limits'},
+      {cat:'Quarterly',name:'5% Rotating Categories',val:'5%',cls:'high',note:'Q1: Gas & EV Charging'},
+      {cat:'Pharmacy',name:'3% on Drugstores',val:'3%',cls:'med',note:'CVS, Walgreens, etc'},
+      {cat:'Dining',name:'3% on Dining',val:'3%',cls:'med',note:'Redundant — use Sapphire'},
+    ],score:81,
+    tips:[{t:'Great as catch-all card — keep using for misc',save:'Optimal',i:'✅'},
+      {t:'Activate Q1 5% bonus category NOW',save:'+$37/qtr',i:'⛽'}],
+    missed:[{where:'Gas Station (5 fills)',used:'Debit',shouldve:'Freedom 5x bonus',lost:'$11.25'}]
+  },
+  {id:'plat',name:'Amex Platinum',last4:'9012',net:'AMEX',cls:'plat',
+    benefits:[
+      {cat:'Flights',name:'5x on Flights (direct)',val:'5x',cls:'high',note:'Book direct with airline'},
+      {cat:'Lounge',name:'Centurion Lounge',val:'FREE',cls:'high',note:'+ Priority Pass + Delta'},
+      {cat:'Credits',name:'$200 Hotel Credit',val:'$200',cls:'high',note:'FHR/THC bookings'},
+      {cat:'Credits',name:'$200 Airline Credit',val:'$200',cls:'high',note:'Select 1 airline'},
+      {cat:'Credits',name:'$155 Walmart+',val:'$13/mo',cls:'med',note:'Auto-enrolled'},
+      {cat:'Credits',name:'$240 Entertainment',val:'$20/mo',cls:'med',note:'Disney+, Hulu, etc'},
+      {cat:'Status',name:'Hilton Gold Status',val:'Gold',cls:'med',note:'Auto breakfast + upgrades'},
+      {cat:'Status',name:'Marriott Gold Status',val:'Gold',cls:'med',note:'Late checkout + upgrades'},
+    ],score:58,
+    tips:[{t:'Use $200 hotel credit — expires Dec 31',save:'$200',i:'🏨'},
+      {t:'Select airline for $200 incidental credit',save:'$200',i:'✈️'},
+      {t:'Claim $20/mo entertainment credit',save:'$20/mo',i:'🎬'}],
+    missed:[{where:'Delta Flight',used:'Sapphire 3x',shouldve:'Platinum 5x',lost:'$28.00'},
+      {where:'Marriott Stay',used:'Personal Card',shouldve:'Platinum (FHR portal)',lost:'$200 credit'}]
+  },
+];
+let selectedCard=0;
+
+function renderWallet(){const w=document.getElementById('wallet');w.innerHTML='';
+  cards.forEach((c,i)=>{const d=document.createElement('div');d.className=`cc ${c.cls}${i===selectedCard?' selected':''}`;
+    d.onclick=()=>{selectedCard=i;renderWallet();renderCardDetail()};
+    d.innerHTML=`<div class="cc-top"><div class="cc-issuer">${c.net}</div><div class="cc-chip"></div></div>
+      <div class="cc-num">•••• •••• •••• ${c.last4}</div>
+      <div class="cc-bottom"><div class="cc-name">${c.name.split(' ').slice(-2).join(' ')}</div><div class="cc-net">Score: ${c.score}%</div></div>`;
+    w.appendChild(d)})}
+
+function renderCardDetail(){const c=cards[selectedCard];
+  // Benefits
+  const bg=document.getElementById('benGrid');bg.innerHTML='';
+  c.benefits.forEach(b=>{bg.innerHTML+=`<div class="ben"><div class="ben-cat">${b.cat}</div><div class="ben-name">${b.name}</div><div class="ben-val ${b.cls}">${b.val}</div><div class="ben-note">${b.note}</div></div>`});
+  // Score ring
+  const pct=c.score,circ=327,off=circ-(circ*pct/100);
+  document.getElementById('scoreArc').style.strokeDashoffset=off;
+  document.getElementById('scoreVal').textContent=pct+'%';
+  // Tips
+  const mt=document.getElementById('maxTips');mt.innerHTML='';
+  c.tips.forEach(t=>{mt.innerHTML+=`<div class="tip"><span class="tip-icon">${t.i}</span><span>${t.t}</span><span class="tip-save">${t.save}</span></div>`});
+  // Missed
+  const mr=document.getElementById('missedRewards');mr.innerHTML='';
+  c.missed.forEach(m=>{mr.innerHTML+=`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.03);font-size:12px;animation:fadeUp 0.4s ease-out">
+    <span>${m.where}</span><span style="opacity:0.4">Used: ${m.used}</span><span style="color:var(--green)">Should: ${m.shouldve}</span><span style="color:var(--red);font-family:Orbitron;font-size:11px">-${m.lost}</span></div>`});
+}
+renderWallet();setTimeout(renderCardDetail,100);
+
+// ===== TRAVEL / LOUNGES =====
+const loungeDB={
+  PIT:[{n:'American Airlines Admirals Club',t:'Concourse C',card:'Amex Platinum',c:'background:rgba(90,90,106,0.3);color:#c0c0c0'},{n:'Air France/KLM Lounge',t:'International Terminal',card:'Priority Pass (Sapphire)',c:'background:rgba(0,100,200,0.15);color:#8bb8ff'}],
+  LAX:[{n:'Star Alliance Lounge',t:'TBIT',card:'Priority Pass (Sapphire)',c:'background:rgba(0,100,200,0.15);color:#8bb8ff'},{n:'Centurion Lounge',t:'Terminal B',card:'Amex Platinum',c:'background:rgba(90,90,106,0.3);color:#c0c0c0'},{n:'Delta Sky Club',t:'Terminal 2',card:'Amex Platinum',c:'background:rgba(90,90,106,0.3);color:#c0c0c0'}],
+  JFK:[{n:'Centurion Lounge',t:'Terminal 4',card:'Amex Platinum',c:'background:rgba(90,90,106,0.3);color:#c0c0c0'},{n:'Chase Sapphire Lounge',t:'Terminal 1',card:'Sapphire Reserve',c:'background:rgba(10,22,40,0.5);color:#8bb8ff'},{n:'Delta ONE Lounge',t:'Terminal 4',card:'Amex Platinum',c:'background:rgba(90,90,106,0.3);color:#c0c0c0'}],
+  ORD:[{n:'Centurion Lounge',t:'Terminal 3',card:'Amex Platinum',c:'background:rgba(90,90,106,0.3);color:#c0c0c0'},{n:'United Club',t:'Terminal 1',card:'Priority Pass (Sapphire)',c:'background:rgba(0,100,200,0.15);color:#8bb8ff'}],
+  SFO:[{n:'Centurion Lounge',t:'Terminal 1',card:'Amex Platinum',c:'background:rgba(90,90,106,0.3);color:#c0c0c0'},{n:'United Polaris Lounge',t:'International Terminal',card:'Priority Pass (Sapphire)',c:'background:rgba(0,100,200,0.15);color:#8bb8ff'}],
+};
+function scanLounges(){
+  const from=(document.getElementById('tFrom').value||'PIT').toUpperCase();
+  const to=(document.getElementById('tTo').value||'LAX').toUpperCase();
+  const r=document.getElementById('loungeResults');r.innerHTML='';
+  const all=[];
+  [from,to].forEach(code=>{const ls=loungeDB[code]||[];
+    ls.forEach(l=>all.push({...l,airport:code}))});
+  if(!all.length){r.innerHTML='<div style="text-align:center;padding:16px;opacity:0.4">No lounges found for that route. Try PIT → LAX, JFK, ORD, or SFO.</div>';return}
+  all.forEach((l,i)=>{setTimeout(()=>{const d=document.createElement('div');d.className='lounge';d.style.animation=`fadeUp 0.4s ease-out ${i*0.1}s both`;
+    d.innerHTML=`<div class="lounge-icon">🛋️</div><div class="lounge-info"><strong>${l.n}</strong><small>${l.airport} · ${l.t}</small></div><div class="lounge-card" style="${l.c}">${l.card}</div>`;
+    r.appendChild(d)},i*80)});
+  // Add booking tip
+  setTimeout(()=>{const tip=document.createElement('div');tip.style.cssText='padding:12px;margin-top:8px;border-radius:8px;background:rgba(0,255,136,0.04);border:1px solid rgba(0,255,136,0.1);font-size:12px;color:var(--green);animation:fadeUp 0.4s ease-out';
+    tip.innerHTML=`💡 <strong>Captain's Tip:</strong> Book your ${from}→${to} flight directly with the airline using your <strong>Amex Platinum (5x points)</strong>. Use Sapphire Reserve for the Uber to the airport (3x transport). Total optimization: ~$${Math.floor(Math.random()*40+25)} extra in rewards.`;
+    r.appendChild(tip)},all.length*80+200);
+}
+
+// Travel perks summary
+const tp=document.getElementById('travelPerks');
+tp.innerHTML=`
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
+    ${[
+      {i:'🛋️',n:'Lounge Networks',v:'3 Networks',d:'Centurion + Priority Pass + Delta Sky Club'},
+      {i:'🏨',n:'Hotel Status',v:'2 Programs',d:'Hilton Gold + Marriott Gold (via Amex Plat)'},
+      {i:'🚗',n:'Rental Insurance',v:'Primary CDW',d:'Via Sapphire Reserve — skip rental counter coverage'},
+      {i:'⏰',n:'Trip Delay',v:'$500/day',d:'After 6hr delay — covers meals, hotel, essentials'},
+      {i:'🧳',n:'Lost Bag',v:'$3,000',d:'Per passenger via Sapphire Reserve'},
+      {i:'💱',n:'No Foreign Tx Fee',v:'3 Cards',d:'Sapphire + Amex Gold + Amex Platinum'},
+    ].map(p=>`<div class="ben" style="animation:fadeUp 0.4s ease-out"><div class="ben-cat">${p.i} ${p.n}</div><div class="ben-val med">${p.v}</div><div class="ben-note">${p.d}</div></div>`).join('')}
+  </div>`;
+
+// ===== SMART SPEND =====
+const spendMap={
+  'groceries':{best:'Amex Gold',rate:'4x',why:'Amex Gold earns 4x MR points on groceries (up to $25K/yr). Your next best option is Freedom at 1.5%.',alts:[{c:'Freedom Unlimited',r:'1.5%'},{c:'Sapphire Reserve',r:'1x'}]},
+  'grocery':{best:'Amex Gold',rate:'4x',why:'Amex Gold earns 4x MR points on groceries (up to $25K/yr).',alts:[{c:'Freedom Unlimited',r:'1.5%'}]},
+  'restaurant':{best:'Amex Gold',rate:'4x',why:'Amex Gold edges Sapphire Reserve (3x) for dining. Both are great, but Gold wins by 1x per dollar.',alts:[{c:'Sapphire Reserve',r:'3x'},{c:'Freedom Unlimited',r:'3%'}]},
+  'dining':{best:'Amex Gold',rate:'4x',why:'Amex Gold 4x beats Sapphire Reserve 3x on restaurants. Use Gold for dine-in and delivery.',alts:[{c:'Sapphire Reserve',r:'3x'},{c:'Freedom Unlimited',r:'3%'}]},
+  'gas':{best:'Freedom Unlimited',rate:'5%',why:'Q1 rotating category gives 5% on gas and EV charging (up to $1,500). Make sure you activated it!',alts:[{c:'Sapphire Reserve',r:'1x'},{c:'Amex Gold',r:'1x'}]},
+  'uber':{best:'Amex Gold',rate:'4x + $10',why:'Amex Gold 4x on dining + $10/mo Uber credit stacks. Use in Uber Eats for maximum value.',alts:[{c:'Sapphire Reserve',r:'3x transport'},{c:'Freedom',r:'1.5%'}]},
+  'amazon':{best:'Freedom Unlimited',rate:'1.5%',why:'Without an Amazon card, Freedom 1.5% cashback is your best general rate. Consider applying for Amazon Prime Visa (5%).',alts:[{c:'Sapphire Reserve',r:'1x'},{c:'Amex Gold',r:'1x'}]},
+  'flight':{best:'Amex Platinum',rate:'5x',why:'Amex Platinum earns 5x MR on flights booked directly with airlines. Do NOT book through travel portals for this benefit.',alts:[{c:'Sapphire Reserve',r:'3x travel'},{c:'Freedom',r:'1.5%'}]},
+  'hotel':{best:'Amex Platinum (FHR)',rate:'5x + $200',why:'Use Fine Hotels & Resorts portal for 5x points PLUS $200 annual credit. Includes late checkout, breakfast, and room upgrade.',alts:[{c:'Sapphire Reserve',r:'3x + 10x portal'},{c:'Amex Gold',r:'1x'}]},
+  'streaming':{best:'Amex Platinum',rate:'$20/mo',why:'Amex Platinum covers up to $20/mo in streaming credits (Disney+, Hulu, ESPN+, etc). Free money.',alts:[{c:'Freedom',r:'1.5%'},{c:'Amex Gold',r:'1x'}]},
+  'default':{best:'Freedom Unlimited',rate:'1.5%',why:'For uncategorized spend, Freedom Unlimited 1.5% cashback is your reliable catch-all card.',alts:[{c:'Sapphire Reserve',r:'1x'},{c:'Amex Gold',r:'1x'}]},
+};
+function shopAdvise(){
+  const q=(document.getElementById('shopQ').value||'').toLowerCase().trim();
+  const amt=parseFloat(document.getElementById('shopAmt').value)||50;
+  const key=Object.keys(spendMap).find(k=>q.includes(k))||'default';
+  const s=spendMap[key];
+  const r=document.getElementById('shopResult');
+  r.innerHTML=`<div class="shop-result" style="animation:fadeUp 0.3s ease-out">
+    <div class="shop-winner"><div><div style="font-size:10px;opacity:0.4;letter-spacing:2px;margin-bottom:2px">RECOMMENDED CARD</div>
+      <div class="shop-winner-card">${s.best}</div></div>
+      <div style="margin-left:auto;text-align:right"><div style="font-size:10px;opacity:0.4">EARN RATE</div><div class="shop-rate">${s.rate}</div></div></div>
+    <div class="shop-reason">${s.why}</div>
+    <div class="shop-alts"><div style="font-size:10px;opacity:0.3;letter-spacing:1px;margin-bottom:6px">ALTERNATIVES</div>
+      ${s.alts.map(a=>`<div class="shop-alt"><span>${a.c}</span><span>${a.r}</span></div>`).join('')}
+    </div></div>`;
+}
+
+// Strategy view
+const sv=document.getElementById('strategyView');
+sv.innerHTML=`
+  <div style="font-size:13px;line-height:1.7;opacity:0.7;margin-bottom:16px">
+    Based on your spending patterns, here's your optimized card routing strategy:
+  </div>
+  ${[
+    {cat:'🍽️ Dining & Restaurants',card:'Amex Gold',rate:'4x MR',color:'var(--gold)'},
+    {cat:'🛒 Groceries',card:'Amex Gold',rate:'4x MR',color:'var(--gold)'},
+    {cat:'✈️ Flights (direct)',card:'Amex Platinum',rate:'5x MR',color:'var(--cyan)'},
+    {cat:'🏨 Hotels',card:'Amex Platinum (FHR)',rate:'5x + $200 credit',color:'var(--cyan)'},
+    {cat:'🚗 Rideshare & Transport',card:'Sapphire Reserve',rate:'3x UR',color:'var(--blue)'},
+    {cat:'⛽ Gas (Q1 Bonus)',card:'Freedom Unlimited',rate:'5%',color:'var(--green)'},
+    {cat:'🎬 Streaming',card:'Amex Platinum',rate:'$20/mo credit',color:'var(--cyan)'},
+    {cat:'🛍️ Everything Else',card:'Freedom Unlimited',rate:'1.5% cashback',color:'var(--mag)'},
+  ].map(s=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.025);font-size:12px">
+    <span style="width:180px">${s.cat}</span>
+    <span style="flex:1;font-weight:600;color:${s.color}">${s.card}</span>
+    <span style="font-family:Orbitron;font-size:11px;color:${s.color}">${s.rate}</span>
+  </div>`).join('')}
+  <div style="margin-top:16px;padding:12px;border-radius:8px;background:rgba(0,255,136,0.04);border:1px solid rgba(0,255,136,0.1);font-size:12px;color:var(--green)">
+    💰 <strong>Estimated monthly savings from optimal routing: $47 — $82/month</strong> in additional rewards vs your current card usage patterns.
+  </div>`;
+
+// ===== WARP =====
+function warp(){const b=document.getElementById('warpBtn');
+  b.textContent='◆ WARPING... ◆';b.style.borderColor='var(--mag)';
+  document.body.style.transition='filter 0.4s';document.body.style.filter='brightness(1.4) saturate(1.4)';
+  setTimeout(()=>{document.body.style.filter='';b.textContent='◆ PAYMENT COMPLETE ✓ ◆';b.style.borderColor='var(--green)';b.style.color='var(--green)';
+    setTimeout(()=>{b.textContent='◆ INITIATE PAYMENT ◆';b.style.borderColor='';b.style.color=''},2500)},1200)}
+
+// Balance animation
+let bal=47832;
+setInterval(()=>{bal+=(Math.random()-0.4)*30;document.getElementById('balAmt').textContent='$'+Math.floor(bal).toLocaleString()},4000);
+</script>
+</body>
+</html>

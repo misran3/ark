@@ -1,26 +1,202 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap');
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Aurora colors - dynamically updated via JavaScript */
+  --aurora-primary: #8b5cf6;
+  --aurora-secondary: #6366f1;
+  --aurora-tertiary: #3b82f6;
+
+  /* Space colors */
+  --space-black: #030818;
+  --space-dark: #060a16;
+  --space-darker: #020510;
+
+  /* UI colors */
+  --text-primary: #c0d8ff;
+  --text-secondary: rgba(192, 216, 255, 0.6);
+  --text-tertiary: rgba(192, 216, 255, 0.3);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Custom colors */
+  --color-aurora-primary*: var(--aurora-primary);
+  --color-aurora-secondary*: var(--aurora-secondary);
+  --color-aurora-tertiary*: var(--aurora-tertiary);
+  --color-space-black*: var(--space-black);
+  --color-space-dark*: var(--space-dark);
+  --color-space-darker*: var(--space-darker);
+
+  /* Text colors */
+  --color-text-primary*: var(--text-primary);
+  --color-text-secondary*: var(--text-secondary);
+  --color-text-tertiary*: var(--text-tertiary);
+
+  /* Fonts */
+  --font-orbitron: 'Orbitron', var(--font-geist-sans);
+  --font-rajdhani: 'Rajdhani', var(--font-geist-sans);
+  --font-mono: 'Share Tech Mono', var(--font-geist-mono);
+
+  /* Animations */
+  --animate-pulse-slow: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-scan: scan 2s linear infinite;
+  --animate-glow: glow 2s ease-in-out infinite;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
   }
 }
 
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes scan {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 0.8;
+    filter: brightness(1.2);
+  }
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  font-family: 'Rajdhani', sans-serif;
+  color: var(--text-primary);
+  user-select: none;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 3px;
+  height: 3px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--aurora-primary);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--aurora-secondary);
+}
+
+/* Disable text selection on UI elements */
+button,
+.panel,
+.console {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Smooth font rendering */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Aurora gradient utilities */
+.aurora-border {
+  border-image: linear-gradient(
+    90deg,
+    var(--aurora-primary),
+    var(--aurora-secondary),
+    var(--aurora-tertiary)
+  ) 1;
+}
+
+.aurora-gradient {
+  background: linear-gradient(
+    135deg,
+    var(--aurora-primary),
+    var(--aurora-secondary),
+    var(--aurora-tertiary)
+  );
+}
+
+.aurora-text {
+  background: linear-gradient(
+    90deg,
+    var(--aurora-primary),
+    var(--aurora-secondary)
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glassmorphism */
+.glass {
+  background: rgba(6, 10, 26, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Scanline effect */
+.scanlines {
+  position: relative;
+}
+
+.scanlines::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 1px,
+    rgba(0, 240, 255, 0.007) 1px,
+    rgba(0, 240, 255, 0.007) 2px
+  );
+  pointer-events: none;
+  z-index: 9998;
+}
+
+/* Vignette effect */
+.vignette {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 40%,
+    rgba(0, 0, 0, 0.7) 100%
+  );
+  pointer-events: none;
+  z-index: 9997;
 }
