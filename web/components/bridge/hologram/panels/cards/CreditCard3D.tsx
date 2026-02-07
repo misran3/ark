@@ -3,7 +3,8 @@
 import { useRef, useMemo, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Text } from '@react-three/drei';
-import { Color, MathUtils, type Mesh, type BufferGeometry, BufferAttribute, DoubleSide, AdditiveBlending } from 'three';
+import { Color, MathUtils, BufferGeometry, BufferAttribute, DoubleSide, AdditiveBlending } from 'three';
+import type { Mesh } from 'three';
 import type { CreditCardData } from '@/lib/data/fleet-cards';
 import '@/lib/hologram/card-hologram-material';
 
