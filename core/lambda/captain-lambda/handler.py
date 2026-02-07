@@ -8,7 +8,7 @@ import asyncio
 from typing import Any
 
 from aws_lambda_powertools import Logger, Tracer
-from aws_lambda_powertools.event_handler import APIGatewayRestResolver
+from aws_lambda_powertools.event_handler import APIGatewayRestResolver, Response
 from aws_lambda_powertools.logging import correlation_paths
 from aws_lambda_powertools.utilities.typing import LambdaContext
 
@@ -32,7 +32,7 @@ def health_check() -> dict[str, str]:
 
 @app.post("/captain/query")
 @tracer.capture_method
-def captain_query() -> dict[str, Any]:
+def captain_query() -> Response:
     """Process a query to Captain Nova.
 
     Request body:
@@ -42,12 +42,20 @@ def captain_query() -> dict[str, Any]:
         "message": "optional additional context"
     }
 
-    Response:
+    Response (200):
     {
         "message": "Captain Nova's response",
         "tools_used": ["tool1", "tool2"],
         "confidence": 1.0,
         "suggested_visa_controls": [...]  // optional
+    }
+
+    Response (500):
+    {
+        "message": "Error message",
+        "tools_used": [],
+        "confidence": 0.0,
+        "suggested_visa_controls": null
     }
     """
     logger.info("Captain query endpoint called")
@@ -65,16 +73,19 @@ def captain_query() -> dict[str, Any]:
 
         logger.info(f"Response tools used: {response.tools_used}")
 
-        return response.model_dump()
+        return Response(status_code=200, body=response.model_dump())
 
     except Exception as e:
         logger.exception(f"Error processing captain query: {e}")
-        return {
-            "message": "Captain Nova encountered an error. Please try again, Commander.",
-            "tools_used": [],
-            "confidence": 0.0,
-            "suggested_visa_controls": None,
-        }
+        return Response(
+            status_code=500,
+            body={
+                "message": "Captain Nova encountered an error. Please try again, Commander.",
+                "tools_used": [],
+                "confidence": 0.0,
+                "suggested_visa_controls": None,
+            },
+        )
 
 
 @logger.inject_lambda_context(correlation_id_path=correlation_paths.API_GATEWAY_REST)
