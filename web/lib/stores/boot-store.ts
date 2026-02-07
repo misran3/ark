@@ -23,6 +23,20 @@ interface BootStore {
   completeBoot: () => void;
 }
 
+/**
+ * Boot sequence state management
+ *
+ * State flow:
+ * loading → eyelid → blur → blink → console-boot → hud-rise → complete
+ *
+ * Derived state:
+ * - isBooting: true when phase !== 'complete'
+ * - bootComplete: true when phase === 'complete'
+ *
+ * Side effects:
+ * - setPhase() automatically updates derived state
+ * - LocalStorage managed by useBootSequence hook
+ */
 export const useBootStore = create<BootStore>((set) => ({
   phase: 'loading',
   progress: 0,

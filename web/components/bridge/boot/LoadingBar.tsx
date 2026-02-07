@@ -9,7 +9,7 @@ export function LoadingBar({ progress }: LoadingBarProps) {
     <div className="fixed inset-0 bg-black flex flex-col items-center justify-center gap-8">
       {/* Logo */}
       <div
-        className="font-orbitron text-3xl font-bold aurora-text opacity-0 animate-[fadeIn_0.6s_ease-out_forwards]"
+        className="font-orbitron text-3xl font-bold aurora-text opacity-0 animate-fade-in"
         style={{ animationDelay: '0.2s' }}
       >
         SYNESTHESIAPAY
@@ -26,7 +26,7 @@ export function LoadingBar({ progress }: LoadingBarProps) {
         ].map((line, i) => (
           <div
             key={i}
-            className="font-mono text-sm text-aurora-primary opacity-0 animate-[fadeInUp_0.3s_ease-out_forwards]"
+            className="font-mono text-sm text-aurora-primary opacity-0 animate-fade-in-up"
             style={{
               animationDelay: line.delay,
               textShadow: '0 0 20px rgba(139, 92, 246, 0.4)'

@@ -20,6 +20,23 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## System Requirements
+
+### Display
+- **Minimum resolution:** 1024px width (desktop/laptop)
+- **Recommended:** 1920x1080 or higher
+- **Mobile support:** Not currently supported (desktop-only experience)
+
+### Browser
+- Chrome 90+ (recommended for WebGL performance)
+- Firefox 88+
+- Safari 14+
+- Edge 90+
+
+### Hardware
+- WebGL 2.0 support required
+- Dedicated GPU recommended for smooth 3D rendering
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

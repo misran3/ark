@@ -31,13 +31,13 @@ export function PanelPopup({ type, title, children }: PanelPopupProps) {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]"
+        className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm animate-fade-in"
         onClick={closePanel}
       />
 
       {/* Floating panel */}
       <div
-        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[800px] max-h-[600px] animate-[liftUp_0.3s_ease-out]"
+        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[800px] max-h-[600px] animate-lift-up"
         style={{
           boxShadow: '0 20px 60px rgba(0, 255, 255, 0.4)',
         }}

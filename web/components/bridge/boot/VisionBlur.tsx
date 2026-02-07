@@ -8,7 +8,7 @@ export function VisionBlur({ phase }: VisionBlurProps) {
   if (phase === 'blur') {
     return (
       <div
-        className="fixed inset-0 z-[998] pointer-events-none backdrop-blur-[20px] animate-[reduceBlur_0.5s_ease-out_forwards]"
+        className="fixed inset-0 z-[998] pointer-events-none backdrop-blur-[20px] animate-reduce-blur"
       />
     );
   }
@@ -16,7 +16,7 @@ export function VisionBlur({ phase }: VisionBlurProps) {
   if (phase === 'blink') {
     return (
       <div
-        className="fixed inset-0 z-[998] pointer-events-none bg-black animate-[quickBlink_0.5s_ease-in-out]"
+        className="fixed inset-0 z-[998] pointer-events-none bg-black animate-quick-blink"
       />
     );
   }

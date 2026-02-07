@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { useBootStore, type BootPhase } from '@/lib/stores/boot-store';
+import { storage } from '@/lib/utils/storage';
 
 const PHASE_DURATIONS: Record<string, number> = {
   loading: 3000,
@@ -22,6 +23,27 @@ const PHASES: BootPhase[] = [
   'complete',
 ];
 
+/**
+ * Orchestrates the multi-phase boot sequence
+ *
+ * Phases: loading → eyelid → blur → blink → console-boot → hud-rise → complete
+ *
+ * Features:
+ * - LocalStorage skip on repeat visits
+ * - Phase-based timing (defined in PHASE_DURATIONS)
+ * - Automatic phase transitions
+ * - Progress tracking (0-100% per phase)
+ *
+ * @returns {Object} Current phase and progress
+ * @returns {BootPhase} phase - Current boot phase
+ * @returns {number} progress - Progress percentage (0-100) for current phase
+ *
+ * @example
+ * const { phase, progress } = useBootSequence();
+ * if (phase === 'complete') {
+ *   // Boot sequence finished
+ * }
+ */
 export function useBootSequence() {
   // Use individual selectors to avoid unnecessary re-renders
   const phase = useBootStore((s) => s.phase);
@@ -34,7 +56,7 @@ export function useBootSequence() {
 
   useEffect(() => {
     // Check localStorage for skip flag
-    const shouldSkip = localStorage.getItem('skipBootSequence') === 'true';
+    const shouldSkip = storage.getItem('skipBootSequence') === 'true';
     if (shouldSkip && phase === 'loading') {
       setPhase('complete');
       return;
@@ -82,7 +104,7 @@ export function useBootSequence() {
   useEffect(() => {
     // Save skip preference when complete
     if (phase === 'complete') {
-      localStorage.setItem('skipBootSequence', 'true');
+      storage.setItem('skipBootSequence', 'true');
     }
   }, [phase]);
 

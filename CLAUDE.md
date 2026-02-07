@@ -82,6 +82,44 @@ When working on Three.js threat visuals, 3D components, or the R3F scene, always
 - `three-best-practices` — Three.js performance, memory management, disposal
 - `vfx-realtime` — Real-time VFX patterns for cinematic effects
 
+## Development Workflow
+
+### Commit Granularity
+
+When implementing features from detailed plans:
+
+**Prefer granular commits:**
+- Follow the task structure specified in implementation plans
+- One commit per logical task (e.g., "Task 5: Bridge Layout Component")
+- Commit messages reference task numbers from the plan
+- Benefits: easier code review, clearer git history, better bisection
+
+**When consolidation is acceptable:**
+- Tightly coupled changes that don't make sense separately
+- Rapid prototyping or spike work
+- Bug fixes touching multiple related areas
+
+**Example - Good:**
+```
+feat: add boot sequence state machine (Task 1)
+feat: add loading bar with boot text (Task 2)
+feat: add eyelid reveal transition (Task 3)
+```
+
+**Example - Avoid:**
+```
+feat: add entire boot sequence system
+(consolidates Tasks 1-4 into single commit)
+```
+
+### Code Review Checkpoints
+
+For multi-task implementations:
+- Request code review after every 3-5 tasks
+- Use `/requesting-code-review` skill with proper git SHAs
+- Address feedback before continuing to next batch
+- Prevents compounding issues
+
 ## Environment Variables
 
 Frontend (via SSM → Amplify):
