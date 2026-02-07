@@ -170,6 +170,83 @@
   }
 }
 
+/* Start screen: title glitch-in — holographic display powering on */
+@keyframes title-glitch-in {
+  0% {
+    opacity: 0;
+    transform: translateX(0);
+    filter: brightness(1);
+  }
+  8% {
+    opacity: 1;
+    transform: translateX(-8px) skewX(-2deg);
+    filter: brightness(2.5);
+    clip-path: inset(10% 0 40% 0);
+  }
+  12% {
+    opacity: 0;
+    clip-path: inset(0);
+  }
+  20% {
+    opacity: 1;
+    transform: translateX(5px) skewX(1.5deg);
+    filter: brightness(2);
+    clip-path: inset(50% 0 10% 0);
+  }
+  24% {
+    opacity: 0;
+    clip-path: inset(0);
+  }
+  32% {
+    opacity: 1;
+    transform: translateX(-3px);
+    filter: brightness(1.6);
+    clip-path: inset(0);
+  }
+  38% {
+    opacity: 0.3;
+    transform: translateX(0);
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(2px);
+    filter: brightness(1.3);
+  }
+  55% {
+    opacity: 0.7;
+    filter: brightness(1);
+  }
+  65% {
+    opacity: 1;
+    transform: translateX(0);
+    filter: brightness(1);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+    filter: brightness(1);
+  }
+}
+
+/* Start screen: button border breathe */
+@keyframes start-btn-breathe {
+  0%, 100% {
+    border-color: rgba(0, 240, 255, 0.25);
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.05);
+  }
+  50% {
+    border-color: rgba(0, 240, 255, 0.5);
+    box-shadow: 0 0 30px rgba(0, 240, 255, 0.15);
+  }
+}
+
+/* Name exit: container fades to black */
+@keyframes fadeToBlack {
+  from { background-color: transparent; }
+  to { background-color: black; }
+}
+
 * {
   margin: 0;
   padding: 0;
