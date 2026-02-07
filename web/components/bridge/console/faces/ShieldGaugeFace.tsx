@@ -46,8 +46,8 @@ export function ShieldGaugeFace() {
       <div
         className="relative"
         style={{
-          width: '125px',
-          height: '125px',
+          width: '135px',
+          height: '135px',
         }}
       >
         {/* Outer ring — dark metal bezel */}
@@ -98,11 +98,11 @@ export function ShieldGaugeFace() {
             className="absolute"
             style={{
               width: '2px',
-              height: tick.isMajor ? '12px' : '7px',
+              height: tick.isMajor ? '14px' : '8px',
               left: '50%',
               top: '10px',
               marginLeft: '-1px',
-              transformOrigin: `center ${125 / 2 - 10}px`,
+              transformOrigin: `center ${135 / 2 - 10}px`,
               transform: `rotate(${tick.angle}deg)`,
               background: tick.isRedZone
                 ? 'rgba(239, 68, 68, 0.6)'
@@ -115,9 +115,9 @@ export function ShieldGaugeFace() {
         <div
           className="absolute font-mono uppercase"
           style={{
-            fontSize: '6px',
-            left: '18px',
-            bottom: '38px',
+            fontSize: '7px',
+            left: '20px',
+            bottom: '40px',
             color: 'rgba(239, 68, 68, 0.5)',
             letterSpacing: '0.5px',
             transform: 'rotate(-45deg)',
@@ -131,9 +131,9 @@ export function ShieldGaugeFace() {
           className="absolute font-mono text-center"
           style={{
             left: '50%',
-            bottom: '24px',
+            bottom: '26px',
             transform: 'translateX(-50%)',
-            fontSize: '14px',
+            fontSize: '17px',
             color: overallPercent <= 25 ? 'rgba(239, 68, 68, 0.9)' : 'rgba(0, 240, 255, 0.7)',
             textShadow: overallPercent <= 25
               ? '0 0 6px rgba(239, 68, 68, 0.4)'
@@ -148,11 +148,11 @@ export function ShieldGaugeFace() {
           className="absolute"
           style={{
             width: '2px',
-            height: '43px',
+            height: '48px',
             left: '50%',
             top: '20px',
             marginLeft: '-1px',
-            transformOrigin: 'center 43px',
+            transformOrigin: 'center 48px',
             transform: `rotate(${displayAngle}deg)`,
             background: 'linear-gradient(to bottom, rgba(255,200,50,0.9) 0%, rgba(255,120,20,0.7) 100%)',
             borderRadius: '1px',
@@ -165,12 +165,12 @@ export function ShieldGaugeFace() {
         <div
           className="absolute rounded-full"
           style={{
-            width: '10px',
-            height: '10px',
+            width: '12px',
+            height: '12px',
             left: '50%',
             top: '50%',
-            marginLeft: '-5px',
-            marginTop: '-5px',
+            marginLeft: '-6px',
+            marginTop: '-6px',
             background: 'radial-gradient(circle at 35% 35%, rgba(180,160,120,0.6), rgba(60,50,30,0.8))',
             boxShadow: '0 0 3px rgba(0,0,0,0.5)',
           }}

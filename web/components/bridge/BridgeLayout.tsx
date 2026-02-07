@@ -1,13 +1,12 @@
 'use client';
 
 import { useBootStore } from '@/lib/stores/boot-store';
-import { HUDTopBar } from './hud/HUDTopBar';
+
 import { HUDThreats } from './hud/HUDThreats';
 import { HUDAmbient } from './hud/HUDAmbient';
 import { CommandConsole } from './console/CommandConsole';
 import { CaptainNovaStation } from './hud/CaptainNovaPanel';
-import { CockpitFrame } from './cockpit/CockpitFrame';
-import { LeftDataStrip } from './cockpit/LeftDataStrip';
+
 import { Viewport3D } from '../viewport/Viewport3D';
 import { ViewportGlass } from './cockpit/ViewportGlass';
 import { EnvironmentalCohesion } from './cockpit/EnvironmentalCohesion';
@@ -50,22 +49,12 @@ export function BridgeLayout() {
         {/* Dashboard projection: top surface + shadow gap (z-9, between glass and frame) */}
         <DashboardProjection />
 
-        {/* Layer 2: Cockpit frame (structural hull overlay) */}
-        <CockpitFrame />
-        <LeftDataStrip />
-
         {/* Layer 3: Captain Nova station (inside right frame area) */}
         <div
           className="absolute top-6 right-0 w-[180px] z-20 pointer-events-none"
           style={{ bottom: '220px' }}
         >
           <CaptainNovaStation />
-        </div>
-
-        {/* Layer 4: HUD overlays (floating holographic elements) */}
-        {/* Top bar - floating above frame */}
-        <div className="absolute top-0 left-0 right-0 z-30">
-          <HUDTopBar />
         </div>
 
         {/* Threats list - inside viewscreen, upper-left */}

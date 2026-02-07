@@ -29,7 +29,7 @@ function getLampColor(util: number): { bg: string; glow: string } {
 export function CardStatusFace() {
   return (
     <div className="relative w-full h-full flex items-center justify-center px-3 py-1">
-      <div className="flex gap-5 items-end">
+      <div className="flex gap-6 items-end">
         {MOCK_CARDS.map((card) => {
           const lamp = getLampColor(card.utilization);
           const isRedZone = card.utilization >= 70;
@@ -39,7 +39,7 @@ export function CardStatusFace() {
               <div
                 className="font-mono uppercase text-center"
                 style={{
-                  fontSize: '8px',
+                  fontSize: '10px',
                   color: 'rgba(200, 210, 230, 0.45)',
                   letterSpacing: '1px',
                   textShadow: '0 0 2px rgba(200, 210, 230, 0.1)',
@@ -52,8 +52,8 @@ export function CardStatusFace() {
               <div
                 className="relative"
                 style={{
-                  width: '36px',
-                  height: '36px',
+                  width: '45px',
+                  height: '45px',
                 }}
               >
                 {/* Lamp recess */}
@@ -88,7 +88,7 @@ export function CardStatusFace() {
               <div
                 className="font-mono tabular-nums"
                 style={{
-                  fontSize: '10px',
+                  fontSize: '12px',
                   color: lamp.bg,
                   textShadow: `0 0 4px ${lamp.bg.replace('0.8', '0.3')}`,
                 }}

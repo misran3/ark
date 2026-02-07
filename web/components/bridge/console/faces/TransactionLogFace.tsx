@@ -60,7 +60,7 @@ export function TransactionLogFace() {
       />
 
       {/* Log entries */}
-      <div className="space-y-[5px]" style={{ fontSize: '10px' }}>
+      <div className="space-y-[6px]" style={{ fontSize: '12.5px' }}>
         {visible.map((entry, i) => (
           <div
             key={`${entry.time}-${entry.label}-${offset}`}

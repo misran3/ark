@@ -27,8 +27,8 @@ export function NetWorthManifestFace() {
   };
 
   // SVG sparkline path
-  const sparkW = 120;
-  const sparkH = 22;
+  const sparkW = 150;
+  const sparkH = 28;
   const points = sparkline.map((v, i) => {
     const x = (i / (sparkline.length - 1)) * sparkW;
     const y = sparkH - v * sparkH;
@@ -42,7 +42,7 @@ export function NetWorthManifestFace() {
       style={{
         color: 'rgba(255, 190, 50, 0.85)',
         textShadow: '0 0 6px rgba(255, 180, 40, 0.3)',
-        fontSize: '11px',
+        fontSize: '14px',
       }}
     >
       {/* Scanline overlay */}
@@ -57,7 +57,7 @@ export function NetWorthManifestFace() {
       <div
         className="tracking-wider mb-1"
         style={{
-          fontSize: '22px',
+          fontSize: '28px',
           color: 'rgba(255, 200, 60, 0.95)',
           textShadow: '0 0 10px rgba(255, 180, 40, 0.4), 0 0 20px rgba(255, 160, 30, 0.15)',
         }}
@@ -66,7 +66,7 @@ export function NetWorthManifestFace() {
       </div>
 
       {/* Breakdown rows */}
-      <div className="space-y-[2px]" style={{ fontSize: '9px', opacity: 0.7 }}>
+      <div className="space-y-[2px]" style={{ fontSize: '11px', opacity: 0.7 }}>
         {breakdown.map((row) => (
           <div key={row.label} className="flex justify-between">
             <span>{padLabel(row.label, 18)}</span>
@@ -84,7 +84,7 @@ export function NetWorthManifestFace() {
         </svg>
         <span
           style={{
-            fontSize: '11px',
+            fontSize: '14px',
             color: 'rgba(80, 255, 120, 0.8)',
             textShadow: '0 0 4px rgba(80, 255, 120, 0.3)',
           }}
