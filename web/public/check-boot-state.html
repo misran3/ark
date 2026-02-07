@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Boot State Checker</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #0ff; }
+    button { margin: 10px; padding: 10px; background: #333; color: #0ff; border: 1px solid #0ff; cursor: pointer; }
+    button:hover { background: #0ff; color: #000; }
+    pre { background: #000; padding: 15px; border: 1px solid #0ff; }
+  </style>
+</head>
+<body>
+  <h1>Boot Sequence Debugger</h1>
+  <div id="status"></div>
+  <button onclick="clearBoot()">Clear bootCount & Reload</button>
+  <button onclick="showState()">Refresh State</button>
+  <pre id="output"></pre>
+
+  <script>
+    function showState() {
+      const bootCount = localStorage.getItem('bootCount');
+      const output = document.getElementById('output');
+      const status = document.getElementById('status');
+      
+      const count = bootCount ? parseInt(bootCount) : 0;
+      const mode = count > 0 ? 'COMPRESSED (repeat visit)' : 'FULL (first visit)';
+      
+      status.innerHTML = `<h2>Current Mode: ${mode}</h2><p>bootCount = ${count}</p>`;
+      
+      output.textContent = `
+=== BOOT MODE ANALYSIS ===
+
+bootCount: ${count}
+Mode: ${mode}
+
+${mode === 'COMPRESSED (repeat visit)' ? `
+⚠️  PROBLEM DETECTED!
+You're in COMPRESSED mode which skips beats and uses shorter durations.
+
+Compressed timings:
+  black: 500ms (vs 1500ms full)
+  emergency: SKIPPED (vs 2000ms full)
+  power-surge: 300ms (vs 1000ms full)
+  viewport-awake: 1000ms (vs 2000ms full)
+  console-boot: 1000ms (vs 1500ms full)
+  hud-rise: 500ms (vs 1000ms full)
+  settling: 300ms (vs 500ms full)
+  
+Total: ~3.6s instead of 9.5s
+
+This explains the rushed, blended feeling!
+` : `
+✓ Correct mode for testing
+You should see full 9.5s sequence.
+`}
+
+All localStorage keys:
+${Object.keys(localStorage).map(k => `  ${k}: ${localStorage.getItem(k)}`).join('\n')}
+      `;
+    }
+    
+    function clearBoot() {
+      localStorage.clear();
+      alert('localStorage cleared! Reloading...');
+      location.href = '/';
+    }
+    
+    showState();
+  </script>
+</body>
+</html>
