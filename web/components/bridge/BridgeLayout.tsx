@@ -21,7 +21,13 @@ export function BridgeLayout() {
   const globalIntensity = useBootStore((state) => state.globalIntensity);
   const showHUD = phase === 'hud-rise' || phase === 'settling' || phase === 'complete';
   const showConsole = phase === 'console-boot' || phase === 'hud-rise' || phase === 'settling' || phase === 'complete';
-  const showFrame = phase === 'console-boot' || phase === 'hud-rise' || phase === 'settling' || phase === 'complete';
+  // Frame becomes visible during power-surge (when cyan lighting turns on)
+  const showFrame = phase === 'power-surge' || phase === 'viewport-awake' ||
+                    phase === 'console-boot' || phase === 'hud-rise' ||
+                    phase === 'settling' || phase === 'complete';
+  // Viewport mounts during viewport-awake (when eyelid opens to reveal stars)
+  const showViewport = phase === 'viewport-awake' || phase === 'console-boot' ||
+                       phase === 'hud-rise' || phase === 'settling' || phase === 'complete';
   const isEmergencyPhase = phase === 'emergency';
 
   // Trigger power lifecycle cold start when console-boot phase begins
@@ -48,20 +54,20 @@ export function BridgeLayout() {
   return (
     <div className="fixed inset-0 bg-space-black overflow-hidden">
       {/* Layer 1: Full-screen 3D viewport (behind everything) */}
-      {/* Only mount Three.js after viewport-awake phase to prevent boot jank */}
-      {showFrame && (
-        <div
-          className="absolute inset-0 z-0"
-          style={{
-            // Viewport glass during emergency: rgb(3,2,2) - warm bias from red reflection
-            // vs Frame metal: rgb(0,0,0) - absorbs light
-            backgroundColor: isEmergencyPhase ? 'rgb(3, 2, 2)' : 'transparent',
-            transition: 'background-color 0.5s ease-out',
-          }}
-        >
-          <Viewport3D />
-        </div>
-      )}
+      {/* Only mount Three.js during viewport-awake phase (when eyelid opens) */}
+      {/* During power-surge, this div exists but is black (no Viewport3D) */}
+      <div
+        className="absolute inset-0 z-0"
+        style={{
+          // During power-surge: black (viewport unpowered)
+          // During viewport-awake onwards: transparent (shows stars)
+          backgroundColor: showViewport ? 'transparent' : 'rgb(0, 0, 0)',
+          transition: 'background-color 0.5s ease-out',
+          opacity: showFrame ? 1 : 0,
+        }}
+      >
+        {showViewport && <Viewport3D />}
+      </div>
 
       {/* Glass layers: z-5 through z-8 between viewport and frame */}
       <div

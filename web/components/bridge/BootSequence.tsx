@@ -61,10 +61,12 @@ export function BootSequence({ children }: BootSequenceProps) {
       )}
 
       {/* Content - always mounted to prevent remount, but visibility controlled by phase */}
+      {/* Visible from power-surge onwards (when frame lighting comes on) */}
       <div
         className="relative h-full w-full"
         style={{
-          visibility: phase === 'console-boot' || phase === 'hud-rise' ||
+          visibility: phase === 'power-surge' || phase === 'viewport-awake' ||
+                     phase === 'console-boot' || phase === 'hud-rise' ||
                      phase === 'settling' || phase === 'complete' ? 'visible' : 'hidden',
         }}
       >
