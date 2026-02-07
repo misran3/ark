@@ -1,6 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
-import * as cognito from 'aws-cdk-lib/aws-cognito';
+// import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
@@ -11,7 +11,7 @@ import * as path from 'path';
 import { APP_NAME, APP_NAME_LOWERCASE } from './constants';
 
 export interface ApiStackProps extends cdk.StackProps {
-    userPool: cognito.UserPool;
+    // userPool: cognito.UserPool;
     usersTable: dynamodb.Table;
     usersTableEmailIndexName: string;
 }
@@ -44,11 +44,11 @@ export class ApiStack extends cdk.Stack {
         };
 
         // Create Cognito Authorizer for API Gateway
-        const cognitoAuthorizer = new apigateway.CognitoUserPoolsAuthorizer(this, 'CognitoAuthorizer', {
-            cognitoUserPools: [props.userPool],
-            identitySource: 'method.request.header.Authorization',
-            authorizerName: `${APP_NAME}CognitoAuthorizer`,
-        });
+        // const cognitoAuthorizer = new apigateway.CognitoUserPoolsAuthorizer(this, 'CognitoAuthorizer', {
+        //     cognitoUserPools: [props.userPool],
+        //     identitySource: 'method.request.header.Authorization',
+        //     authorizerName: `${APP_NAME}CognitoAuthorizer`,
+        // });
 
         // Create REST API
         this.api = new apigateway.RestApi(this, `${APP_NAME}Api`, {
@@ -91,7 +91,7 @@ export class ApiStack extends cdk.Stack {
         // =============================================================
         // User API Resources and Methods
         // =============================================================
-        this.createUserAPIResources(userLambdaFn, cognitoAuthorizer);
+        this.createUserAPIResources(userLambdaFn);
 
         // =============================================================
         // Data Lambda Function
@@ -114,7 +114,7 @@ export class ApiStack extends cdk.Stack {
         // =============================================================
         // Data API Resources and Methods
         // =============================================================
-        this.createDataAPIResources(dataLambdaFn, cognitoAuthorizer);
+        this.createDataAPIResources(dataLambdaFn);
 
         // =============================================================
         // VISA Lambda Function
@@ -140,7 +140,7 @@ export class ApiStack extends cdk.Stack {
         // =============================================================
         // VISA API Resources and Methods
         // =============================================================
-        this.createVisaAPIResources(visaLambdaFn, cognitoAuthorizer);
+        this.createVisaAPIResources(visaLambdaFn);
         
         // =============================================================
         // Captain Nova Lambda Function
@@ -171,7 +171,7 @@ export class ApiStack extends cdk.Stack {
         // =============================================================
         // Captain Nova API Resources
         // =============================================================
-        this.createCaptainAPIResources(captainLambdaFn, cognitoAuthorizer);
+        this.createCaptainAPIResources(captainLambdaFn);
 
         // CloudFormation Outputs
         new cdk.CfnOutput(this, 'ApiUrl', {
@@ -199,7 +199,7 @@ export class ApiStack extends cdk.Stack {
      * @param userLambdaFn The Lambda function that handles user-related API requests.
      * @param authorizer The Cognito User Pools Authorizer to secure the endpoints.
      */
-    private createUserAPIResources(userLambdaFn: lambda.Function, authorizer: apigateway.CognitoUserPoolsAuthorizer) {
+    private createUserAPIResources(userLambdaFn: lambda.Function) {
         const usersResource = this.api.root.addResource('users');
 
         // Health check endpoint
@@ -207,39 +207,24 @@ export class ApiStack extends cdk.Stack {
         healthResource.addMethod('GET', new apigateway.LambdaIntegration(userLambdaFn));
 
         // POST /users
-        usersResource.addMethod('POST', new apigateway.LambdaIntegration(userLambdaFn), {
-            authorizationType: apigateway.AuthorizationType.COGNITO,
-            authorizer: authorizer,
-        });
+        usersResource.addMethod('POST', new apigateway.LambdaIntegration(userLambdaFn));
 
         // GET /users
-        usersResource.addMethod('GET', new apigateway.LambdaIntegration(userLambdaFn), {
-            authorizationType: apigateway.AuthorizationType.COGNITO,
-            authorizer: authorizer,
-        });
+        usersResource.addMethod('GET', new apigateway.LambdaIntegration(userLambdaFn));
 
         // GET, PUT, DELETE /users/{user_id}
         const userIdResource = usersResource.addResource('{user_id}');
 
-        userIdResource.addMethod('GET', new apigateway.LambdaIntegration(userLambdaFn), {
-            authorizationType: apigateway.AuthorizationType.COGNITO,
-            authorizer: authorizer,
-        });
-        userIdResource.addMethod('PUT', new apigateway.LambdaIntegration(userLambdaFn), {
-            authorizationType: apigateway.AuthorizationType.COGNITO,
-            authorizer: authorizer,
-        });
-        userIdResource.addMethod('DELETE', new apigateway.LambdaIntegration(userLambdaFn), {
-            authorizationType: apigateway.AuthorizationType.COGNITO,
-            authorizer: authorizer,
-        });
+        userIdResource.addMethod('GET', new apigateway.LambdaIntegration(userLambdaFn));
+        userIdResource.addMethod('PUT', new apigateway.LambdaIntegration(userLambdaFn));
+        userIdResource.addMethod('DELETE', new apigateway.LambdaIntegration(userLambdaFn));
     }
 
     /**
      * Creates API Gateway resources and methods for data/financial operations.
      * Health check is unauthenticated; all other endpoints require Cognito auth.
      */
-    private createDataAPIResources(dataLambdaFn: lambda.Function, authorizer: apigateway.CognitoUserPoolsAuthorizer) {
+    private createDataAPIResources(dataLambdaFn: lambda.Function) {
         const apiResource = this.apiResource;
         const lambdaIntegration = new apigateway.LambdaIntegration(dataLambdaFn);
 
@@ -259,7 +244,7 @@ export class ApiStack extends cdk.Stack {
     /**
      * Creates API Gateway resources and methods for VISA operations.
      */
-    private createVisaAPIResources(visaLambdaFn: lambda.Function, authorizer: apigateway.CognitoUserPoolsAuthorizer) {
+    private createVisaAPIResources(visaLambdaFn: lambda.Function) {
         const apiResource = this.apiResource;
         const visaResource = apiResource.getResource('visa') || apiResource.addResource('visa');
         const lambdaIntegration = new apigateway.LambdaIntegration(visaLambdaFn);
@@ -280,10 +265,7 @@ export class ApiStack extends cdk.Stack {
      * @param captainLambdaFn The Lambda function that handles Captain Nova API requests.
      * @param authorizer The Cognito User Pools Authorizer to secure the endpoints.
      */
-    private createCaptainAPIResources(
-        captainLambdaFn: lambda.Function,
-        authorizer: apigateway.CognitoUserPoolsAuthorizer
-    ) {
+    private createCaptainAPIResources(captainLambdaFn: lambda.Function) {
         const captainResource = this.apiResource.addResource('captain');
         const lambdaIntegration = new apigateway.LambdaIntegration(captainLambdaFn);
 
