@@ -34,6 +34,11 @@ export function Viewport3D() {
         <StarfieldBackground />
 
         {/* The Sun */}
+        {/* TODO: Planet focus acquisition during viewport-awake phase
+            - Phase C (1200-2000ms): blur 8→0, saturate 0.6→1.0, brightness 1.3→1.0
+            - Requires Three.js shader approach (CSS filters don't work on <group>)
+            - Alternative: Apply filter to entire Canvas container from BridgeLayout
+            - See: Beat 3 Viewport Display Calibration spec */}
         <Sun solarFlareActive={hasSolarFlare} />
 
         {/* Threat objects */}

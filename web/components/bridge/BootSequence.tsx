@@ -4,6 +4,7 @@ import { useBootSequence } from '@/hooks/useBootSequence';
 import { TrueBlack } from './boot/TrueBlack';
 import { EmergencyLighting } from './boot/EmergencyLighting';
 import { PowerSurge } from './boot/PowerSurge';
+import { ViewportCalibration } from './boot/ViewportCalibration';
 import { EyelidReveal } from './boot/EyelidReveal';
 
 interface BootSequenceProps {
@@ -31,7 +32,10 @@ export function BootSequence({ children }: BootSequenceProps) {
           {/* Beat 2: Power surge */}
           {phase === 'power-surge' && <PowerSurge />}
 
-          {/* Beat 3: Eyelid reveal (existing component, will be updated in Task 5) */}
+          {/* Beat 3: Viewport calibration overlay */}
+          {phase === 'viewport-awake' && <ViewportCalibration />}
+
+          {/* Beat 3: Eyelid reveal with light leak */}
           {(phase === 'viewport-awake' || phase === 'console-boot' ||
             phase === 'hud-rise' || phase === 'settling') && (
             <EyelidReveal isOpen={phase !== 'viewport-awake'} />
