@@ -1,16 +1,19 @@
 """
 VISA Transaction Controls (VTC) Service.
 
-Handles mTLS authentication with VISA Sandbox and provides methods to:
+Handles X-Pay-Token authentication (API key + shared secret) with VISA Sandbox and provides methods to:
 - Create spending controls (limits, category blocks)
 - Retrieve active controls
 - Delete controls
 
-Certificates are fetched from S3 on cold start and cached in /tmp.
+Auth is performed by generating an `x-pay-token` header for each request.
 """
 
+import datetime
+import hashlib
+import hmac
+import json
 import os
-import boto3
 import httpx
 from aws_lambda_powertools import Logger
 from shared.models import VisaControlRule
@@ -22,41 +25,77 @@ class VisaService:
     """Service for interacting with VISA Transaction Controls API."""
 
     def __init__(self):
-        self.s3 = boto3.client("s3")
-        self.bucket = "synesthesia-pay-artifacts"
+        # Note: project convention maps these env vars for VISA:
+        # - VISA_USER_ID      -> API key for X-Pay-Token
+        # - VISA_PASSWORD     -> shared secret for X-Pay-Token
+        self.api_key = os.getenv("VISA_USER_ID", "")
+        self.shared_secret = os.getenv("VISA_PASSWORD", "")
 
-        # Local paths in Lambda's writable /tmp directory
-        self.cert_path = "/tmp/visa-cert.pem"
-        self.key_path = "/tmp/visa-pvtkey.pem"
-        self.ca_path = "/tmp/visa-sbx.pem"
-
-        self._ensure_certs()
-
-        # Initialize mTLS client with credentials from env vars
+        # Initialize HTTP client (TLS uses default trust store)
         self.client = httpx.Client(
             base_url="https://sandbox.api.visa.com",
-            cert=(self.cert_path, self.key_path),
-            verify=self.ca_path,
-            auth=(os.getenv("VISA_USER_ID", ""), os.getenv("VISA_PASSWORD", "")),
             timeout=30.0,
         )
 
-    def _ensure_certs(self):
-        """Download certificates from S3 if they don't exist in /tmp."""
-        certs = {
-            "visa/visa-cert.pem": self.cert_path,
-            "visa/visa-pvtkey.pem": self.key_path,
-            "visa/visa-sbx.pem": self.ca_path,
-        }
-        for s3_key, local_path in certs.items():
-            if not os.path.exists(local_path):
-                logger.info(f"Downloading {s3_key} from S3 to {local_path}")
-                try:
-                    self.s3.download_file(self.bucket, s3_key, local_path)
-                    logger.info(f"Successfully downloaded {s3_key}")
-                except Exception as e:
-                    logger.error(f"Failed to download {s3_key}: {e}")
-                    raise
+    def _generate_x_pay_token(self, resource_path: str, query_string: str, body: str) -> str:
+        """
+        Generate VISA X-Pay-Token header value.
+
+        Algorithm (matches `core/scripts/visa_auth.py`):
+        - timestamp = Unix epoch seconds (UTC)
+        - pre_hash = timestamp + resource_path + query_string + body
+        - HMAC-SHA256(shared_secret, pre_hash)
+        - token = xv2:{timestamp}:{hexdigest}
+        """
+        # Use timezone-aware UTC timestamp (avoid datetime.utcnow deprecation)
+        timestamp = str(int(datetime.datetime.now(datetime.UTC).timestamp()))
+        pre_hash_string = f"{timestamp}{resource_path}{query_string}{body}"
+        secret = bytes(self.shared_secret, "utf-8")
+        digest = hmac.new(secret, bytes(pre_hash_string, "utf-8"), digestmod=hashlib.sha256).hexdigest()
+        return f"xv2:{timestamp}:{digest}"
+
+    def _visa_request(self, method: str, path: str, payload: dict | None = None) -> httpx.Response:
+        """
+        Make an authenticated request to VISA using X-Pay-Token.
+
+        `path` should be the full path portion (e.g. "/vdp/helloworld" or
+        "/vctc/customerrules/v1/consumertransactioncontrols").
+        """
+        if not self.api_key or not self.shared_secret:
+            raise ValueError("Missing VISA_USER_ID (apiKey) or VISA_PASSWORD (shared secret) environment variables")
+
+        # Query string required by VISA sample auth
+        query_string = f"apiKey={self.api_key}"
+
+        # Resource path for token generation. The working sample uses "helloworld"
+        # for "/vdp/helloworld", so we strip the "vdp/" prefix if present.
+        resource_path = path.lstrip("/")
+        if resource_path.startswith("vdp/"):
+            resource_path = resource_path[len("vdp/") :]
+
+        body = ""
+        headers: dict[str, str] = {"Accept": "application/json"}
+        if payload is not None:
+            body = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
+            headers["Content-Type"] = "application/json"
+
+        token = self._generate_x_pay_token(resource_path, query_string, body)
+        headers["x-pay-token"] = token
+
+        url = f"{path}?{query_string}"
+
+        # Send body exactly as signed (use `content`, not `json=`, to avoid spacing differences)
+        response = self.client.request(method, url, headers=headers, content=body if body else None)
+
+        # Compatibility fallback: some VISA samples sign only the last path segment.
+        # If we get an auth error, retry once using the last segment.
+        if response.status_code in (401, 403):
+            alt_resource = resource_path.split("/")[-1]
+            alt_token = self._generate_x_pay_token(alt_resource, query_string, body)
+            headers["x-pay-token"] = alt_token
+            response = self.client.request(method, url, headers=headers, content=body if body else None)
+
+        return response
 
     def create_control(self, rule: VisaControlRule) -> dict:
         """
@@ -95,8 +134,10 @@ class VisaService:
             }
 
         try:
-            response = self.client.post(
-                "/vctc/customerrules/v1/consumertransactioncontrols", json=payload
+            response = self._visa_request(
+                "POST",
+                "/vctc/customerrules/v1/consumertransactioncontrols",
+                payload=payload,
             )
             response.raise_for_status()
             result = response.json()
@@ -132,8 +173,9 @@ class VisaService:
         logger.info(f"Fetching VISA control: {document_id}")
 
         try:
-            response = self.client.get(
-                f"/vctc/customerrules/v1/consumertransactioncontrols/{document_id}"
+            response = self._visa_request(
+                "GET",
+                f"/vctc/customerrules/v1/consumertransactioncontrols/{document_id}",
             )
             response.raise_for_status()
             return response.json()
@@ -162,8 +204,9 @@ class VisaService:
         logger.info(f"Deleting VISA control: {document_id}")
 
         try:
-            response = self.client.delete(
-                f"/vctc/customerrules/v1/consumertransactioncontrols/{document_id}"
+            response = self._visa_request(
+                "DELETE",
+                f"/vctc/customerrules/v1/consumertransactioncontrols/{document_id}",
             )
             response.raise_for_status()
             return {"status": "success", "message": "Control deleted"}

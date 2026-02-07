@@ -11,22 +11,20 @@ Frontend (React Hook)
     ↓
 API Gateway (/api/visa/controls)
     ↓
-Data Lambda (handler.py)
+VISA Lambda (handler.py)
     ↓
 VisaService (visa_service.py)
-    ↓ [mTLS with certs from S3]
+    ↓ [X-Pay-Token signing]
 VISA Sandbox API
 ```
 
-## Certificate Setup
+## Authentication
 
-All certificates are stored in S3 and downloaded to Lambda `/tmp` on cold start:
+We are using **API Key + Shared Secret (X-Pay-Token)** authentication (same mechanism validated in `core/scripts/visa_auth.py`).
 
-| File | S3 Location | Purpose |
-|------|-------------|---------|
-| Client Cert | `s3://synesthesia-pay-artifacts/visa/visa-cert.pem` | Proves your identity to VISA |
-| Private Key | `s3://synesthesia-pay-artifacts/visa/visa-pvtkey.pem` | Signs the mTLS handshake |
-| Root CA | `s3://synesthesia-pay-artifacts/visa/visa-sbx.pem` | Verifies VISA's identity |
+Each request includes:
+- `apiKey=<VISA_API_KEY>` as a query parameter
+- `x-pay-token: xv2:<timestamp>:<hmac>` header
 
 ## Environment Variables
 
@@ -34,8 +32,8 @@ Set these in AWS Lambda Console or via CDK:
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `VISA_USER_ID` | Your VISA Developer Portal User ID | `ABC123XYZ` |
-| `VISA_PASSWORD` | Your VISA Developer Portal Password | `********` |
+| `VISA_USER_ID` | VISA API Key (apiKey) used for X-Pay-Token | `F9ZNQD...` |
+| `VISA_PASSWORD` | VISA Shared Secret used for X-Pay-Token | `********` |
 
 ## API Endpoints
 
@@ -113,23 +111,17 @@ bunx cdk deploy --all
 
 This will:
 1. Update the Lambda with the new VISA service code
-2. Grant S3 read permissions for the certificate bucket
-3. Set the VISA environment variables
-4. Deploy the new API Gateway routes
+2. Set the VISA environment variables
+3. Deploy the new API Gateway routes
 
 ## Testing
 
-1. Verify certificates are accessible:
-```bash
-aws s3 ls s3://synesthesia-pay-artifacts/visa/
-```
-
-2. Test the health endpoint:
+1. Test the health endpoint:
 ```bash
 curl https://hpjg3vun6j.execute-api.us-east-1.amazonaws.com/dev/api/health
 ```
 
-3. Test VISA control creation (after deploy):
+2. Test VISA control creation (after deploy):
 ```bash
 curl -X POST https://hpjg3vun6j.execute-api.us-east-1.amazonaws.com/dev/api/visa/controls \
   -H "Content-Type: application/json" \
@@ -138,13 +130,9 @@ curl -X POST https://hpjg3vun6j.execute-api.us-east-1.amazonaws.com/dev/api/visa
 
 ## Troubleshooting
 
-### Certificate Download Fails
-- Check Lambda IAM role has `s3:GetObject` on `synesthesia-pay-artifacts/visa/*`
-- Verify files exist in S3: `aws s3 ls s3://synesthesia-pay-artifacts/visa/`
-
 ### VISA API Returns 401
-- Verify `VISA_USER_ID` and `VISA_PASSWORD` are set correctly
-- Check that certificates are valid (not expired)
+- Verify `VISA_USER_ID` (apiKey) and `VISA_PASSWORD` (shared secret) are set correctly
+- Confirm your token-generation logic matches `core/scripts/visa_auth.py` (timestamp + resource_path + query_string + body)
 
 ### VISA API Returns 400
 - Check the payload structure matches VISA's expected format

@@ -32,7 +32,7 @@
 | [x] | Isolation test page (/test/bridge-data) |
 | [ ] | Frontend → API Gateway integration |
 | [ ] | Captain Nova tools → real endpoints |
-| [x] | VISA sandbox authentication (mTLS) |
+| [x] | VISA sandbox authentication (X-Pay-Token) |
 | [x] | VISA Transaction Controls API integration |
 | [x] | VISA controls Lambda endpoints (Isolated in visa-lambda) |
 | [ ] | Wire VISA tools into Captain Nova |
@@ -131,20 +131,18 @@
 - **VISA Lambda:** `core/lambda/visa-lambda/`
   - Dedicated Lambda function for all VISA-related operations.
   - **Handler:** `handler.py` exposes `/api/visa/health`, `/api/visa/controls`.
-  - **Service:** `services/visa_service.py` handles mTLS and S3 cert downloads.
+  - **Service:** `services/visa_service.py` handles X-Pay-Token signing (API key + shared secret).
 - **Separation of Concerns:**
   - Removed VISA logic from `data-lambda` to keep it focused on financial data processing.
   - VISA operations now have their own independent deployment and scaling.
 - **Infrastructure Updates:** `infrastructure/lib/api-stack.ts`
   - Defined `visa-lambda` function.
-  - Granted `visa-lambda` S3 read access to `synesthesia-pay-artifacts/visa/*`.
   - Configured API Gateway to route `/api/visa/*` to the new `visa-lambda`.
   - Set environment variables: `VISA_USER_ID`, `VISA_PASSWORD`.
 
-**Certificate Setup:**
-- Client Cert: `s3://synesthesia-pay-artifacts/visa/visa-cert.pem`
-- Private Key: `s3://synesthesia-pay-artifacts/visa/visa-pvtkey.pem`
-- Root CA: `s3://synesthesia-pay-artifacts/visa/visa-sbx.pem`
+**Auth Setup (X-Pay-Token):**
+- `VISA_USER_ID` = VISA API key (apiKey)
+- `VISA_PASSWORD` = VISA shared secret
 
 **Next Steps for VISA:**
 1. Set `VISA_USER_ID` and `VISA_PASSWORD` environment variables.

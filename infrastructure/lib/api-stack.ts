@@ -5,7 +5,6 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
-import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
 import * as path from 'path';
@@ -119,20 +118,15 @@ export class ApiStack extends cdk.Stack {
             copySourceFiles: true,
             additionalEnv: {
                 USERS_TABLE_NAME: props.usersTable.tableName,
+                // NOTE: For X-Pay-Token auth:
+                // - VISA_USER_ID is the Visa API Key (apiKey)
+                // - VISA_PASSWORD is the Visa Shared Secret
                 VISA_USER_ID: process.env.VISA_USER_ID || '',
                 VISA_PASSWORD: process.env.VISA_PASSWORD || '',
             },
             tableGrants: [props.usersTable],
             timeout: cdk.Duration.seconds(30),
         });
-
-        // Grant S3 read access for VISA certificates to VISA Lambda
-        const visaCertsBucket = s3.Bucket.fromBucketName(
-            this,
-            'VisaCertsBucket',
-            'synesthesia-pay-artifacts'
-        );
-        visaCertsBucket.grantRead(visaLambdaFn, 'visa/*');
 
         // =============================================================
         // Data API Resources and Methods
