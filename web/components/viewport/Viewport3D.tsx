@@ -5,6 +5,7 @@ import { StarfieldBackground } from './StarfieldBackground';
 import { Planet } from './Planet';
 import { NebulaBackground } from './NebulaBackground';
 import { SpaceDust } from './SpaceDust';
+import { LensFlare } from './LensFlare';
 import { ThreatsLayer } from './ThreatsLayer';
 import SceneEffects from '@/components/three/SceneEffects';
 import { CanopyStruts } from './CanopyStruts';
@@ -46,6 +47,7 @@ export function Viewport3D() {
 
         {/* Blue planet backdrop */}
         <Planet />
+        <LensFlare />
 
         {/* Sparse drifting dust particles */}
         <SpaceDust />
