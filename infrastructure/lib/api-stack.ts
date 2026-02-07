@@ -5,7 +5,6 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
-import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
 import * as path from 'path';
@@ -71,6 +70,9 @@ export class ApiStack extends cdk.Stack {
             cloudWatchRole: true,
         });
 
+        // Create base /api resource
+        this.apiResource = this.api.root.addResource('api');
+
         // =============================================================
         // User Lambda Function
         // =============================================================
@@ -109,8 +111,10 @@ export class ApiStack extends cdk.Stack {
             timeout: cdk.Duration.seconds(30),
         });
 
-        // Shared /api resource for data and captain lambdas
-        this.apiResource = this.api.root.addResource('api');
+        // =============================================================
+        // Data API Resources and Methods
+        // =============================================================
+        this.createDataAPIResources(dataLambdaFn, cognitoAuthorizer);
 
         // =============================================================
         // VISA Lambda Function
@@ -133,18 +137,10 @@ export class ApiStack extends cdk.Stack {
             timeout: cdk.Duration.seconds(30),
         });
 
-        // Grant S3 read access for VISA certificates to VISA Lambda
-        const visaCertsBucket = s3.Bucket.fromBucketName(
-            this,
-            'VisaCertsBucket',
-            'synesthesia-pay-artifacts'
-        );
-        visaCertsBucket.grantRead(visaLambdaFn, 'visa/*');
-
         // =============================================================
-        // Data API Resources and Methods
+        // VISA API Resources and Methods
         // =============================================================
-        this.createDataAPIResources(dataLambdaFn, cognitoAuthorizer);
+        this.createVisaAPIResources(visaLambdaFn, cognitoAuthorizer);
         
         // =============================================================
         // Captain Nova Lambda Function
@@ -176,11 +172,6 @@ export class ApiStack extends cdk.Stack {
         // Captain Nova API Resources
         // =============================================================
         this.createCaptainAPIResources(captainLambdaFn, cognitoAuthorizer);
-
-        // =============================================================
-        // VISA API Resources and Methods
-        // =============================================================
-        this.createVisaAPIResources(visaLambdaFn, cognitoAuthorizer);
 
         // CloudFormation Outputs
         new cdk.CfnOutput(this, 'ApiUrl', {
@@ -269,7 +260,7 @@ export class ApiStack extends cdk.Stack {
      * Creates API Gateway resources and methods for VISA operations.
      */
     private createVisaAPIResources(visaLambdaFn: lambda.Function, authorizer: apigateway.CognitoUserPoolsAuthorizer) {
-        const apiResource = this.api.root.getResource('api') || this.api.root.addResource('api');
+        const apiResource = this.apiResource;
         const visaResource = apiResource.getResource('visa') || apiResource.addResource('visa');
         const lambdaIntegration = new apigateway.LambdaIntegration(visaLambdaFn);
 
