@@ -34,7 +34,7 @@
 | [ ] | Captain Nova tools → real endpoints |
 | [x] | VISA sandbox authentication (mTLS) |
 | [x] | VISA Transaction Controls API integration |
-| [x] | VISA controls Lambda endpoints |
+| [x] | VISA controls Lambda endpoints (Isolated in visa-lambda) |
 | [ ] | Wire VISA tools into Captain Nova |
 | [ ] | VISA shield activation UI |
 | [ ] | VISA controls display (stretch) |
@@ -125,21 +125,21 @@
 
 ---
 
-### Module 2: VISA Integration Implementation
+### Module 2: VISA Integration Implementation (Isolated)
 
 **What was added:**
-- **VISA Service:** `core/lambda/data-lambda/services/visa_service.py`
-  - Handles mTLS authentication with VISA Sandbox
-  - Downloads certificates from S3 (`synesthesia-pay-artifacts/visa/*`) to Lambda `/tmp` on cold start
-  - Provides methods: `create_control()`, `get_controls()`, `delete_control()`
-- **Lambda Handler Routes:** Added to `core/lambda/data-lambda/handler.py`
-  - `POST /api/visa/controls` - Create a spending limit or category block
-  - `GET /api/visa/controls/{document_id}` - Retrieve active control
-  - `DELETE /api/visa/controls/{document_id}` - Remove a control
+- **VISA Lambda:** `core/lambda/visa-lambda/`
+  - Dedicated Lambda function for all VISA-related operations.
+  - **Handler:** `handler.py` exposes `/api/visa/health`, `/api/visa/controls`.
+  - **Service:** `services/visa_service.py` handles mTLS and S3 cert downloads.
+- **Separation of Concerns:**
+  - Removed VISA logic from `data-lambda` to keep it focused on financial data processing.
+  - VISA operations now have their own independent deployment and scaling.
 - **Infrastructure Updates:** `infrastructure/lib/api-stack.ts`
-  - Granted data-lambda S3 read access to `synesthesia-pay-artifacts/visa/*`
-  - Added environment variables: `VISA_USER_ID`, `VISA_PASSWORD`
-  - Added API Gateway routes for VISA endpoints
+  - Defined `visa-lambda` function.
+  - Granted `visa-lambda` S3 read access to `synesthesia-pay-artifacts/visa/*`.
+  - Configured API Gateway to route `/api/visa/*` to the new `visa-lambda`.
+  - Set environment variables: `VISA_USER_ID`, `VISA_PASSWORD`.
 
 **Certificate Setup:**
 - Client Cert: `s3://synesthesia-pay-artifacts/visa/visa-cert.pem`
@@ -147,6 +147,6 @@
 - Root CA: `s3://synesthesia-pay-artifacts/visa/visa-sbx.pem`
 
 **Next Steps for VISA:**
-1. Set `VISA_USER_ID` and `VISA_PASSWORD` environment variables in AWS Lambda Console or via CDK deploy
-2. Deploy updated stack: `cd infrastructure && bunx cdk deploy --all`
-3. Test VISA endpoints using the frontend hooks
+1. Set `VISA_USER_ID` and `VISA_PASSWORD` environment variables.
+2. Deploy updated stack: `cd infrastructure && bunx cdk deploy --all`.
+3. Test VISA endpoints using the frontend hooks.
