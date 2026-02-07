@@ -4,7 +4,8 @@ import { PanelPopup } from '../PanelPopup';
 import { useShieldStore } from '@/lib/stores/shield-store';
 
 export function ShieldsPopup() {
-  const shields = useShieldStore((state) => Object.values(state.shields));
+  const shieldsMap = useShieldStore((state) => state.shields);
+  const shields = Object.values(shieldsMap);
 
   return (
     <PanelPopup type="shields" title="Shield Status - Detailed View">

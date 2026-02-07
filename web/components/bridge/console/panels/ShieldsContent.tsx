@@ -3,7 +3,8 @@
 import { useShieldStore } from '@/lib/stores/shield-store';
 
 export function ShieldsContent() {
-  const shields = useShieldStore((state) => Object.values(state.shields));
+  const shieldsMap = useShieldStore((state) => state.shields);
+  const shields = Object.values(shieldsMap);
   const overallPercent = useShieldStore((state) => state.overallPercent);
 
   return (

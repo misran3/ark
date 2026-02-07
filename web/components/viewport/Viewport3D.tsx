@@ -8,7 +8,8 @@ import SceneEffects from '@/components/three/SceneEffects';
 import { useThreatStore } from '@/lib/stores/threat-store';
 
 export function Viewport3D() {
-  const threats = useThreatStore((state) => state.threats.filter((t) => !t.deflected));
+  const allThreats = useThreatStore((state) => state.threats);
+  const threats = allThreats.filter((t) => !t.deflected);
   const hasSolarFlare = threats.some((t) => t.type === 'solar_flare');
 
   return (

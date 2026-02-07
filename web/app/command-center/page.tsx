@@ -122,7 +122,8 @@ function OverviewTab({
   budgetQuery: ReturnType<typeof useBudgetReport>;
   setActiveTab: (tab: string) => void;
 }) {
-  const activeThreats = useThreatStore((state) => state.threats.filter((t) => !t.deflected));
+  const allThreats = useThreatStore((state) => state.threats);
+  const activeThreats = allThreats.filter((t) => !t.deflected);
   const openTransactionModal = useModalStore((state) => state.openTransactionModal);
 
   // Loading skeleton for Overview tab

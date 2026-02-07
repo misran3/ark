@@ -12,7 +12,8 @@ const THREAT_ICONS: Record<string, string> = {
 };
 
 export function HUDThreats() {
-  const threats = useThreatStore((state) => state.threats.filter((t) => !t.deflected));
+  const allThreats = useThreatStore((state) => state.threats);
+  const threats = allThreats.filter((t) => !t.deflected);
 
   return (
     <div className="w-60 bg-black/15 border border-cyan-500/60 rounded p-3 relative">
