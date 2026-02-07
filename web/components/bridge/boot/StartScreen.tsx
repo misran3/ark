@@ -19,16 +19,7 @@ export function StartScreen({ onStart }: StartScreenProps) {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center">
-      {/* Vignette — darkens edges, transparent center lets 3D starfield through */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.85) 100%)',
-        }}
-      />
-
+    <div className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center">
       {/* ARK title */}
       <h1
         className="relative font-orbitron font-black tracking-[0.3em] mb-12"
@@ -36,7 +27,6 @@ export function StartScreen({ onStart }: StartScreenProps) {
           fontSize: 'clamp(80px, 12vw, 160px)',
           lineHeight: 1,
           color: 'rgba(0, 240, 255, 0.9)',
-          mixBlendMode: 'screen',
           opacity: phase === 'waiting' ? 0 : undefined,
           animation:
             phase !== 'waiting'
