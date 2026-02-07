@@ -27,6 +27,11 @@ class CaptainDeps(BaseModel):
     """Dependencies injected into Captain Nova agent via RunContext."""
 
     user_id: str = "demo_user"
+    query_type: str = "custom"
+    query_message: str = ""
+
+    # This field is set dynamically if a Bedrock parallel tool call error occurs, to trigger the instruction callback to include an error message in the prompt for the next retry.
+    parallel_tool_call_error: str = ""
 
 
 class CaptainOutput(BaseModel):
