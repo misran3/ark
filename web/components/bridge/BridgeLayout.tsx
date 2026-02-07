@@ -18,9 +18,10 @@ import { PerfMonitor } from './cockpit/PerfMonitor';
 
 export function BridgeLayout() {
   const phase = useBootStore((state) => state.phase);
-  const showHUD = phase === 'hud-rise' || phase === 'complete';
-  const showConsole = phase === 'console-boot' || phase === 'hud-rise' || phase === 'complete';
-  const showFrame = phase === 'console-boot' || phase === 'hud-rise' || phase === 'complete';
+  const showHUD = phase === 'hud-rise' || phase === 'settling' || phase === 'complete';
+  const showConsole = phase === 'console-boot' || phase === 'hud-rise' || phase === 'settling' || phase === 'complete';
+  const showFrame = phase === 'console-boot' || phase === 'hud-rise' || phase === 'settling' || phase === 'complete';
+  const isEmergencyPhase = phase === 'emergency';
 
   // Trigger power lifecycle cold start when console-boot phase begins
   const coldStartTriggered = useRef(false);
@@ -46,9 +47,17 @@ export function BridgeLayout() {
   return (
     <div className="fixed inset-0 bg-space-black overflow-hidden">
       {/* Layer 1: Full-screen 3D viewport (behind everything) */}
-      {/* Only mount Three.js after blur phase to prevent boot jank */}
+      {/* Only mount Three.js after viewport-awake phase to prevent boot jank */}
       {showFrame && (
-        <div className="absolute inset-0 z-0">
+        <div
+          className="absolute inset-0 z-0"
+          style={{
+            // Viewport glass during emergency: rgb(3,2,2) - warm bias from red reflection
+            // vs Frame metal: rgb(0,0,0) - absorbs light
+            backgroundColor: isEmergencyPhase ? 'rgb(3, 2, 2)' : 'transparent',
+            transition: 'background-color 0.5s ease-out',
+          }}
+        >
           <Viewport3D />
         </div>
       )}
