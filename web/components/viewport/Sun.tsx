@@ -68,7 +68,7 @@ const sunFragmentShader = `
     float glow = 1.0 - smoothstep(0.0, 1.0, dist);
     glow = pow(glow, 2.0) * flareIntensity;
 
-    gl_FragColor = vec4(color, 1.0) * glow;
+    gl_FragColor = vec4(color * glow, 1.0);
   }
 `;
 
@@ -106,8 +106,6 @@ export function Sun({ solarFlareActive }: SunProps) {
         }}
         vertexShader={sunVertexShader}
         fragmentShader={sunFragmentShader}
-        transparent
-        depthWrite
         side={THREE.FrontSide}
       />
 
