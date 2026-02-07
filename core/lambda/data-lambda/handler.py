@@ -8,6 +8,7 @@ Routes:
 - GET  /api/asteroids     - Financial threats (Cognito auth)
 - POST /api/asteroids/<id>/action - Take action on asteroid (Cognito auth)
 - GET  /api/transactions  - Transaction list (Cognito auth)
+- GET  /api/report/summary - 6-month financial summary (Cognito auth)
 
 Supports mock mode (DATA_SOURCE=mock) and live Nessie mode (DATA_SOURCE=nessie).
 """
@@ -226,6 +227,61 @@ def get_transactions() -> dict[str, Any]:
         transactions = [t for t in transactions if t.get("date", "") >= cutoff_str]
 
     return {"transactions": transactions, "count": len(transactions)}
+
+
+@app.get("/api/report/summary")
+@tracer.capture_method
+def get_financial_summary() -> dict[str, Any]:
+    """Return 6-month financial summary report.
+
+    Query params:
+        user_id: User ID to fetch report for (default: user_maya_torres)
+
+    Data source priority:
+        1. Nessie API (fresh data)
+        2. DynamoDB cache (fallback)
+    """
+    # Get user_id from query params, default to Maya Torres for demo
+    params = app.current_event.query_string_parameters or {}
+    user_id = params.get("user_id", "user_maya_torres")
+
+    logger.info("Financial summary endpoint called", user_id=user_id)
+
+    from shared.models import FinancialSnapshot
+    from services.report_service import build_report
+
+    snapshot_dict = None
+
+    # 1. Try Nessie API first
+    if DATA_SOURCE == "nessie":
+        try:
+            nessie = _get_nessie_service()
+            snapshot = nessie.build_snapshot(days=180)  # 6 months
+            snapshot_dict = snapshot.model_dump(mode="json")
+            logger.info("Got fresh data from Nessie", user_id=user_id)
+        except Exception as e:
+            logger.warning("Nessie API failed, trying cache", error=str(e))
+
+    # 2. Fallback to DynamoDB cache
+    if snapshot_dict is None:
+        try:
+            db = _get_data_table_client()
+            snapshot_dict = db.get_cached_snapshot(user_id)
+            if snapshot_dict:
+                logger.info("Using cached snapshot from DynamoDB", user_id=user_id)
+        except Exception as e:
+            logger.warning("DynamoDB cache failed", error=str(e))
+
+    # 3. Final fallback to mock data
+    if snapshot_dict is None:
+        from shared.mocks import get_mock_snapshot
+        snapshot_dict = get_mock_snapshot().model_dump(mode="json")
+        logger.info("Using mock data as final fallback", user_id=user_id)
+
+    snapshot = FinancialSnapshot.model_validate(snapshot_dict)
+    report = build_report(snapshot, user_id)
+
+    return report.model_dump(mode="json")
 
 
 # =============================================================================
