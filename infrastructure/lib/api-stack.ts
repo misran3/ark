@@ -96,13 +96,29 @@ export class ApiStack extends cdk.Stack {
         const dataLambdaFn = this.createLambdaFunction({
             name: 'data-lambda',
             handler: 'handler.lambda_handler',
-            description: 'Financial data: Nessie integration, budget engine, asteroid detection, VISA controls',
+            description: 'Financial data: Nessie integration, budget engine, asteroid detection',
             additionalDeps: ['./shared', './database'],
             copySourceFiles: true,
             additionalEnv: {
                 USERS_TABLE_NAME: props.usersTable.tableName,
                 NESSIE_API_KEY: process.env.NESSIE_API_KEY || '',
                 DATA_SOURCE: process.env.DATA_SOURCE || 'mock',
+            },
+            tableGrants: [props.usersTable],
+            timeout: cdk.Duration.seconds(30),
+        });
+
+        // =============================================================
+        // VISA Lambda Function
+        // =============================================================
+        const visaLambdaFn = this.createLambdaFunction({
+            name: 'visa-lambda',
+            handler: 'handler.lambda_handler',
+            description: 'VISA Transaction Controls service',
+            additionalDeps: ['./shared', './database'],
+            copySourceFiles: true,
+            additionalEnv: {
+                USERS_TABLE_NAME: props.usersTable.tableName,
                 VISA_USER_ID: process.env.VISA_USER_ID || '',
                 VISA_PASSWORD: process.env.VISA_PASSWORD || '',
             },
@@ -110,13 +126,13 @@ export class ApiStack extends cdk.Stack {
             timeout: cdk.Duration.seconds(30),
         });
 
-        // Grant S3 read access for VISA certificates
+        // Grant S3 read access for VISA certificates to VISA Lambda
         const visaCertsBucket = s3.Bucket.fromBucketName(
             this,
             'VisaCertsBucket',
             'synesthesia-pay-artifacts'
         );
-        visaCertsBucket.grantRead(dataLambdaFn, 'visa/*');
+        visaCertsBucket.grantRead(visaLambdaFn, 'visa/*');
 
         // =============================================================
         // VISA Lambda Function
@@ -259,9 +275,20 @@ export class ApiStack extends cdk.Stack {
         asteroidIdResource.addResource('action').addMethod('POST', lambdaIntegration);
 
         apiResource.addResource('transactions').addMethod('GET', lambdaIntegration);
+    }
+
+    /**
+     * Creates API Gateway resources and methods for VISA operations.
+     */
+    private createVisaAPIResources(visaLambdaFn: lambda.Function, authorizer: apigateway.CognitoUserPoolsAuthorizer) {
+        const apiResource = this.api.root.getResource('api') || this.api.root.addResource('api');
+        const visaResource = apiResource.getResource('visa') || apiResource.addResource('visa');
+        const lambdaIntegration = new apigateway.LambdaIntegration(visaLambdaFn);
+
+        // VISA health check
+        visaResource.addResource('health').addMethod('GET', lambdaIntegration);
 
         // VISA Transaction Controls endpoints
-        const visaResource = apiResource.addResource('visa');
         const visaControlsResource = visaResource.addResource('controls');
         visaControlsResource.addMethod('POST', lambdaIntegration);
         const visaControlIdResource = visaControlsResource.addResource('{document_id}');
