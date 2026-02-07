@@ -45,6 +45,15 @@ const actionLabels: Record<Asteroid['recommended_action'], { label: string; desc
   redirect: { label: 'REDIRECT', description: 'Find an alternative' },
 };
 
+/**
+ * Render an interactive card for an asteroid item with expandable details and action controls.
+ *
+ * @param asteroid - The asteroid data to display (title, amounts, timing, severity, details, reasoning, recommended action, and id).
+ * @param onAction - Callback invoked when an action button is clicked; receives the asteroid `id` and chosen action (`'deflect' | 'absorb' | 'redirect'`).
+ * @param isExpanded - Whether the card's detailed view is currently expanded. Defaults to `false`.
+ * @param onToggleExpand - Optional handler invoked when the card header is clicked to toggle expansion.
+ * @returns The rendered card element for the provided asteroid.
+ */
 export function AsteroidCard({
   asteroid,
   onAction,

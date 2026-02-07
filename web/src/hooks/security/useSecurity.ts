@@ -3,10 +3,14 @@ import api from "@/src/lib/api";
 import type { Asteroid, VisaControlRule } from "@/src/types/api";
 
 /**
- * Hook to fetch active financial threats (Asteroids).
+ * Provides state and actions for fetching and managing active financial threats ("asteroids").
  *
- * Endpoint: GET /api/asteroids
- * Returns: { asteroids: Asteroid[] }
+ * @returns An object containing:
+ * - `asteroids` — the current list of asteroids.
+ * - `loading` — `true` while a fetch is in progress, `false` otherwise.
+ * - `error` — the last fetch error or `null`.
+ * - `resolveAsteroid` — a function `(id, action)` that attempts to resolve an asteroid; it returns `{ success: true }` on success or `{ success: false, error }` on failure.
+ * - `refetch` — a function to re-fetch the asteroids list.
  */
 export function useAsteroids() {
   const [asteroids, setAsteroids] = useState<Asteroid[]>([]);

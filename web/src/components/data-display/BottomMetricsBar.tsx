@@ -17,6 +17,16 @@ interface MetricCardProps {
   trend?: 'up' | 'down' | 'neutral';
 }
 
+/**
+ * Render a compact metric card showing a label, a primary value, an optional sub-value with trend, and a mini sparkline.
+ *
+ * @param label - Short uppercase descriptor shown above the value
+ * @param value - Primary displayed value (e.g., formatted currency or percent)
+ * @param subValue - Optional secondary text displayed with a trend indicator
+ * @param colorClass - Tailwind text color class applied to the primary value and mapped to the sparkline fill (e.g., `text-emerald-400`)
+ * @param trend - Visual trend indicator; `'up'` renders an upward icon and green color, `'down'` renders a downward icon and red color, `'neutral'` renders a neutral icon and gray color
+ * @returns A JSX element containing the styled metric card
+ */
 function MetricCard({ label, value, subValue, colorClass, trend }: MetricCardProps) {
   const trendIcon = trend === 'up' ? '▲' : trend === 'down' ? '▼' : '●';
   const trendColor =
@@ -57,6 +67,17 @@ function MetricCard({ label, value, subValue, colorClass, trend }: MetricCardPro
   );
 }
 
+/**
+ * Render a responsive grid of four financial metric cards for monthly income, monthly spending, savings rate, and net worth change.
+ *
+ * Each card displays a label, a formatted value (USD currency without decimals for amounts, one decimal for percentages), an optional sub-value, a trend indicator, and a mini sparkline placeholder.
+ *
+ * @param monthlyIncome - Total income for the current month in USD (used for display and relative spending percentage)
+ * @param monthlySpending - Total spending for the current month in USD
+ * @param savingsRate - Savings rate expressed as a percentage (e.g., 12.5 for 12.5%)
+ * @param netWorthChange - Change in net worth for the month in USD (positive for increase, negative for decrease)
+ * @returns The rendered metrics bar as a JSX element
+ */
 export function BottomMetricsBar({
   monthlyIncome,
   monthlySpending,
