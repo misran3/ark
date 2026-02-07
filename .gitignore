@@ -11,3 +11,4 @@ docs/plans/*
 
 # Git worktrees
 .worktrees
+.idea

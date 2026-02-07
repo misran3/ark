@@ -1,11 +1,12 @@
 [project]
-name = "user-lambda"
+name = "data-lambda"
 version = "0.1.0"
-description = "User Lambda function for handling user-related operations"
+description = "Financial data service: Nessie integration, budget engine, asteroid detection"
 requires-python = ">=3.12"
 dependencies = [
     "aws-lambda-powertools>=3.24.0",
     "aws-xray-sdk>=2.15.0",
+    "httpx>=0.27.0",
 ]
 
 [tool.uv.sources]
