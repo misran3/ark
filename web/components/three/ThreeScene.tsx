@@ -1,13 +1,16 @@
 'use client';
 
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useMemo } from 'react';
+import { useGLTF } from '@react-three/drei';
 import Starfield from './Starfield';
 import CaptainNova from './CaptainNova';
 import Threats from './Threats';
 import PostProcessingPipeline from './PostProcessingPipeline';
 import { useTransitionStore } from '@/lib/stores/transition-store';
+import { useNovaVariant } from '@/contexts/NovaVariantContext';
 import gsap from 'gsap';
+import * as THREE from 'three';
 
 function CameraController() {
   const { camera } = useThree();
@@ -20,6 +23,39 @@ function CameraController() {
       ease: 'power2.inOut',
     });
   }, [cameraZ, camera]);
+
+  return null;
+}
+
+function GLBModel({ path }: { path: string }) {
+  const { scene } = useGLTF(path);
+
+  const clonedScene = useMemo(() => {
+    const clone = scene.clone(true);
+    // Auto-center the model at origin
+    const box = new THREE.Box3().setFromObject(clone);
+    const center = box.getCenter(new THREE.Vector3());
+    clone.position.set(-center.x, -box.min.y, -center.z);
+    return clone;
+  }, [scene]);
+
+  return <primitive object={clonedScene} position={[-4, -2, 0]} />;
+}
+
+function NovaVariantRenderer() {
+  const { activeVariant } = useNovaVariant();
+
+  if (activeVariant.type === 'skeletal') {
+    return <CaptainNova />;
+  }
+
+  if (activeVariant.type === 'community' && activeVariant.path) {
+    return (
+      <Suspense fallback={null}>
+        <GLBModel path={activeVariant.path} />
+      </Suspense>
+    );
+  }
 
   return null;
 }
@@ -47,7 +83,7 @@ export default function ThreeScene() {
 
           {/* Scene elements */}
           <Starfield />
-          <CaptainNova />
+          <NovaVariantRenderer />
           <Threats />
           <PostProcessingPipeline />
         </Suspense>
