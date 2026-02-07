@@ -88,6 +88,42 @@ Component uses TailwindCSS with cyan/cyberpunk theme matching the bridge UI:
 2. **Main Bridge** (`/`): Uses NovaVariantContext for shared state across HUD components
 3. **ThreeScene**: Renders appropriate component based on selected variant
 
+## Memory Management
+
+GLBModel components properly dispose of Three.js resources (geometries and materials) when:
+- Component unmounts
+- User switches to a different variant
+- Component re-renders with a different path
+
+This prevents memory leaks during long-running sessions with frequent variant switching.
+
+**Implementation Pattern:**
+
+```typescript
+useEffect(() => {
+  return () => {
+    clonedScene.traverse((obj) => {
+      if (obj instanceof THREE.Mesh) {
+        obj.geometry?.dispose();
+        if (obj.material) {
+          if (Array.isArray(obj.material)) {
+            obj.material.forEach((m) => m.dispose());
+          } else {
+            obj.material.dispose();
+          }
+        }
+      }
+    });
+  };
+}, [clonedScene]);
+```
+
+**Best Practices:**
+- Always dispose geometries and materials when done
+- Use useEffect cleanup functions for automatic disposal
+- Handle both single materials and material arrays
+- Traverse entire scene graph to catch nested meshes
+
 ## Features
 
 - **Click-outside detection**: Dropdown closes when clicking outside
@@ -145,12 +181,11 @@ Built-in variant renders `CaptainNova` component:
 2. **Model Preloading**: Preload GLB files on app load for smoother switching
 3. **Model Metadata**: Support JSON metadata files alongside GLBs (descriptions, credits, preview images)
 4. **Upload UI**: Allow users to upload their own GLB files dynamically
-5. **Model Caching**: Cache loaded models in Three.js to avoid re-parsing
-6. **Variant Presets**: Save user's preferred variant to localStorage or user profile
-7. **Preview Thumbnails**: Show small 3D preview or static image in dropdown
-8. **Model Validation**: Validate GLB files for compatibility before rendering
-9. **Loading States**: Show loading spinner while GLB models load
-10. **Error Boundaries**: Graceful fallback if GLB fails to load
+5. **Variant Presets**: Save user's preferred variant to localStorage or user profile
+6. **Preview Thumbnails**: Show small 3D preview or static image in dropdown
+7. **Model Validation**: Validate GLB files for compatibility before rendering
+8. **Loading States**: Show loading spinner while GLB models load
+9. **Error Boundaries**: Graceful fallback if GLB fails to load
 
 ## Troubleshooting
 
