@@ -30,13 +30,13 @@ const presets = {
     noiseEnabled: true, noiseOpacity: 0.05,
   },
   cinematic: {
-    bloomEnabled: true, bloomIntensity: 2.0, bloomThreshold: 0.4,
+    bloomEnabled: true, bloomIntensity: 2.0, bloomThreshold: 0.55,
     vignetteEnabled: true, vignetteOffset: 0.3, vignetteDarkness: 0.8,
     chromaticEnabled: true, chromaticOffset: [0.002, 0.002] as [number, number],
     noiseEnabled: true, noiseOpacity: 0.08,
   },
   intense: {
-    bloomEnabled: true, bloomIntensity: 3.0, bloomThreshold: 0.3,
+    bloomEnabled: true, bloomIntensity: 3.0, bloomThreshold: 0.45,
     vignetteEnabled: true, vignetteOffset: 0.2, vignetteDarkness: 1.0,
     chromaticEnabled: true, chromaticOffset: [0.005, 0.005] as [number, number],
     noiseEnabled: true, noiseOpacity: 0.12,
