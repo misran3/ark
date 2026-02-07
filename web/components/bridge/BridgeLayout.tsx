@@ -4,7 +4,7 @@ import { useBootStore } from '@/lib/stores/boot-store';
 import { HUDTopBar } from './hud/HUDTopBar';
 import { HUDThreats } from './hud/HUDThreats';
 import { CommandConsole } from './console/CommandConsole';
-import { CaptainNovaPanel } from './hud/CaptainNovaPanel';
+import { CaptainNovaStation } from './hud/CaptainNovaPanel';
 import { Viewport3D } from '../viewport/Viewport3D';
 
 export function BridgeLayout() {
@@ -51,7 +51,7 @@ export function BridgeLayout() {
             transform: showHUD ? 'translateX(0)' : 'translateX(100%)',
           }}
         >
-          <CaptainNovaPanel />
+          <CaptainNovaStation />
         </div>
       </div>
 
