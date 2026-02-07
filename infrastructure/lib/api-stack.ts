@@ -127,6 +127,8 @@ export class ApiStack extends cdk.Stack {
              additionalEnv: {
                 BEDROCK_MODEL_ID: 'us.anthropic.claude-sonnet-4-5-20250929-v1:0',
                 LOGFIRE_TOKEN: process.env.LOGFIRE_TOKEN || '',
+                NESSIE_API_KEY: process.env.NESSIE_API_KEY || '',
+                DATA_SOURCE: process.env.DATA_SOURCE || 'mock',
              },
              timeout: cdk.Duration.seconds(60),
          });
