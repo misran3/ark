@@ -2,7 +2,7 @@
 
 import { Canvas } from '@react-three/fiber';
 import { StarfieldBackground } from './StarfieldBackground';
-import { Sun } from './Sun';
+import { Planet } from './Planet';
 import { ThreatsLayer } from './ThreatsLayer';
 import SceneEffects from '@/components/three/SceneEffects';
 import { CanopyStruts } from './CanopyStruts';
@@ -18,7 +18,6 @@ export function Viewport3D() {
   const allThreats = useThreatStore((state) => state.threats);
   const expandedPanel = useConsoleStore((s) => s.expandedPanel);
   const threats = allThreats.filter((t) => !t.deflected);
-  const hasSolarFlare = threats.some((t) => t.type === 'solar_flare');
 
   return (
     <div className="w-full h-full">
@@ -40,11 +39,8 @@ export function Viewport3D() {
         {/* Starfield */}
         <StarfieldBackground />
 
-        {/* The Sun */}
-        {/* TODO: Planet focus acquisition effect (post-boot enhancement)
-            - blur 8→0, saturate 0.6→1.0, brightness 1.3→1.0
-            - Requires Three.js shader approach (CSS filters don't work on <group>) */}
-        <Sun solarFlareActive={hasSolarFlare} />
+        {/* Blue planet backdrop */}
+        <Planet />
 
         {/* Threat objects */}
         <ThreatsLayer threats={threats} />
