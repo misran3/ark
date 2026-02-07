@@ -63,8 +63,25 @@ export default function AsteroidField({
 }: AsteroidFieldProps) {
   const driftGroupRef = useRef<THREE.Group>(null);
 
+  // Validate amount prop exists and is reasonable
+  const validAmount = useMemo(() => {
+    if (amount === undefined || amount === null) {
+      console.warn('AsteroidField: amount prop is missing, defaulting to $10');
+      return 10;
+    }
+    if (amount < 1) {
+      console.warn(`AsteroidField: amount ${amount} is too low, clamping to $1`);
+      return 1;
+    }
+    if (amount > 10000) {
+      console.warn(`AsteroidField: amount ${amount} is too high, clamping to $10,000`);
+      return 10000;
+    }
+    return amount;
+  }, [amount]);
+
   // Compute field params from amount (memoized, doesn't change)
-  const fieldParams = useMemo(() => getFieldParams(amount, seed), [amount, seed]);
+  const fieldParams = useMemo(() => getFieldParams(validAmount, seed), [validAmount, seed]);
 
   // Drift target — random point in convergence circle
   const driftTarget = useMemo(() => getDriftTarget(seed), [seed]);

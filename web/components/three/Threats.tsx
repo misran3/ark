@@ -35,9 +35,9 @@ export default function Threats() {
             size={threat.size}
             color={threat.color}
             label={threat.label}
-            amount={threat.amount}
+            amount={threat.amount ?? 10}
             seed={threat.seed}
-            createdAt={threat.createdAt}
+            createdAt={threat.createdAt ?? Date.now()}
             onHover={(hovered: boolean) => setHoveredThreat(hovered ? threat.id : null)}
             onDeflect={() => {
               console.log('Deflecting threat:', threat.id);
@@ -56,20 +56,8 @@ export default function Threats() {
       case 'enemy_cruiser':
         return <EnemyCruiser key={threat.id} {...commonProps} />;
       default:
-        return (
-          <AsteroidField
-            key={threat.id}
-            position={threat.position}
-            size={threat.size}
-            color={threat.color}
-            label={threat.label}
-            amount={threat.amount}
-            seed={threat.seed}
-            createdAt={threat.createdAt}
-            onHover={(hovered: boolean) => setHoveredThreat(hovered ? threat.id : null)}
-            onDeflect={() => deflectThreat(threat.id)}
-          />
-        );
+        console.warn(`Unknown threat type: ${threat.type}, skipping render`);
+        return null;
     }
   };
 
