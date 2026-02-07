@@ -8,9 +8,12 @@ import SceneEffects from '@/components/three/SceneEffects';
 import { CanopyStruts } from './CanopyStruts';
 import { useThreatStore } from '@/lib/stores/threat-store';
 import { HologramOverlay } from '@/components/bridge/hologram/HologramOverlay';
+import { DefenseGrid } from '@/components/bridge/hologram/panels/DefenseGrid';
+import { useConsoleStore } from '@/lib/stores/console-store';
 
 export function Viewport3D() {
   const allThreats = useThreatStore((state) => state.threats);
+  const expandedPanel = useConsoleStore((s) => s.expandedPanel);
   const threats = allThreats.filter((t) => !t.deflected);
   const hasSolarFlare = threats.some((t) => t.type === 'solar_flare');
 
@@ -49,7 +52,9 @@ export function Viewport3D() {
         <CanopyStruts />
 
         {/* Hologram expansion overlay */}
-        <HologramOverlay />
+        <HologramOverlay>
+          {expandedPanel === 'shields' && <DefenseGrid />}
+        </HologramOverlay>
 
         {/* Post-processing: bloom, chromatic aberration, vignette */}
         <SceneEffects />
