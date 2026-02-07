@@ -29,7 +29,7 @@ MOCKS_DIR = Path(__file__).parent
 def _load_json(filename: str) -> dict | list:
     """Load JSON file from mocks directory."""
     filepath = MOCKS_DIR / filename
-    with open(filepath) as f:
+    with open(filepath, encoding="utf-8") as f:
         return json.load(f)
 
 
