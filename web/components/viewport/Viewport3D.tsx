@@ -5,6 +5,7 @@ import { StarfieldBackground } from './StarfieldBackground';
 import { Sun } from './Sun';
 import { ThreatsLayer } from './ThreatsLayer';
 import SceneEffects from '@/components/three/SceneEffects';
+import { CanopyStruts } from './CanopyStruts';
 import { useThreatStore } from '@/lib/stores/threat-store';
 
 export function Viewport3D() {
@@ -37,6 +38,9 @@ export function Viewport3D() {
 
         {/* Threat objects */}
         <ThreatsLayer threats={threats} />
+
+        {/* Canopy struts — converging structural beams */}
+        <CanopyStruts />
 
         {/* Post-processing: bloom, chromatic aberration, vignette */}
         <SceneEffects />

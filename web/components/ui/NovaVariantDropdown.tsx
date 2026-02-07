@@ -15,6 +15,8 @@ export interface NovaVariantDropdownProps {
   variants: NovaVariant[];
   /** Optional custom className */
   className?: string;
+  /** Open menu upward instead of downward */
+  dropUp?: boolean;
 }
 
 export function NovaVariantDropdown({
@@ -22,6 +24,7 @@ export function NovaVariantDropdown({
   onChange,
   variants,
   className = '',
+  dropUp = false,
 }: NovaVariantDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -60,7 +63,7 @@ export function NovaVariantDropdown({
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 rounded border border-cyan-500/30 bg-gray-900/95 backdrop-blur-sm shadow-[0_0_20px_rgba(0,255,255,0.15)] max-h-64 overflow-y-auto">
+        <div className={`absolute z-50 w-full rounded border border-cyan-500/30 bg-gray-900/95 backdrop-blur-sm shadow-[0_0_20px_rgba(0,255,255,0.15)] max-h-64 overflow-y-auto ${dropUp ? 'bottom-full mb-1' : 'mt-1'}`}>
           {variants.map((variant, idx) => {
             const isSelected = value.label === variant.label;
             return (

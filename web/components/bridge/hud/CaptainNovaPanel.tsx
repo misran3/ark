@@ -1,7 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect, useMemo } from 'react';
+import { Canvas } from '@react-three/fiber';
+import { useGLTF } from '@react-three/drei';
+import * as THREE from 'three';
 import { useAlertStore, ALERT_COLORS } from '@/lib/stores/alert-store';
+import { useNovaVariant } from '@/contexts/NovaVariantContext';
+import CaptainNova from '@/components/three/captain-nova';
 import { NovaVariantSelector } from './NovaVariantSelector';
 
 type NovaState = 'idle' | 'analyzing' | 'ready' | 'alert';
@@ -20,6 +25,56 @@ const STATE_BORDER_COLORS: Record<NovaState, string> = {
   ready: 'rgba(34, 197, 94, 0.5)',
   alert: 'rgba(239, 68, 68, 0.6)',
 };
+
+function GLBModel({ path }: { path: string }) {
+  const { scene } = useGLTF(path);
+  const clonedScene = useMemo(() => {
+    const clone = scene.clone(true);
+    const box = new THREE.Box3().setFromObject(clone);
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const scale = 2 / maxDim; // normalize to ~2 units tall
+    // Center model at origin (not feet-on-ground)
+    clone.position.set(-center.x * scale, -center.y * scale, -center.z * scale);
+    clone.scale.setScalar(scale);
+    return clone;
+  }, [scene]);
+
+  useEffect(() => {
+    return () => {
+      clonedScene.traverse((obj) => {
+        if (obj instanceof THREE.Mesh) {
+          if (obj.geometry) obj.geometry.dispose();
+          if (obj.material) {
+            if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());
+            else obj.material.dispose();
+          }
+        }
+      });
+    };
+  }, [clonedScene]);
+
+  return <primitive object={clonedScene} />;
+}
+
+function NovaInlineRenderer() {
+  const { activeVariant } = useNovaVariant();
+
+  if (activeVariant.type === 'skeletal') {
+    return <CaptainNova position={[0, -0.5, 0]} />;
+  }
+
+  if (activeVariant.type === 'community' && activeVariant.path) {
+    return (
+      <Suspense fallback={null}>
+        <GLBModel path={activeVariant.path} />
+      </Suspense>
+    );
+  }
+
+  return null;
+}
 
 export function CaptainNovaStation() {
   const alertLevel = useAlertStore((state) => state.level);
@@ -119,40 +174,29 @@ export function CaptainNovaStation() {
         ) : (
           /* Booted content */
           <div className="flex flex-col items-center h-full pt-3 px-2">
-            {/* Avatar with glow ring */}
-            <div className="relative mb-2">
+            {/* 3D Captain Nova viewport */}
+            <div className="relative flex-1 w-full min-h-0">
               <div
-                className="absolute inset-0 rounded-full"
+                className="absolute inset-0 pointer-events-none"
                 style={{
                   background: `radial-gradient(circle, ${borderColor} 0%, transparent 70%)`,
-                  transform: 'scale(1.4)',
-                  opacity: 0.3,
+                  opacity: 0.15,
                 }}
               />
-              <div
-                className="w-12 h-12 rounded-full bg-space-darker/80 border flex items-center justify-center relative"
-                style={{
-                  borderColor: borderColor,
-                  clipPath: 'polygon(25% 0%, 75% 0%, 100% 25%, 100% 75%, 75% 100%, 25% 100%, 0% 75%, 0% 25%)',
-                }}
+              <Canvas
+                camera={{ position: [0, 0, 3], fov: 45 }}
+                gl={{ antialias: true, alpha: true }}
+                style={{ background: 'transparent' }}
               >
-                <span className="text-lg opacity-60">&#128100;</span>
-              </div>
-            </div>
-
-            {/* Comm signal visualizer */}
-            <div className="flex gap-[2px] mb-2 h-3 items-end">
-              {[3, 5, 2, 6, 3, 4, 2].map((h, i) => (
-                <div
-                  key={i}
-                  className="w-[2px] bg-cyan-400/30 rounded-sm"
-                  style={{ height: `${h}px` }}
-                />
-              ))}
+                <ambientLight intensity={0.4} />
+                <pointLight position={[2, 3, 3]} intensity={0.6} color="#06b6d4" />
+                <pointLight position={[-2, -1, 2]} intensity={0.3} color="#8b5cf6" />
+                <NovaInlineRenderer />
+              </Canvas>
             </div>
 
             {/* Status area */}
-            <div className="text-center flex-1 flex flex-col justify-center gap-1 w-full">
+            <div className="text-center flex flex-col justify-center gap-1 w-full py-1">
               {/* Current status */}
               <div className="font-mono text-[8px] text-cyan-300/70">
                 {statusMsg}
@@ -179,7 +223,7 @@ export function CaptainNovaStation() {
             </button>
 
             {/* Variant Selector */}
-            <div className="w-full px-1 mb-2">
+            <div className="w-full px-1 mb-2 pointer-events-auto">
               <NovaVariantSelector />
             </div>
           </div>

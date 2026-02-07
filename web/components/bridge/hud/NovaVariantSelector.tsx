@@ -16,6 +16,7 @@ export function NovaVariantSelector() {
         onChange={setActiveVariant}
         variants={availableVariants}
         className="w-full"
+        dropUp
       />
       <div className="font-rajdhani text-xs text-cyan-400/40 mt-1">
         {activeVariant.type === 'skeletal' ? 'Built-in system' : 'Community model'}

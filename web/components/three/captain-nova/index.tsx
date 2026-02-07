@@ -47,6 +47,9 @@ const CaptainNova = forwardRef<CaptainNovaHandle, CaptainNovaProps>(
     useEffect(() => {
       const parts = createNovaGeometry(geometryConfig);
       const material = createHologramMaterial(colors[0], colors[1]);
+      // Offset fade thresholds by group Y so fade works at any position
+      material.uniforms.uFadeStart.value += position[1];
+      material.uniforms.uFadeEnd.value += position[1];
       materialRef.current = material;
 
       // Apply material to all meshes

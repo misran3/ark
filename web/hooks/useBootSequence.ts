@@ -79,6 +79,7 @@ export function useBootSequence() {
         const currentIndex = PHASES.indexOf(phase);
         const nextPhase = PHASES[currentIndex + 1];
         if (nextPhase) {
+          console.log(`[BOOT] Phase transition: ${phase} → ${nextPhase} at ${Date.now()}`);
           setPhase(nextPhase);
         }
       }

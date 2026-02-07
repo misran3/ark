@@ -101,6 +101,45 @@ export function GlassSurface() {
             'radial-gradient(ellipse 40% 25% at 50% 95%, rgba(200, 150, 80, 0.01) 0%, transparent 100%)',
         }}
       />
+
+      {/* Canopy strut shadows — soft diagonal strips matching R3F strut convergence.
+          Offset 2-3px in overhead light direction (downward-right). */}
+      {/* Top-left strut shadow */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            'linear-gradient(135deg, rgba(0,0,0,0.06) 0%, rgba(0,0,0,0.03) 2%, transparent 4%)',
+          transform: 'translate(2px, 3px)',
+        }}
+      />
+      {/* Top-right strut shadow */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            'linear-gradient(225deg, rgba(0,0,0,0.06) 0%, rgba(0,0,0,0.03) 2%, transparent 4%)',
+          transform: 'translate(2px, 3px)',
+        }}
+      />
+      {/* Bottom-left strut shadow */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            'linear-gradient(45deg, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.02) 2%, transparent 4%)',
+          transform: 'translate(2px, 2px)',
+        }}
+      />
+      {/* Bottom-right strut shadow */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            'linear-gradient(315deg, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.02) 2%, transparent 4%)',
+          transform: 'translate(2px, 2px)',
+        }}
+      />
     </div>
   );
 }

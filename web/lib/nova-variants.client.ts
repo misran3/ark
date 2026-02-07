@@ -6,9 +6,9 @@ import { NovaVariant } from '@/components/ui/NovaVariantDropdown';
  */
 export const HARDCODED_VARIANTS: NovaVariant[] = [
   { type: 'skeletal', label: 'A: Skeletal-less Hierarchical' },
-  { type: 'community', label: 'CAUCASIAN MAN', path: '/3D/CAUCASIAN MAN.glb' },
-  { type: 'community', label: 'Vinayagar', path: '/3D/Vinayagar.glb' },
-  { type: 'community', label: 'https storage googleapis', path: '/3D/https___storage_googleapis_com_ai_services_quality_jobs_xr4enzsf_input_png.glb' },
+  { type: 'community', label: 'CAUCASIAN MAN', path: '/models/caucasian-man.glb' },
+  { type: 'community', label: 'Vinayagar', path: '/models/vinayagar.glb' },
+  { type: 'community', label: 'https storage googleapis', path: '/models/googleapis-model.glb' },
 ];
 
 /**

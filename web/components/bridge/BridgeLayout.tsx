@@ -21,6 +21,8 @@ export function BridgeLayout() {
   const showConsole = phase === 'console-boot' || phase === 'hud-rise' || phase === 'complete';
   const showFrame = phase === 'console-boot' || phase === 'hud-rise' || phase === 'complete';
 
+  console.log(`[BRIDGE] Render - phase: ${phase}, showFrame: ${showFrame}, showConsole: ${showConsole}, showHUD: ${showHUD}`);
+
   // Trigger power lifecycle cold start when console-boot phase begins
   const coldStartTriggered = useRef(false);
   const coldStart = usePowerStore((s) => s.coldStart);
@@ -45,9 +47,12 @@ export function BridgeLayout() {
   return (
     <div className="fixed inset-0 bg-space-black overflow-hidden">
       {/* Layer 1: Full-screen 3D viewport (behind everything) */}
-      <div className="absolute inset-0 z-0">
-        <Viewport3D />
-      </div>
+      {/* Only mount Three.js after blur phase to prevent boot jank */}
+      {showFrame && (
+        <div className="absolute inset-0 z-0">
+          <Viewport3D />
+        </div>
+      )}
 
       {/* Glass layers: z-5 through z-8 between viewport and frame */}
       <div
