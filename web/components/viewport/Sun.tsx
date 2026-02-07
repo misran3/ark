@@ -107,6 +107,7 @@ export function Sun({ solarFlareActive }: SunProps) {
         vertexShader={sunVertexShader}
         fragmentShader={sunFragmentShader}
         transparent
+        depthWrite
         side={THREE.FrontSide}
       />
 
