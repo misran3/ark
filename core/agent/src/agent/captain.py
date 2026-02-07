@@ -10,13 +10,9 @@ import os
 
 import boto3
 import logfire
-from aws_lambda_powertools import Logger
-from pydantic_ai import Agent
-from pydantic_ai.exceptions import ModelHTTPError
+from pydantic_ai import Agent, Tool, ToolOutput
 from pydantic_ai.models.bedrock import BedrockConverseModel
 from pydantic_ai.providers.bedrock import BedrockProvider
-
-logger = Logger(service="CaptainNova")
 
 from shared.models import CaptainResponse, VisaControlRule
 from shared.utils import validate_aws_credentials
@@ -54,33 +50,27 @@ bedrock_model = BedrockConverseModel(
     provider=BedrockProvider(bedrock_client=bedrock_client),
 )
 
-# Create the Captain Nova agent
+# Create the Captain Nova agent with tools wrapped in Tool instances
 captain_nova = Agent[CaptainDeps, CaptainOutput](
     model=bedrock_model,
     system_prompt=SYSTEM_PROMPT,
-    output_type=CaptainOutput,
+    output_type=ToolOutput(CaptainOutput),
     deps_type=CaptainDeps,
+    tools=[
+        Tool(get_financial_snapshot),
+        Tool(get_budget_report),
+        Tool(get_active_threats),
+        Tool(get_spending_by_category),
+        Tool(get_savings_projection),
+        Tool(get_active_visa_controls),
+        Tool(recommend_visa_control),
+        Tool(activate_visa_control),
+    ],
 )
-
-# Register all tools
-captain_nova.tool(get_financial_snapshot)
-captain_nova.tool(get_budget_report)
-captain_nova.tool(get_active_threats)
-captain_nova.tool(get_spending_by_category)
-captain_nova.tool(get_savings_projection)
-captain_nova.tool(get_active_visa_controls)
-captain_nova.tool(recommend_visa_control)
-captain_nova.tool(activate_visa_control)
-
-
-MAX_RETRIES = 3
 
 
 async def run_captain_nova(request: QueryRequest, user_id: str = "demo_user") -> CaptainResponse:
     """Run Captain Nova with a query request.
-
-    Includes retry logic for transient Bedrock API errors (e.g., parallel tool call
-    formatting issues in pydantic_ai).
 
     Args:
         request: The query request with type and optional message
@@ -92,69 +82,25 @@ async def run_captain_nova(request: QueryRequest, user_id: str = "demo_user") ->
     user_prompt = build_user_prompt(request.type, request.message)
     deps = CaptainDeps(user_id=user_id)
 
-    last_error: Exception | None = None
+    result = await captain_nova.run(user_prompt, deps=deps)
 
-    for attempt in range(1, MAX_RETRIES + 1):
-        try:
-            result = await captain_nova.run(user_prompt, deps=deps)
+    # Extract tools used from the result
+    tools_used: list[str] = []
+    for message in result.all_messages():
+        if hasattr(message, "parts"):
+            for part in message.parts:
+                if hasattr(part, "tool_name"):
+                    if part.tool_name not in tools_used:
+                        tools_used.append(part.tool_name)
 
-            # Extract tools used from the result
-            tools_used: list[str] = []
-            for message in result.all_messages():
-                if hasattr(message, "parts"):
-                    for part in message.parts:
-                        if hasattr(part, "tool_name"):
-                            if part.tool_name not in tools_used:
-                                tools_used.append(part.tool_name)
+    # Extract VISA suggestions from output
+    suggested_controls: list[VisaControlRule] | None = None
+    if result.output and result.output.suggested_visa_controls:
+        suggested_controls = result.output.suggested_visa_controls
 
-            # Extract VISA suggestions from output
-            suggested_controls: list[VisaControlRule] | None = None
-            if result.output and result.output.suggested_visa_controls:
-                suggested_controls = result.output.suggested_visa_controls
-
-            return CaptainResponse(
-                message=result.output.message if result.output else "Unable to process request.",
-                tools_used=tools_used,
-                confidence=1.0,
-                suggested_visa_controls=suggested_controls,
-            )
-
-        except ModelHTTPError as e:
-            last_error = e
-            # Check if this is the known parallel tool call formatting bug
-            error_msg = str(e)
-            is_known_bug = "toolUse.name" in error_msg and "failed to satisfy constraint" in error_msg
-
-            if is_known_bug:
-                logger.warning(
-                    "Bedrock API tool name validation error (pydantic_ai parallel tool call bug)",
-                    attempt=attempt,
-                    max_retries=MAX_RETRIES,
-                    error=error_msg[:200],
-                )
-                if attempt < MAX_RETRIES:
-                    continue  # Retry
-                # On last attempt, fall through to return fallback response
-            else:
-                # For other HTTP errors, don't retry - raise immediately
-                raise
-
-    # All retries exhausted - return graceful fallback response
-    logger.error(
-        "All retries exhausted for Captain Nova request",
-        attempts=MAX_RETRIES,
-        last_error=str(last_error)[:200] if last_error else None,
-    )
-
-    # Return a fallback response instead of crashing
-    # This is a known pydantic_ai Bedrock bug with parallel tool calls
     return CaptainResponse(
-        message=(
-            "Commander, I'm experiencing some interference with my sensors. "
-            "Please try rephrasing your question or try a specific query type "
-            "(bridge briefing, budget scan, threat report, or savings projection)."
-        ),
-        tools_used=[],
-        confidence=0.0,
-        suggested_visa_controls=None,
+        message=result.output.message if result.output else "Unable to process request.",
+        tools_used=tools_used,
+        confidence=1.0,
+        suggested_visa_controls=suggested_controls,
     )
