@@ -123,7 +123,11 @@ export class ApiStack extends cdk.Stack {
             additionalEnv: {
                 BEDROCK_MODEL_ID: 'us.anthropic.claude-sonnet-4-5-20250929-v1:0',
             },
-            timeout: cdk.Duration.minutes(5),
+             additionalEnv: {
+                 BEDROCK_MODEL_ID: 'us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+             },
+             timeout: cdk.Duration.seconds(60),
+         });
         });
 
         // Grant Bedrock access

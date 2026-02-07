@@ -57,7 +57,8 @@ def captain_query() -> dict[str, Any]:
         body = app.current_event.json_body
         request = QueryRequest(**body)
 
-        logger.info(f"Query type: {request.type}, message: {request.message[:50] if request.message else 'none'}")
+        msg_len = len(request.message) if request.message else 0
+        logger.info(f"Query type: {request.type}, message_len: {msg_len}")
 
         # Run Captain Nova (async)
         response = asyncio.run(run_captain_nova(request))
