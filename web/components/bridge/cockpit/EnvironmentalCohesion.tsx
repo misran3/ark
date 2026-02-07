@@ -134,29 +134,29 @@ export function EnvironmentalCohesion() {
 
       {/* ========== CONSISTENT SPECULAR: Top-left light source ========== */}
 
-      {/* Top frame specular — flat horizontal: broader, softer */}
+      {/* Top frame specular — angled surface: light falloff front-to-back */}
       <div
         className="absolute top-0 left-0 right-0 h-6"
         style={{
-          background: 'linear-gradient(135deg, rgba(200, 220, 255, 0.02) 0%, transparent 40%)',
+          background: 'linear-gradient(180deg, rgba(200, 220, 255, 0.02) 0%, transparent 70%)',
         }}
       />
 
-      {/* Left frame specular — vertical surface: tighter, directional */}
+      {/* Left frame specular — angled wall: lighter near screen edge, darker receding */}
       <div
         className="absolute top-6 left-0 w-[50px]"
         style={{
           bottom: '220px',
-          background: 'linear-gradient(160deg, rgba(200, 220, 255, 0.015) 0%, transparent 25%)',
+          background: 'linear-gradient(90deg, rgba(200, 220, 255, 0.025) 0%, transparent 60%)',
         }}
       />
 
-      {/* Right frame specular — vertical, further from light */}
+      {/* Right frame specular — angled wall: lighter near screen edge */}
       <div
         className="absolute top-6 right-0 w-[180px]"
         style={{
           bottom: '220px',
-          background: 'linear-gradient(200deg, rgba(200, 220, 255, 0.008) 0%, transparent 30%)',
+          background: 'linear-gradient(270deg, rgba(200, 220, 255, 0.015) 0%, transparent 50%)',
         }}
       />
 

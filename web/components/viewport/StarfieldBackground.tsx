@@ -83,7 +83,7 @@ export function StarfieldBackground() {
       // Distribute in a box: x/y spread wide, z behind camera
       positions[i * 3] = rand() * 2000 - 1000;       // x: -1000 to 1000
       positions[i * 3 + 1] = rand() * 2000 - 1000;   // y: -1000 to 1000
-      positions[i * 3 + 2] = -(rand() * 1500 + 100);  // z: -100 to -1600
+      positions[i * 3 + 2] = -(rand() * 1000 + 850);  // z: -850 to -1850 (all behind Sun at z=-800)
 
       // Size: 95% small (8-18), 5% hero (22-35)
       const isHero = rand() < 0.05;

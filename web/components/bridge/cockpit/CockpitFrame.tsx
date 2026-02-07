@@ -16,17 +16,48 @@ export function CockpitFrame() {
 
   return (
     <div className="fixed inset-0 z-10 pointer-events-none" aria-hidden="true">
-      {/* ========== TOP FRAME (thin, ~24px) ========== */}
-      <div className="absolute top-0 left-0 right-0 h-6 hull-metal-h">
-        {/* Top bevel / gasket line */}
-        <div className="absolute bottom-0 left-12 right-12 h-px" style={{ background: colors.border }} />
-        {/* Frost effect at top corners */}
-        <div className="absolute bottom-0 left-0 w-24 h-3 bg-gradient-to-r from-white/[0.02] to-transparent rounded-br" />
-        <div className="absolute bottom-0 right-0 w-24 h-3 bg-gradient-to-l from-white/[0.02] to-transparent rounded-bl" />
+      {/* ========== TOP FRAME (thin, ~24px) — perspective angled ========== */}
+      <div style={{ perspective: '600px', contain: 'layout style paint' }} className="absolute top-0 left-0 right-0 h-6">
+        <div
+          className="absolute inset-0 hull-metal-h"
+          style={{
+            transform: 'rotateX(-2deg)',
+            transformOrigin: 'center top',
+          }}
+        >
+          {/* Top bevel / gasket line */}
+          <div className="absolute bottom-0 left-12 right-12 h-px" style={{ background: colors.border }} />
+          {/* Frost effect at top corners */}
+          <div className="absolute bottom-0 left-0 w-24 h-3 bg-gradient-to-r from-white/[0.02] to-transparent rounded-br" />
+          <div className="absolute bottom-0 right-0 w-24 h-3 bg-gradient-to-l from-white/[0.02] to-transparent rounded-bl" />
+
+          {/* 4A: Overhead light strip — warm white along bottom edge */}
+          <div
+            className="absolute bottom-0 left-[50px] right-[180px] h-2"
+            style={{
+              background: 'linear-gradient(180deg, transparent 0%, rgba(255, 245, 230, 0.06) 60%, rgba(255, 245, 230, 0.12) 85%, rgba(255, 245, 230, 0.04) 100%)',
+            }}
+          />
+
+          {/* Light falloff gradient — lighter at back, darker at front overhang */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background: 'linear-gradient(180deg, rgba(200,220,255,0.02) 0%, transparent 70%)',
+            }}
+          />
+        </div>
       </div>
 
-      {/* ========== LEFT FRAME (~50px) ========== */}
-      <div className="absolute top-6 left-0 w-[50px] bottom-[220px] hull-metal-v">
+      {/* ========== LEFT FRAME (~50px) — perspective angled ========== */}
+      <div style={{ perspective: '600px', contain: 'layout style paint' }} className="absolute top-6 left-0 w-[50px] bottom-[220px]">
+      <div
+        className="absolute inset-0 hull-metal-v"
+        style={{
+          transform: 'rotateY(3deg)',
+          transformOrigin: 'left center',
+        }}
+      >
         {/* Panel segment seams */}
         <div className="absolute top-[30%] left-0 right-0 h-px hull-seam" />
         <div className="absolute top-[65%] left-0 right-0 h-px hull-seam" />
@@ -63,10 +94,26 @@ export function CockpitFrame() {
 
         {/* Emergency shutter mark */}
         <div className="absolute top-[10%] right-0 bottom-[10%] w-px bg-white/[0.03]" />
+
+        {/* Light falloff — lighter on left edge (near overhead light), darker on right */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: 'linear-gradient(90deg, rgba(200,220,255,0.025) 0%, transparent 60%)',
+          }}
+        />
+      </div>
       </div>
 
-      {/* ========== RIGHT FRAME (~180px, houses Captain Nova station) ========== */}
-      <div className="absolute top-6 right-0 w-[180px] bottom-[220px] hull-metal-v">
+      {/* ========== RIGHT FRAME (~180px, houses Captain Nova station) — perspective angled ========== */}
+      <div style={{ perspective: '600px', contain: 'layout style paint' }} className="absolute top-6 right-0 w-[180px] bottom-[220px]">
+      <div
+        className="absolute inset-0 hull-metal-v"
+        style={{
+          transform: 'rotateY(-2deg)',
+          transformOrigin: 'right center',
+        }}
+      >
         {/* Panel seams */}
         <div className="absolute top-[25%] left-0 right-0 h-px hull-seam" />
         <div className="absolute top-[70%] left-0 right-0 h-px hull-seam" />
@@ -100,8 +147,69 @@ export function CockpitFrame() {
         {/* Thermal discoloration near bottom (engine heat) */}
         <div className="absolute bottom-0 left-0 right-0 h-[30%] hull-thermal" />
 
+        {/* Light falloff — lighter on right edge, darker on left */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: 'linear-gradient(270deg, rgba(200,220,255,0.015) 0%, transparent 50%)',
+          }}
+        />
+
         {/* Nova station area is rendered separately (CaptainNovaStation) */}
       </div>
+      </div>
+
+      {/* ========== CORNER STRUCTURAL RIBS ========== */}
+      {/* Top-left corner chamfer — where top frame meets left wall */}
+      <div
+        className="absolute"
+        style={{
+          top: '24px',
+          left: '0px',
+          width: '50px',
+          height: '12px',
+          clipPath: 'polygon(0 0, 100% 100%, 0 100%)',
+          background: 'rgba(12, 16, 28, 0.9)',
+          boxShadow: 'inset 0 -1px 0 rgba(200, 220, 255, 0.04)',
+        }}
+      />
+      {/* Top-right corner chamfer */}
+      <div
+        className="absolute"
+        style={{
+          top: '24px',
+          right: '0px',
+          width: '180px',
+          height: '12px',
+          clipPath: 'polygon(100% 0, 0 100%, 100% 100%)',
+          background: 'rgba(12, 16, 28, 0.9)',
+          boxShadow: 'inset 0 -1px 0 rgba(200, 220, 255, 0.04)',
+        }}
+      />
+      {/* Bottom-left junction rib */}
+      <div
+        className="absolute"
+        style={{
+          bottom: '220px',
+          left: '0px',
+          width: '50px',
+          height: '3px',
+          background: 'linear-gradient(90deg, rgba(200,220,255,0.06) 0%, rgba(200,220,255,0.02) 100%)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+        }}
+      />
+      {/* Bottom-right junction rib */}
+      <div
+        className="absolute"
+        style={{
+          bottom: '220px',
+          right: '0px',
+          width: '180px',
+          height: '3px',
+          background: 'linear-gradient(270deg, rgba(200,220,255,0.06) 0%, rgba(200,220,255,0.02) 100%)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+        }}
+      />
 
       {/* ========== CORNER BRACKETS (viewscreen frame) ========== */}
       {/* Top-left */}
