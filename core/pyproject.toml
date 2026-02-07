@@ -12,6 +12,7 @@ packages = []
 [tool.uv.workspace]
 members = [
     "lambda/user-lambda",
+    "lambda/data-lambda",
     "agent",
     "shared",
     "database",

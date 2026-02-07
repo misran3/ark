@@ -88,6 +88,29 @@ export class ApiStack extends cdk.Stack {
         // =============================================================
         this.createUserAPIResources(userLambdaFn, cognitoAuthorizer);
 
+        // =============================================================
+        // Data Lambda Function
+        // =============================================================
+        const dataLambdaFn = this.createLambdaFunction({
+            name: 'data-lambda',
+            handler: 'handler.lambda_handler',
+            description: 'Financial data: Nessie integration, budget engine, asteroid detection',
+            additionalDeps: ['./shared', './database'],
+            copySourceFiles: true,
+            additionalEnv: {
+                USERS_TABLE_NAME: props.usersTable.tableName,
+                NESSIE_API_KEY: process.env.NESSIE_API_KEY || '',
+                DATA_SOURCE: process.env.DATA_SOURCE || 'mock',
+            },
+            tableGrants: [props.usersTable],
+            timeout: cdk.Duration.seconds(30),
+        });
+
+        // =============================================================
+        // Data API Resources and Methods
+        // =============================================================
+        this.createDataAPIResources(dataLambdaFn, cognitoAuthorizer);
+
         // CloudFormation Outputs
         new cdk.CfnOutput(this, 'ApiUrl', {
             value: this.api.url,
@@ -151,6 +174,27 @@ export class ApiStack extends cdk.Stack {
     }
 
     /**
+     * Creates API Gateway resources and methods for data/financial operations.
+     * Health check is unauthenticated; all other endpoints require Cognito auth.
+     */
+    private createDataAPIResources(dataLambdaFn: lambda.Function, authorizer: apigateway.CognitoUserPoolsAuthorizer) {
+        const apiResource = this.api.root.addResource('api');
+        const lambdaIntegration = new apigateway.LambdaIntegration(dataLambdaFn);
+
+        // All data endpoints are public for now (no Cognito auth)
+        apiResource.addResource('health').addMethod('GET', lambdaIntegration);
+        apiResource.addResource('snapshot').addMethod('GET', lambdaIntegration);
+        apiResource.addResource('budget').addMethod('GET', lambdaIntegration);
+
+        const asteroidsResource = apiResource.addResource('asteroids');
+        asteroidsResource.addMethod('GET', lambdaIntegration);
+        const asteroidIdResource = asteroidsResource.addResource('{asteroid_id}');
+        asteroidIdResource.addResource('action').addMethod('POST', lambdaIntegration);
+
+        apiResource.addResource('transactions').addMethod('GET', lambdaIntegration);
+    }
+
+    /**
      * Utility method to create a Lambda function with specified configuration,
      * including bundling dependencies with uv and optionally copying source files.
      * @param config Lambda function configuration details
@@ -205,6 +249,7 @@ export class ApiStack extends cdk.Stack {
             code: lambda.Code.fromAsset(this.coreRoot, {
                 bundling: {
                     image: lambda.Runtime.PYTHON_3_12.bundlingImage,
+                    platform: 'linux/arm64',
                     command: ['bash', '-c', bundlingCommands.join(' && ')],
                 },
             }),
