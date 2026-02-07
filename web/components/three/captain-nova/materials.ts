@@ -162,8 +162,9 @@ export function createHologramMaterial(
     transparent: true,
     side: THREE.FrontSide,
     depthWrite: false,
-    flatShading: true, // Per-face normals for geometric aesthetic
   });
+  // Note: Per-face normals come from Three.js built-in geometries
+  // which include non-indexed faces by default for flat shading appearance
 }
 
 // ============================================================================
