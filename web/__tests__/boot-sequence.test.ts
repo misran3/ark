@@ -1,85 +1,101 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, test, beforeEach } from 'bun:test';
 import { useBootStore } from '@/lib/stores/boot-store';
 
-describe('Boot Sequence State Machine', () => {
-  test('boot store initializes with correct defaults', () => {
+describe('Boot Sequence v2.0 State Machine', () => {
+  beforeEach(() => {
     useBootStore.getState().reset();
-    const state = useBootStore.getState();
-
-    expect(state.phase).toBe('black');
-    expect(state.progress).toBe(0);
-    expect(state.globalIntensity).toBe(1.0);
-    expect(state.isBooting).toBe(true);
-    expect(state.bootComplete).toBe(false);
   });
 
-  test('phase transitions update derived state', () => {
-    useBootStore.getState().reset();
+  test('boot store initializes with correct defaults', () => {
+    const state = useBootStore.getState();
 
-    useBootStore.getState().setPhase('emergency');
-    let state = useBootStore.getState();
-    expect(state.phase).toBe('emergency');
+    expect(state.phase).toBe('start-screen');
+    expect(state.consoleIntensity).toBe(0);
+    expect(state.hasSeenBoot).toBe(false);
     expect(state.isBooting).toBe(true);
-    expect(state.bootComplete).toBe(false);
+  });
 
+  test('setPhase transitions to new phase', () => {
+    useBootStore.getState().setPhase('console-glow');
+    const state = useBootStore.getState();
+    expect(state.phase).toBe('console-glow');
+    expect(state.isBooting).toBe(true);
+  });
+
+  test('setPhase to complete sets isBooting false', () => {
     useBootStore.getState().setPhase('complete');
-    state = useBootStore.getState();
+    const state = useBootStore.getState();
     expect(state.phase).toBe('complete');
     expect(state.isBooting).toBe(false);
-    expect(state.bootComplete).toBe(true);
+  });
+
+  test('startBoot transitions to name-exit and marks hasSeenBoot', () => {
+    useBootStore.getState().startBoot();
+    const state = useBootStore.getState();
+
+    expect(state.phase).toBe('name-exit');
+    expect(state.hasSeenBoot).toBe(true);
+    expect(state.isBooting).toBe(true);
   });
 
   test('skipBoot sets correct end state', () => {
-    useBootStore.getState().reset();
-
     useBootStore.getState().skipBoot();
     const state = useBootStore.getState();
+
     expect(state.phase).toBe('complete');
-    expect(state.globalIntensity).toBe(0.96);
+    expect(state.consoleIntensity).toBe(0.96);
     expect(state.isBooting).toBe(false);
-    expect(state.bootComplete).toBe(true);
   });
 
-  test('globalIntensity can be updated', () => {
-    useBootStore.getState().reset();
-    let state = useBootStore.getState();
+  test('setConsoleIntensity updates intensity', () => {
+    useBootStore.getState().setConsoleIntensity(0.5);
+    expect(useBootStore.getState().consoleIntensity).toBe(0.5);
 
-    expect(state.globalIntensity).toBe(1.0);
-
-    useBootStore.getState().setGlobalIntensity(0.96);
-    state = useBootStore.getState();
-    expect(state.globalIntensity).toBe(0.96);
-
-    useBootStore.getState().setGlobalIntensity(0.92);
-    state = useBootStore.getState();
-    expect(state.globalIntensity).toBe(0.92);
+    useBootStore.getState().setConsoleIntensity(0.96);
+    expect(useBootStore.getState().consoleIntensity).toBe(0.96);
   });
 
-  test('completeBoot sets correct end state', () => {
-    useBootStore.getState().reset();
+  test('setHasSeenBoot updates flag', () => {
+    expect(useBootStore.getState().hasSeenBoot).toBe(false);
 
-    useBootStore.getState().completeBoot();
-    const state = useBootStore.getState();
-    expect(state.phase).toBe('complete');
-    expect(state.globalIntensity).toBe(0.96);
-    expect(state.isBooting).toBe(false);
-    expect(state.bootComplete).toBe(true);
+    useBootStore.getState().setHasSeenBoot(true);
+    expect(useBootStore.getState().hasSeenBoot).toBe(true);
   });
 
   test('reset returns to initial state', () => {
     // Modify state
-    useBootStore.getState().setPhase('hud-rise');
-    useBootStore.getState().setProgress(75);
-    useBootStore.getState().setGlobalIntensity(0.96);
+    useBootStore.getState().startBoot();
+    useBootStore.getState().setConsoleIntensity(0.8);
+    useBootStore.getState().setPhase('power-surge');
 
     // Reset
     useBootStore.getState().reset();
     const state = useBootStore.getState();
 
-    expect(state.phase).toBe('black');
-    expect(state.progress).toBe(0);
-    expect(state.globalIntensity).toBe(1.0);
+    expect(state.phase).toBe('start-screen');
+    expect(state.consoleIntensity).toBe(0);
+    expect(state.hasSeenBoot).toBe(false);
     expect(state.isBooting).toBe(true);
-    expect(state.bootComplete).toBe(false);
+  });
+
+  test('full phase sequence is valid', () => {
+    const phases = [
+      'start-screen',
+      'name-exit',
+      'darkness',
+      'console-glow',
+      'power-surge',
+      'full-power',
+      'complete',
+    ] as const;
+
+    // Walk through all phases
+    for (const phase of phases) {
+      useBootStore.getState().setPhase(phase);
+      expect(useBootStore.getState().phase).toBe(phase);
+    }
+
+    // Final phase should not be booting
+    expect(useBootStore.getState().isBooting).toBe(false);
   });
 });
