@@ -324,7 +324,7 @@ export default function Wormhole({
 
     // ---- Layer 4: Regenerate rim arcs ----
     frameCountRef.current++;
-    if (frameCountRef.current % 8 === 0) {
+    if (frameCountRef.current % 20 === 0) {
       const oldArcs = arcGeometries;
       setArcGeometries(generateArcs());
       oldArcs.forEach((g) => g.dispose());
