@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useBootStore } from '@/lib/stores/boot-store';
 import { ConsolePanel } from './ConsolePanel';
 import { DashboardMicroCreaks } from './DashboardMicroCreaks';
@@ -12,8 +13,54 @@ export function CommandConsole() {
   const recDeck = shieldsMap['recreation-deck'];
   const isRecWarning = recDeck && (recDeck.status === 'warning' || recDeck.status === 'critical' || recDeck.status === 'breached');
 
+  const [panelOpacity, setPanelOpacity] = useState({ 1: 0, 2: 0, 3: 0, 4: 0 });
+
+  useEffect(() => {
+    if (phase === 'console-boot') {
+      // Panel 1: t=0
+      setTimeout(() => setPanelOpacity((p) => ({ ...p, 1: 1 })), 0);
+
+      // Panel 2: t=300ms
+      setTimeout(() => setPanelOpacity((p) => ({ ...p, 2: 1 })), 300);
+
+      // Panel 3: t=600ms (with hesitation - slower fade)
+      setTimeout(() => setPanelOpacity((p) => ({ ...p, 3: 0.3 })), 600);
+      setTimeout(() => setPanelOpacity((p) => ({ ...p, 3: 1 })), 1000); // Catches at 1000ms
+
+      // Panel 4: t=900ms
+      setTimeout(() => setPanelOpacity((p) => ({ ...p, 4: 1 })), 900);
+    }
+  }, [phase]);
+
   return (
-    <div className="h-full relative px-6 pt-5 pb-6">
+    <div
+      className="h-full relative px-6 pt-5 pb-6"
+      style={{
+        // Brushed metal console surface between instruments
+        background: `
+          linear-gradient(180deg,
+            rgba(16, 20, 32, 0.95) 0%,
+            rgba(10, 13, 24, 0.98) 40%,
+            rgba(8, 10, 18, 1) 100%
+          )
+        `,
+        // Faint horizontal brush lines
+        backgroundImage: `
+          linear-gradient(180deg,
+            rgba(16, 20, 32, 0.95) 0%,
+            rgba(10, 13, 24, 0.98) 40%,
+            rgba(8, 10, 18, 1) 100%
+          ),
+          repeating-linear-gradient(
+            0deg,
+            transparent 0px,
+            transparent 2px,
+            rgba(200, 220, 255, 0.006) 2px,
+            transparent 3px
+          )
+        `,
+      }}
+    >
       {/* Shared power bus line (runs through all panels) */}
       <div
         className="absolute top-[50%] left-[8%] right-[8%] h-[1px]"
@@ -30,19 +77,19 @@ export function CommandConsole() {
       <div
         className="h-full"
         style={{
-          perspective: '800px',
+          perspective: '700px',
         }}
       >
       {/* Console instrument grid with T-bar dividers */}
       <div
         className="h-full flex gap-0 relative"
         style={{
-          transform: 'rotateX(2deg)',
+          transform: 'rotateX(4deg)',
           transformOrigin: 'center bottom',
         }}
       >
         {/* Panel 1: Shields */}
-        <div className="flex-1 px-1.5">
+        <div className="flex-1 px-1.5" style={{ opacity: panelOpacity[1], transition: 'opacity 0.4s' }}>
           <ConsolePanel
             type="shields"
             label="Shield Status"
@@ -63,7 +110,7 @@ export function CommandConsole() {
         </div>
 
         {/* Panel 2: Net Worth */}
-        <div className="flex-1 px-1.5">
+        <div className="flex-1 px-1.5" style={{ opacity: panelOpacity[2], transition: 'opacity 0.4s' }}>
           <ConsolePanel
             type="networth"
             label="Net Worth"
@@ -88,7 +135,7 @@ export function CommandConsole() {
         </div>
 
         {/* Panel 3: Transactions */}
-        <div className="flex-1 px-1.5">
+        <div className="flex-1 px-1.5" style={{ opacity: panelOpacity[3], transition: 'opacity 0.2s' }}>
           <ConsolePanel
             type="transactions"
             label="Transactions"
@@ -109,7 +156,7 @@ export function CommandConsole() {
         </div>
 
         {/* Panel 4: Cards */}
-        <div className="flex-1 px-1.5">
+        <div className="flex-1 px-1.5" style={{ opacity: panelOpacity[4], transition: 'opacity 0.4s' }}>
           <ConsolePanel
             type="cards"
             label="Card Intelligence"
