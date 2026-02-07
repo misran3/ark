@@ -7,7 +7,7 @@ import CaptainNova, {
   type AnimationConfig,
 } from '@/components/three/captain-nova';
 import { NovaVariantDropdown, type NovaVariant } from '@/components/ui/NovaVariantDropdown';
-import { HARDCODED_VARIANTS } from '@/lib/nova-variants';
+import { HARDCODED_VARIANTS } from '@/lib/nova-variants.client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';

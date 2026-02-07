@@ -3,7 +3,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, ReactNode } from 'react';
 import { NovaVariantProvider } from '@/contexts/NovaVariantContext';
-import { HARDCODED_VARIANTS } from '@/lib/nova-variants';
+import { HARDCODED_VARIANTS } from '@/lib/nova-variants.client';
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(

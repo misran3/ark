@@ -63,16 +63,18 @@ type NovaVariant =
 
 ## Scanning for Community Models
 
-Use server-side utilities in `web/lib/nova-variants.ts`:
+Use server-side utilities in `web/lib/nova-variants.server.ts`:
 
 ```typescript
-import { getAllNovaVariants } from '@/lib/nova-variants';
+import { getAllNovaVariants } from '@/lib/nova-variants.server';
 
 // In server component or getStaticProps
 const variants = getAllNovaVariants();
 ```
 
 This scans `web/3D/*.glb` and returns all available variants.
+
+**Note:** Server-side functions (`getAllNovaVariants`, `getCommunityVariants`) are in `.server.ts` to prevent Node.js module imports from being bundled for the client. Client-safe exports (`HARDCODED_VARIANTS`, `getDefaultVariant`) are in `.client.ts`.
 
 ## Styling
 
