@@ -9,7 +9,7 @@ export function useAmbientLoops() {
   const [amplitude, setAmplitude] = useState(0);
 
   useEffect(() => {
-    if (phase === 'settling' || phase === 'complete') {
+    if (phase === 'full-power' || phase === 'complete') {
       setLoopsActive(true);
 
       // Fade in amplitude from 0 to 1 over 400ms

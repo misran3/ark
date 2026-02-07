@@ -1,15 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useBootStore } from '@/lib/stores/boot-store';
 import { ConsolePanel } from './ConsolePanel';
 import { DashboardMicroCreaks } from './DashboardMicroCreaks';
 import { useShieldStore } from '@/lib/stores/shield-store';
 import { useConsoleStore, type PanelType } from '@/lib/stores/console-store';
 
 export function CommandConsole() {
-  const phase = useBootStore((state) => state.phase);
-  const isPoweringOn = phase === 'console-boot';
+  // v2.0: BridgeLayout controls brightness via consoleIntensity
+  const isPoweringOn = false;
   const shieldsMap = useShieldStore((state) => state.shields);
   const recDeck = shieldsMap['recreation-deck'];
   const isRecWarning = recDeck && (recDeck.status === 'warning' || recDeck.status === 'critical' || recDeck.status === 'breached');
@@ -23,24 +21,8 @@ export function CommandConsole() {
     return { opacity: bootOpacity * 0.3, transform: 'translateY(20px)', transition: 'all 0.3s ease-out' };
   };
 
-  const [panelOpacity, setPanelOpacity] = useState({ 1: 0, 2: 0, 3: 0, 4: 0 });
-
-  useEffect(() => {
-    if (phase === 'console-boot') {
-      // Panel 1: t=0
-      setTimeout(() => setPanelOpacity((p) => ({ ...p, 1: 1 })), 0);
-
-      // Panel 2: t=300ms
-      setTimeout(() => setPanelOpacity((p) => ({ ...p, 2: 1 })), 300);
-
-      // Panel 3: t=600ms (with hesitation - slower fade)
-      setTimeout(() => setPanelOpacity((p) => ({ ...p, 3: 0.3 })), 600);
-      setTimeout(() => setPanelOpacity((p) => ({ ...p, 3: 1 })), 1000); // Catches at 1000ms
-
-      // Panel 4: t=900ms
-      setTimeout(() => setPanelOpacity((p) => ({ ...p, 4: 1 })), 900);
-    }
-  }, [phase]);
+  // v2.0: BridgeLayout controls fade-in via consoleIntensity — panels always visible
+  const panelOpacity = { 1: 1, 2: 1, 3: 1, 4: 1 };
 
   return (
     <div

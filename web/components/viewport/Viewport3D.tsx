@@ -6,7 +6,6 @@ import { Sun } from './Sun';
 import { ThreatsLayer } from './ThreatsLayer';
 import SceneEffects from '@/components/three/SceneEffects';
 import { CanopyStruts } from './CanopyStruts';
-import { SceneHeartbeat } from './SceneHeartbeat';
 import { useThreatStore } from '@/lib/stores/threat-store';
 import { HologramOverlay } from '@/components/bridge/hologram/HologramOverlay';
 import { DefenseGrid } from '@/components/bridge/hologram/panels/DefenseGrid';
@@ -24,7 +23,6 @@ export function Viewport3D() {
   return (
     <div className="w-full h-full">
       <Canvas
-        frameloop="demand"
         camera={{
           position: [0, 0, 5],
           fov: 75,
@@ -36,9 +34,6 @@ export function Viewport3D() {
           alpha: true,
         }}
       >
-        {/* Render loop throttle — drives demand-mode invalidation */}
-        <SceneHeartbeat />
-
         {/* Ambient lighting */}
         <ambientLight intensity={0.2} />
 
@@ -46,11 +41,9 @@ export function Viewport3D() {
         <StarfieldBackground />
 
         {/* The Sun */}
-        {/* TODO: Planet focus acquisition during viewport-awake phase
-            - Phase C (1200-2000ms): blur 8→0, saturate 0.6→1.0, brightness 1.3→1.0
-            - Requires Three.js shader approach (CSS filters don't work on <group>)
-            - Alternative: Apply filter to entire Canvas container from BridgeLayout
-            - See: Beat 3 Viewport Display Calibration spec */}
+        {/* TODO: Planet focus acquisition effect (post-boot enhancement)
+            - blur 8→0, saturate 0.6→1.0, brightness 1.3→1.0
+            - Requires Three.js shader approach (CSS filters don't work on <group>) */}
         <Sun solarFlareActive={hasSolarFlare} />
 
         {/* Threat objects */}
