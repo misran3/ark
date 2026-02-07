@@ -884,6 +884,18 @@ body {
   }
 }
 
+/* Nova dialogue overlay slide-in */
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 /* Ventilation grille pattern */
 .vent-grille {
   background: repeating-linear-gradient(

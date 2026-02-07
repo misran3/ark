@@ -16,6 +16,7 @@ import { EnvironmentalCohesion } from './cockpit/EnvironmentalCohesion';
 import { DashboardProjection } from './cockpit/DashboardProjection';
 import { PerfMonitor } from './cockpit/PerfMonitor';
 import { useCaptainScans } from '@/hooks/useCaptainScans';
+import { NovaDialogueOverlay } from './hud/NovaDialogueOverlay';
 
 export function BridgeLayout() {
   const phase = useBootStore((state) => state.phase);
@@ -141,6 +142,9 @@ export function BridgeLayout() {
       >
         <HUDThreats />
       </div>
+
+      {/* Nova dialogue overlay — comm panel next to Nova station */}
+      {showHUD && <NovaDialogueOverlay />}
 
       {/* Ambient HUD elements */}
       {showHUD && <HUDAmbient />}
