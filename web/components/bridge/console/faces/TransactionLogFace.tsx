@@ -45,7 +45,7 @@ export function TransactionLogFace() {
 
   return (
     <div
-      className="relative w-full h-full flex flex-col justify-center px-3 py-1 font-mono overflow-hidden"
+      className="relative w-full h-full flex flex-col justify-center px-4 py-2 font-mono overflow-hidden"
       style={{
         color: 'rgba(255, 190, 50, 0.8)',
         textShadow: '0 0 4px rgba(255, 180, 40, 0.2)',
@@ -60,7 +60,7 @@ export function TransactionLogFace() {
       />
 
       {/* Log entries */}
-      <div className="space-y-[3px]" style={{ fontSize: '7.5px' }}>
+      <div className="space-y-[5px]" style={{ fontSize: '10px' }}>
         {visible.map((entry, i) => (
           <div
             key={`${entry.time}-${entry.label}-${offset}`}

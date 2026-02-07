@@ -27,8 +27,8 @@ export function NetWorthManifestFace() {
   };
 
   // SVG sparkline path
-  const sparkW = 80;
-  const sparkH = 16;
+  const sparkW = 120;
+  const sparkH = 22;
   const points = sparkline.map((v, i) => {
     const x = (i / (sparkline.length - 1)) * sparkW;
     const y = sparkH - v * sparkH;
@@ -38,11 +38,11 @@ export function NetWorthManifestFace() {
 
   return (
     <div
-      className="relative w-full h-full flex flex-col justify-center px-3 py-1 font-mono overflow-hidden"
+      className="relative w-full h-full flex flex-col justify-center px-4 py-2 font-mono overflow-hidden"
       style={{
         color: 'rgba(255, 190, 50, 0.85)',
         textShadow: '0 0 6px rgba(255, 180, 40, 0.3)',
-        fontSize: '9px',
+        fontSize: '11px',
       }}
     >
       {/* Scanline overlay */}
@@ -57,7 +57,7 @@ export function NetWorthManifestFace() {
       <div
         className="tracking-wider mb-1"
         style={{
-          fontSize: '14px',
+          fontSize: '22px',
           color: 'rgba(255, 200, 60, 0.95)',
           textShadow: '0 0 10px rgba(255, 180, 40, 0.4), 0 0 20px rgba(255, 160, 30, 0.15)',
         }}
@@ -66,7 +66,7 @@ export function NetWorthManifestFace() {
       </div>
 
       {/* Breakdown rows */}
-      <div className="space-y-[1px]" style={{ fontSize: '7px', opacity: 0.7 }}>
+      <div className="space-y-[2px]" style={{ fontSize: '9px', opacity: 0.7 }}>
         {breakdown.map((row) => (
           <div key={row.label} className="flex justify-between">
             <span>{padLabel(row.label, 18)}</span>
@@ -78,13 +78,13 @@ export function NetWorthManifestFace() {
       </div>
 
       {/* Sparkline + trend */}
-      <div className="flex items-center gap-2 mt-1.5">
+      <div className="flex items-center gap-2 mt-2">
         <svg width={sparkW} height={sparkH} className="opacity-60">
           <path d={pathD} fill="none" stroke="rgba(255, 200, 60, 0.6)" strokeWidth="1.5" />
         </svg>
         <span
           style={{
-            fontSize: '8px',
+            fontSize: '11px',
             color: 'rgba(80, 255, 120, 0.8)',
             textShadow: '0 0 4px rgba(80, 255, 120, 0.3)',
           }}

@@ -14,32 +14,32 @@ const MOCK_CARDS: CardStatus[] = [
 function getLampColor(util: number): { bg: string; glow: string } {
   if (util < 30) return {
     bg: 'rgba(34, 197, 94, 0.8)',
-    glow: '0 0 8px rgba(34, 197, 94, 0.4), 0 0 16px rgba(34, 197, 94, 0.15)',
+    glow: '0 0 12px rgba(34, 197, 94, 0.5), 0 0 24px rgba(34, 197, 94, 0.2)',
   };
   if (util < 70) return {
     bg: 'rgba(251, 191, 36, 0.8)',
-    glow: '0 0 8px rgba(251, 191, 36, 0.4), 0 0 16px rgba(251, 191, 36, 0.15)',
+    glow: '0 0 12px rgba(251, 191, 36, 0.5), 0 0 24px rgba(251, 191, 36, 0.2)',
   };
   return {
     bg: 'rgba(239, 68, 68, 0.8)',
-    glow: '0 0 8px rgba(239, 68, 68, 0.4), 0 0 16px rgba(239, 68, 68, 0.15)',
+    glow: '0 0 12px rgba(239, 68, 68, 0.5), 0 0 24px rgba(239, 68, 68, 0.2)',
   };
 }
 
 export function CardStatusFace() {
   return (
     <div className="relative w-full h-full flex items-center justify-center px-3 py-1">
-      <div className="flex gap-3 items-end">
+      <div className="flex gap-5 items-end">
         {MOCK_CARDS.map((card) => {
           const lamp = getLampColor(card.utilization);
           const isRedZone = card.utilization >= 70;
           return (
-            <div key={card.name} className="flex flex-col items-center gap-1.5">
+            <div key={card.name} className="flex flex-col items-center gap-2">
               {/* Card label — stencil style */}
               <div
                 className="font-mono uppercase text-center"
                 style={{
-                  fontSize: '5.5px',
+                  fontSize: '8px',
                   color: 'rgba(200, 210, 230, 0.45)',
                   letterSpacing: '1px',
                   textShadow: '0 0 2px rgba(200, 210, 230, 0.1)',
@@ -52,8 +52,8 @@ export function CardStatusFace() {
               <div
                 className="relative"
                 style={{
-                  width: '22px',
-                  height: '22px',
+                  width: '36px',
+                  height: '36px',
                 }}
               >
                 {/* Lamp recess */}
@@ -88,7 +88,7 @@ export function CardStatusFace() {
               <div
                 className="font-mono tabular-nums"
                 style={{
-                  fontSize: '7px',
+                  fontSize: '10px',
                   color: lamp.bg,
                   textShadow: `0 0 4px ${lamp.bg.replace('0.8', '0.3')}`,
                 }}

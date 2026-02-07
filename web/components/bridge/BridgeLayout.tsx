@@ -23,10 +23,11 @@ export function BridgeLayout() {
   const isComplete = phase === 'complete';
 
   // Apply console intensity to entire layout
+  // No CSS transition — the 60fps setInterval animation is already smooth
+  // and adding a transition causes double-interpolation (visible jumps)
   const layoutStyle = {
     opacity: consoleIntensity,
     filter: `brightness(${consoleIntensity})`,
-    transition: 'opacity 0.1s linear, filter 0.1s linear',
   };
 
   // Fire Captain API scans when boot completes
@@ -81,7 +82,7 @@ export function BridgeLayout() {
       <EnvironmentalCohesion />
 
       {/* Layer 5: Console dashboard (bottom, integrated into frame) */}
-      <div className="absolute bottom-0 left-0 right-0 h-[220px] z-20">
+      <div className="absolute bottom-0 left-0 right-0 h-[280px] z-20">
         <CommandConsole />
       </div>
       {/* Dev: Performance monitor (enable with ?perf) */}
