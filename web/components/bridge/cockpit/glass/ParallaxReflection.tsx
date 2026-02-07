@@ -40,7 +40,6 @@ export function ParallaxReflection() {
   const isHovering = useRef(false);
 
   const animate = useCallback(() => {
-    // Lerp towards target
     const lerpFactor = 0.04;
     currentX.current += (targetX.current - currentX.current) * lerpFactor;
     currentY.current += (targetY.current - currentY.current) * lerpFactor;
@@ -52,8 +51,15 @@ export function ParallaxReflection() {
       primaryRef.current.style.transform = `translate3d(${x}px, ${y}px, 0)`;
     }
     if (secondaryRef.current) {
-      // Double reflection: offset by 2-3px more, 35% opacity handled by CSS
       secondaryRef.current.style.transform = `translate3d(${x * 1.3 + 2}px, ${y * 1.3 + 2}px, 0)`;
+    }
+
+    // Stop loop when settled (epsilon check)
+    const dx = Math.abs(targetX.current - currentX.current);
+    const dy = Math.abs(targetY.current - currentY.current);
+    if (dx < 0.01 && dy < 0.01 && !isHovering.current) {
+      rafId.current = 0;
+      return;
     }
 
     rafId.current = requestAnimationFrame(animate);
@@ -62,21 +68,24 @@ export function ParallaxReflection() {
   useEffect(() => {
     const onMouseMove = (e: MouseEvent) => {
       isHovering.current = true;
-      // Percentage-based tracking (0-100% of viewport)
       const px = e.clientX / window.innerWidth;
       const py = e.clientY / window.innerHeight;
+      targetX.current = -(px - 0.5) * 16;
+      targetY.current = -(py - 0.5) * 12;
 
-      // 5-10px shift OPPOSITE to mouse position
-      // Center is 0.5, so we invert
-      targetX.current = -(px - 0.5) * 16; // ±8px max
-      targetY.current = -(py - 0.5) * 12; // ±6px max
+      // Restart rAF if it stopped due to epsilon convergence
+      if (!rafId.current) {
+        rafId.current = requestAnimationFrame(animate);
+      }
     };
 
     const onMouseLeave = () => {
       isHovering.current = false;
-      // Drift back to center
       targetX.current = 0;
       targetY.current = 0;
+      if (!rafId.current) {
+        rafId.current = requestAnimationFrame(animate);
+      }
     };
 
     window.addEventListener('mousemove', onMouseMove, { passive: true });
