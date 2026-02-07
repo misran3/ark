@@ -65,14 +65,14 @@ async def fetch_all_financial_data(user_id: str) -> PreFetchedData:
     )
 
 
-def _serialize_default(obj):
+def serialize_default(obj):
     """JSON serializer for datetime objects."""
     if isinstance(obj, datetime):
         return obj.isoformat()
     raise TypeError(f"Type {type(obj)} not serializable")
 
 
-def _slice_financial_meaning(data: PreFetchedData) -> str:
+def slice_financial_meaning(data: PreFetchedData) -> str:
     """Slice data for Financial Meaning specialist."""
     return json.dumps({
         "total_net_worth": data.snapshot.total_net_worth,
@@ -88,16 +88,16 @@ def _slice_financial_meaning(data: PreFetchedData) -> str:
     })
 
 
-def _slice_wasteful_subscriptions(data: PreFetchedData) -> str:
+def slice_wasteful_subscriptions(data: PreFetchedData) -> str:
     """Slice data for Wasteful Subscriptions specialist."""
     recurring = [
         t.model_dump(mode="json") for t in data.transactions
         if t.is_recurring and t.bucket != "income"
     ]
-    return json.dumps({"recurring_transactions": recurring}, default=_serialize_default)
+    return json.dumps({"recurring_transactions": recurring}, default=serialize_default)
 
 
-def _slice_budget_overruns(data: PreFetchedData) -> str:
+def slice_budget_overruns(data: PreFetchedData) -> str:
     """Slice data for Budget Overruns specialist."""
     return json.dumps({
         "budget_report": data.budget.model_dump(mode="json"),
@@ -105,10 +105,10 @@ def _slice_budget_overruns(data: PreFetchedData) -> str:
             t.model_dump(mode="json") for t in data.transactions
             if t.bucket in ("needs", "wants") and t.date >= datetime.now(timezone.utc) - timedelta(days=30)
         ],
-    }, default=_serialize_default)
+    }, default=serialize_default)
 
 
-def _slice_upcoming_bills(data: PreFetchedData) -> str:
+def slice_upcoming_bills(data: PreFetchedData) -> str:
     """Slice data for Upcoming Bills specialist."""
     recurring_with_dates = [
         t.model_dump(mode="json") for t in data.transactions
@@ -118,10 +118,10 @@ def _slice_upcoming_bills(data: PreFetchedData) -> str:
     return json.dumps({
         "recurring_transactions": recurring_with_dates,
         "accounts": accounts,
-    }, default=_serialize_default)
+    }, default=serialize_default)
 
 
-def _slice_debt_spirals(data: PreFetchedData) -> str:
+def slice_debt_spirals(data: PreFetchedData) -> str:
     """Slice data for Debt Spirals specialist."""
     credit_cards = [
         a.model_dump(mode="json") for a in data.snapshot.accounts
@@ -135,10 +135,10 @@ def _slice_debt_spirals(data: PreFetchedData) -> str:
         "credit_card_accounts": credit_cards,
         "loan_transactions": loan_transactions,
         "credit_card_impact": data.budget.credit_card_impact,
-    }, default=_serialize_default)
+    }, default=serialize_default)
 
 
-def _slice_missed_rewards(data: PreFetchedData) -> str:
+def slice_missed_rewards(data: PreFetchedData) -> str:
     """Slice data for Missed Rewards specialist."""
     recent_30 = [
         t.model_dump(mode="json") for t in data.transactions
@@ -148,44 +148,44 @@ def _slice_missed_rewards(data: PreFetchedData) -> str:
     return json.dumps({
         "recent_transactions": recent_30,
         "accounts": accounts,
-    }, default=_serialize_default)
+    }, default=serialize_default)
 
 
-def _slice_fraud_detection(data: PreFetchedData) -> str:
+def slice_fraud_detection(data: PreFetchedData) -> str:
     """Slice data for Fraud Detection specialist."""
     all_txns = [t.model_dump(mode="json") for t in data.transactions]
     return json.dumps({
         "transactions": all_txns,
-    }, default=_serialize_default)
+    }, default=serialize_default)
 
 
 # Fallback values when a specialist fails
-_FM_FALLBACK = FinancialMeaningOutput(
+FM_FALLBACK = FinancialMeaningOutput(
     greeting="Commander, the bridge systems are powering up. Stand by while we run diagnostics on all ship systems.",
     verdict="Navigation sensors offline — unable to chart the financial course at this time.",
     status="warning",
 )
-_WS_FALLBACK = AsteroidAnalysis(
+WS_FALLBACK = AsteroidAnalysis(
     subscriptions=[], total_annual_waste=0.0,
     verdict="Asteroid defense scanners offline — unable to sweep for subscription debris, Commander.",
 )
-_BO_FALLBACK = IonStormAnalysis(
+BO_FALLBACK = IonStormAnalysis(
     overruns=[], overall_budget_status="on_track",
     verdict="Ion storm detectors offline — power grid status unknown until sensors recalibrate.",
 )
-_UB_FALLBACK = SolarFlareAnalysis(
+UB_FALLBACK = SolarFlareAnalysis(
     bills=[], total_upcoming_30_days=0.0,
     verdict="Solar flare early warning system offline — incoming bill trajectory unknown.",
 )
-_DS_FALLBACK = BlackHoleAnalysis(
+DS_FALLBACK = BlackHoleAnalysis(
     debts=[], total_debt=0.0, total_monthly_interest=0.0, urgency="stable",
     verdict="Black hole proximity sensors offline — gravitational threat assessment unavailable.",
 )
-_MR_FALLBACK = WormholeAnalysis(
+MR_FALLBACK = WormholeAnalysis(
     missed_rewards=[], annual_opportunity_cost=0.0,
     verdict="Wormhole navigation computer offline — unable to scan for missed shortcuts.",
 )
-_FD_FALLBACK = EnemyCruiserAnalysis(
+FD_FALLBACK = EnemyCruiserAnalysis(
     alerts=[], overall_risk="normal",
     verdict="Long-range sensors offline — enemy cruiser detection array recalibrating.",
 )
@@ -206,38 +206,38 @@ async def analyze_finances(user_id: str = "demo_user") -> CaptainAnalysis:
     fm, ws, bo, ub, ds, mr, fd = await asyncio.gather(
         safe_run_specialist(
             financial_meaning_agent,
-            make_deps(_slice_financial_meaning),
-            _FM_FALLBACK,
+            make_deps(slice_financial_meaning),
+            FM_FALLBACK,
         ),
         safe_run_specialist(
             wasteful_subscriptions_agent,
-            make_deps(_slice_wasteful_subscriptions),
-            _WS_FALLBACK,
+            make_deps(slice_wasteful_subscriptions),
+            WS_FALLBACK,
         ),
         safe_run_specialist(
             budget_overruns_agent,
-            make_deps(_slice_budget_overruns),
-            _BO_FALLBACK,
+            make_deps(slice_budget_overruns),
+            BO_FALLBACK,
         ),
         safe_run_specialist(
             upcoming_bills_agent,
-            make_deps(_slice_upcoming_bills),
-            _UB_FALLBACK,
+            make_deps(slice_upcoming_bills),
+            UB_FALLBACK,
         ),
         safe_run_specialist(
             debt_spirals_agent,
-            make_deps(_slice_debt_spirals),
-            _DS_FALLBACK,
+            make_deps(slice_debt_spirals),
+            DS_FALLBACK,
         ),
         safe_run_specialist(
             missed_rewards_agent,
-            make_deps(_slice_missed_rewards),
-            _MR_FALLBACK,
+            make_deps(slice_missed_rewards),
+            MR_FALLBACK,
         ),
         safe_run_specialist(
             fraud_detection_agent,
-            make_deps(_slice_fraud_detection),
-            _FD_FALLBACK,
+            make_deps(slice_fraud_detection),
+            FD_FALLBACK,
         ),
     )
 
