@@ -135,7 +135,7 @@ export const hologramFragmentShader = `
 // TYPESCRIPT INTERFACES
 // ============================================================================
 
-export type HologramUniforms = {
+export interface HologramUniforms {
   uTime: { value: number };
   uAuroraColor1: { value: THREE.Color };
   uAuroraColor2: { value: THREE.Color };
@@ -155,8 +155,8 @@ export type HologramUniforms = {
  * @returns Configured THREE.ShaderMaterial with hologram shader
  */
 export function createHologramMaterial(
-  auroraColor1: string | THREE.Color = '#00ffff',
-  auroraColor2: string | THREE.Color = '#ff00ff'
+  auroraColor1: string | THREE.Color = '#a855f7',
+  auroraColor2: string | THREE.Color = '#06b6d4'
 ): THREE.ShaderMaterial {
   const uniforms = {
     uTime: { value: 0 },
@@ -185,20 +185,33 @@ export function createHologramMaterial(
  * Updates hologram shader uniforms (call every frame in useFrame)
  *
  * @param material - The hologram shader material to update
- * @param time - Elapsed time from clock.getElapsedTime()
- * @param auroraColors - Current aurora colors [color1, color2]
- * @param glitchIntensity - Glitch effect strength (0.0-1.0)
+ * @param updates - Object containing optional uniform updates
  */
 export function updateHologramUniforms(
   material: THREE.ShaderMaterial,
-  time: number,
-  auroraColors: [string, string],
-  glitchIntensity: number = 0
+  updates: {
+    time?: number;
+    auroraColor1?: string;
+    auroraColor2?: string;
+    glitchIntensity?: number;
+    opacity?: number;
+  }
 ): void {
-  const uniforms = material.uniforms as any;
+  const uniforms = material.uniforms as unknown as HologramUniforms;
 
-  uniforms.uTime.value = time;
-  uniforms.uAuroraColor1.value.set(auroraColors[0]);
-  uniforms.uAuroraColor2.value.set(auroraColors[1]);
-  uniforms.uGlitchIntensity.value = glitchIntensity;
+  if (updates.time !== undefined) {
+    uniforms.uTime.value = updates.time;
+  }
+  if (updates.auroraColor1) {
+    uniforms.uAuroraColor1.value.set(updates.auroraColor1);
+  }
+  if (updates.auroraColor2) {
+    uniforms.uAuroraColor2.value.set(updates.auroraColor2);
+  }
+  if (updates.glitchIntensity !== undefined) {
+    uniforms.uGlitchIntensity.value = updates.glitchIntensity;
+  }
+  if (updates.opacity !== undefined) {
+    uniforms.uOpacity.value = updates.opacity;
+  }
 }
