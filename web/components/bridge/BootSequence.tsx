@@ -4,6 +4,7 @@ import { useBootSequence } from '@/hooks/useBootSequence';
 import { StartScreen } from './boot/StartScreen';
 import { NameExitAnimation } from './boot/NameExitAnimation';
 import { BootOverlay } from './boot/BootOverlay';
+import { BootReadout } from './boot/BootReadout';
 
 interface BootSequenceProps {
   children: React.ReactNode;
@@ -24,6 +25,9 @@ export function BootSequence({ children }: BootSequenceProps) {
       {phase !== 'complete' && phase !== 'start-screen' && phase !== 'name-exit' && (
         <BootOverlay phase={phase} onSkip={skipBoot} />
       )}
+
+      {/* Boot readout text — scrolling terminal messages */}
+      <BootReadout />
 
       {/* Bridge content - always mounted after name exits */}
       <div
