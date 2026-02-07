@@ -727,7 +727,7 @@ body {
     linear-gradient(75deg, transparent 30%, rgba(255, 255, 255, 0.012) 30.5%, transparent 31%);
 }
 
-/* Console well recess */
+/* Console well recess (legacy, kept for compatibility) */
 .console-well {
   background: rgba(2, 5, 16, 0.9);
   border: 1px solid rgba(0, 240, 255, 0.15);
@@ -735,6 +735,13 @@ body {
     inset 0 2px 8px rgba(0, 0, 0, 0.6),
     inset 0 0 1px rgba(0, 240, 255, 0.1);
   border-radius: 4px;
+}
+
+/* Instrument well — physically recessed housing for dashboard panels */
+.instrument-well {
+  background: rgba(6, 10, 24, 0.85);
+  border-radius: 4px;
+  position: relative;
 }
 
 /* Console CRT screen effect */

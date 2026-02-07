@@ -2,6 +2,7 @@
 
 import { useBootStore } from '@/lib/stores/boot-store';
 import { ConsolePanel } from './ConsolePanel';
+import { DashboardMicroCreaks } from './DashboardMicroCreaks';
 import { useShieldStore } from '@/lib/stores/shield-store';
 
 export function CommandConsole() {
@@ -22,8 +23,24 @@ export function CommandConsole() {
         }}
       />
 
+      {/* Dashboard micro-creaks — thermal expansion shadow events */}
+      <DashboardMicroCreaks />
+
+      {/* Perspective tilt wrapper — applied ABOVE wells so wells stay flat for Phase 3 canvases */}
+      <div
+        className="h-full"
+        style={{
+          perspective: '800px',
+        }}
+      >
       {/* Console instrument grid with T-bar dividers */}
-      <div className="h-full flex gap-0 relative">
+      <div
+        className="h-full flex gap-0 relative"
+        style={{
+          transform: 'rotateX(2deg)',
+          transformOrigin: 'center bottom',
+        }}
+      >
         {/* Panel 1: Shields */}
         <div className="flex-1 px-1.5">
           <ConsolePanel
@@ -35,6 +52,7 @@ export function CommandConsole() {
             isPoweringOn={isPoweringOn}
             powerOnDelay={0}
             priority={1}
+            backlightTint="rgba(0, 242, 253, 0.03)"
           />
         </div>
 
@@ -55,6 +73,7 @@ export function CommandConsole() {
             isPoweringOn={isPoweringOn}
             powerOnDelay={150}
             priority={2}
+            backlightTint="rgba(2, 238, 255, 0.03)"
           />
         </div>
 
@@ -79,6 +98,7 @@ export function CommandConsole() {
             isPoweringOn={isPoweringOn}
             powerOnDelay={300}
             priority={3}
+            backlightTint="rgba(0, 237, 252, 0.025)"
           />
         </div>
 
@@ -99,8 +119,10 @@ export function CommandConsole() {
             isPoweringOn={isPoweringOn}
             powerOnDelay={450}
             isWarning={isRecWarning}
+            backlightTint="rgba(3, 240, 250, 0.028)"
           />
         </div>
+      </div>
       </div>
     </div>
   );
