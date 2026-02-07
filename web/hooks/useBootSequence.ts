@@ -5,36 +5,39 @@ import { useBootStore, type BootPhase } from '@/lib/stores/boot-store';
 import { storage } from '@/lib/utils/storage';
 
 const PHASE_DURATIONS: Record<string, number> = {
-  loading: 3000,
-  eyelid: 1000,
-  blur: 500,
-  blink: 500,
-  'console-boot': 1000,
-  'hud-rise': 1000,
+  black: 1500,           // 1.5s
+  emergency: 2000,       // 2s
+  'power-surge': 1000,   // 1s (includes 400-500ms breath)
+  'viewport-awake': 2000, // 2s
+  'console-boot': 1500,  // 1.5s
+  'hud-rise': 1000,      // 1s
+  settling: 500,         // 0.5s
 };
 
 const PHASES: BootPhase[] = [
-  'loading',
-  'eyelid',
-  'blur',
-  'blink',
+  'black',
+  'emergency',
+  'power-surge',
+  'viewport-awake',
   'console-boot',
   'hud-rise',
+  'settling',
   'complete',
 ];
 
 /**
  * Orchestrates the multi-phase boot sequence
  *
- * Phases: loading → eyelid → blur → blink → console-boot → hud-rise → complete
+ * Phases: black → emergency → power-surge → viewport-awake → console-boot → hud-rise → settling → complete
  *
  * Features:
- * - First visit: full speed boot
+ * - First visit: full 9.5s cinematic sequence
  * - Repeat visits: 2x speed (halved durations)
  * - Click/tap to skip: instantly jumps to complete
  * - Phase-based timing (defined in PHASE_DURATIONS)
  * - Automatic phase transitions
  * - Progress tracking (0-100% per phase)
+ * - Global intensity reduction during settling phase
  */
 export function useBootSequence() {
   const phase = useBootStore((s) => s.phase);
@@ -90,6 +93,36 @@ export function useBootSequence() {
         intervalRef.current = null;
       }
     };
+  }, [phase]);
+
+  // Beat 6: The Settle - global intensity reduction
+  useEffect(() => {
+    if (phase === 'settling') {
+      const setGlobalIntensity = useBootStore.getState().setGlobalIntensity;
+
+      // Animate from 1.0 to 0.96 over 400ms
+      const startTime = Date.now();
+      const duration = 400;
+      const startIntensity = 1.0;
+      const endIntensity = 0.96;
+
+      const intervalId = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+
+        // Ease-out curve
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const currentIntensity = startIntensity + (endIntensity - startIntensity) * eased;
+
+        setGlobalIntensity(currentIntensity);
+
+        if (progress >= 1) {
+          clearInterval(intervalId);
+        }
+      }, 16);
+
+      return () => clearInterval(intervalId);
+    }
   }, [phase]);
 
   // Increment boot count on completion
