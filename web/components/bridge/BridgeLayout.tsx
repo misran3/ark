@@ -18,6 +18,7 @@ import { PerfMonitor } from './cockpit/PerfMonitor';
 
 export function BridgeLayout() {
   const phase = useBootStore((state) => state.phase);
+  const globalIntensity = useBootStore((state) => state.globalIntensity);
   const showHUD = phase === 'hud-rise' || phase === 'settling' || phase === 'complete';
   const showConsole = phase === 'console-boot' || phase === 'hud-rise' || phase === 'settling' || phase === 'complete';
   const showFrame = phase === 'console-boot' || phase === 'hud-rise' || phase === 'settling' || phase === 'complete';
@@ -85,7 +86,7 @@ export function BridgeLayout() {
       {/* Layer 2: Cockpit frame (structural hull overlay) */}
       <div
         style={{
-          opacity: showFrame ? 1 : 0,
+          opacity: showFrame ? globalIntensity : 0,
           transition: 'opacity 0.8s ease-out',
         }}
       >
@@ -111,7 +112,7 @@ export function BridgeLayout() {
       <div
         className="absolute top-0 left-0 right-0 z-30"
         style={{
-          opacity: showHUD ? 1 : 0,
+          opacity: showHUD ? globalIntensity : 0,
           transform: showHUD ? 'translateY(0)' : 'translateY(-20px)',
           transition: 'opacity 0.7s ease-out, transform 0.7s ease-out',
         }}
@@ -148,7 +149,7 @@ export function BridgeLayout() {
       <div
         className="absolute bottom-0 left-0 right-0 h-[220px] z-20"
         style={{
-          opacity: showConsole ? 1 : 0,
+          opacity: showConsole ? globalIntensity : 0,
           transform: showConsole ? 'translateY(0)' : 'translateY(60px)',
           transition: 'opacity 0.4s ease-out, transform 0.4s ease-out',
         }}
