@@ -36,31 +36,39 @@ export function CommandConsole() {
     <div
       className="h-full relative px-6 pt-5 pb-6"
       style={{
-        // Brushed metal console surface between instruments
+        // Opaque brushed metal — visible surface between instruments
         background: `
           linear-gradient(180deg,
-            rgba(16, 20, 32, 0.95) 0%,
-            rgba(10, 13, 24, 0.98) 40%,
-            rgba(8, 10, 18, 1) 100%
+            #10141e 0%,
+            #0e1420 40%,
+            #080a12 100%
           )
         `,
-        // Faint horizontal brush lines
+        // Perceptible horizontal brush lines (2.5% vs old 0.6%)
         backgroundImage: `
           linear-gradient(180deg,
-            rgba(16, 20, 32, 0.95) 0%,
-            rgba(10, 13, 24, 0.98) 40%,
-            rgba(8, 10, 18, 1) 100%
+            #10141e 0%,
+            #0e1420 40%,
+            #080a12 100%
           ),
           repeating-linear-gradient(
             0deg,
             transparent 0px,
             transparent 2px,
-            rgba(200, 220, 255, 0.006) 2px,
+            rgba(200, 220, 255, 0.025) 2px,
             transparent 3px
           )
         `,
       }}
     >
+      {/* Console top-edge highlight — connects visually to dashboard ledge */}
+      <div
+        className="absolute top-0 left-4 right-4 h-px"
+        style={{
+          background: 'linear-gradient(90deg, transparent, rgba(200, 220, 255, 0.08) 20%, rgba(200, 220, 255, 0.10) 50%, rgba(200, 220, 255, 0.08) 80%, transparent)',
+        }}
+      />
+
       {/* Shared power bus line (runs through all panels) */}
       <div
         className="absolute top-[50%] left-[8%] right-[8%] h-[1px]"
