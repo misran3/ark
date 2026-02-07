@@ -102,3 +102,25 @@ class DataTableClient(DynamoDBClient):
                 "actioned_at": int(time.time()),
             }),
         })
+
+    # =========================================================================
+    # VTC Preferences
+    # =========================================================================
+
+    def get_vtc_preferences(self, user_id: str) -> dict | None:
+        """Get VTC enforcement preferences."""
+        pk = f"USER#{user_id}"
+        sk = "VTC_PREFS"
+        item = self.get_item(pk, sk)
+        if item and "data" in item:
+            return json.loads(item["data"])
+        return None
+
+    def save_vtc_preferences(self, user_id: str, prefs: dict) -> None:
+        """Save VTC enforcement preferences."""
+        self.put_item({
+            "PK": f"USER#{user_id}",
+            "SK": "VTC_PREFS",
+            "data": json.dumps(prefs),
+            "updated_at": int(time.time()),
+        })

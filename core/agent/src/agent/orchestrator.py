@@ -244,7 +244,7 @@ async def analyze_finances(user_id: str = "demo_user") -> CaptainAnalysis:
     logger.info("All specialists completed", user_id=user_id)
 
     # 4. Combine into CaptainAnalysis
-    return CaptainAnalysis(
+    analysis = CaptainAnalysis(
         financial_meaning=fm,
         wasteful_subscriptions=ws,
         budget_overruns=bo,
@@ -253,3 +253,26 @@ async def analyze_finances(user_id: str = "demo_user") -> CaptainAnalysis:
         missed_rewards=mr,
         fraud_alerts=fd,
     )
+
+    # 5. VTC Enforcement (NEW)
+    vtc_enabled = os.getenv("VTC_ENFORCEMENT_ENABLED", "false").lower() == "true"
+    if vtc_enabled:
+        try:
+            from .vtc import enforce_on_cold_boot
+
+            # Get user preferences from DB
+            user_prefs = None
+            try:
+                from database import DataTableClient
+                db = DataTableClient()
+                user_prefs = db.get_vtc_preferences(user_id)
+            except Exception:
+                logger.debug("Could not fetch VTC preferences, using defaults")
+
+            enforcement_result = await enforce_on_cold_boot(analysis, user_prefs=user_prefs)
+            analysis.vtc_enforcement = enforcement_result
+            logger.info("VTC enforcement completed", action=enforcement_result.get("action"))
+        except Exception:
+            logger.exception("VTC enforcement failed (non-fatal)")
+
+    return analysis

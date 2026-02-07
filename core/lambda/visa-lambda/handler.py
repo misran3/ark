@@ -99,6 +99,68 @@ def delete_visa_control(document_id: str) -> dict[str, Any]:
         return {"status": "error", "error": str(e)}, 400
 
 
+@app.get("/api/visa/rules/<document_id>")
+@tracer.capture_method
+def get_visa_rules(document_id: str) -> dict[str, Any]:
+    """Get all VTC rules for a document."""
+    user_id = _get_user_id()
+    logger.info("Get rules endpoint called", document_id=document_id)
+    try:
+        visa = _get_visa_service()
+        result = visa.get_rules(document_id)
+        return result
+    except Exception as e:
+        logger.error(f"Failed to get rules: {e}")
+        return {"status": "error", "error": str(e)}, 400
+
+
+@app.put("/api/visa/rules/<document_id>")
+@tracer.capture_method
+def update_visa_rules(document_id: str) -> dict[str, Any]:
+    """Update all VTC rules for a document."""
+    user_id = _get_user_id()
+    logger.info("Update rules endpoint called", document_id=document_id)
+    try:
+        body = app.current_event.json_body or {}
+        visa = _get_visa_service()
+        result = visa.put_rules(document_id, body)
+        return result
+    except Exception as e:
+        logger.error(f"Failed to update rules: {e}")
+        return {"status": "error", "error": str(e)}, 400
+
+
+@app.post("/api/visa/notifications")
+@tracer.capture_method
+def vtc_notification_callback() -> dict[str, Any]:
+    """Handle VTC notification callback from Visa."""
+    logger.info("VTC notification received")
+    try:
+        payload = app.current_event.json_body or {}
+
+        # Extract key info
+        details = payload.get("transactionDetails", {})
+        outcome = payload.get("transactionOutcome", {})
+
+        notification = {
+            "merchant": details.get("merchantInfo", {}).get("name", "Unknown"),
+            "amount": details.get("cardholderBillAmount"),
+            "approved": outcome.get("transactionApproved"),
+            "reason": (outcome.get("alertDetails", [{}])[0]).get("alertReason"),
+            "rule_type": (outcome.get("alertDetails", [{}])[0]).get("ruleType"),
+            "timestamp": details.get("requestReceivedTimeStamp"),
+        }
+
+        logger.info("VTC notification processed", notification=notification)
+
+        # TODO: Store to DynamoDB, push to WebSocket, send SMS, etc.
+
+        return {"status": "received"}
+    except Exception as e:
+        logger.exception(f"Error processing VTC notification: {e}")
+        return {"status": "error", "error": str(e)}, 500
+
+
 @logger.inject_lambda_context(correlation_id_path=correlation_paths.API_GATEWAY_REST)
 @tracer.capture_lambda_handler
 def lambda_handler(event: dict, context: LambdaContext) -> dict[str, Any]:

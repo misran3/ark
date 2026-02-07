@@ -1,11 +1,12 @@
 """
-Shared constants for Visa VTC sandbox pipelines.
+Shared constants for Visa VTC integration.
 
-All demo values, credentials, and mapping tables live here so every
-pipeline can import them without duplicating magic strings.
+Credentials are read from environment with demo fallback values for development.
 """
 
 from __future__ import annotations
+
+import os
 
 # ---------------------------------------------------------------------------
 # Visa Sandbox
@@ -15,22 +16,15 @@ VISA_BASE = "https://sandbox.api.visa.com"
 # ---------------------------------------------------------------------------
 # Credentials  (X-Pay-Token HMAC auth — NOT mTLS)
 # ---------------------------------------------------------------------------
-API_KEY = "F9ZNQD7PJ5GKEO59K38Q21wGYQNCvqLPxGXE12eyLHIoprCw0"
-SHARED_SECRET = r"gp+FtNKV5n4TZe3Y{0HCeSVaFh2RL9UE/}}H9/d7"
+API_KEY = os.getenv("VTC_API_KEY", "F9ZNQD7PJ5GKEO59K38Q21wGYQNCvqLPxGXE12eyLHIoprCw0")
+SHARED_SECRET = os.getenv("VTC_SHARED_SECRET", r"gp+FtNKV5n4TZe3Y{0HCeSVaFh2RL9UE/}}H9/d7")
 
 # ---------------------------------------------------------------------------
 # Fixed demo card — one card, one document, one user
 # ---------------------------------------------------------------------------
 DEMO_PAN = "4514170000000001"
-DEMO_DOC_ID = "ctc-vd-2e30a899-8f02-47c7-89e5-1cee8265b509"  # Updated from enrollment
-DEMO_USER_ID = "b2d1b9cc-fc3f-4a37-b431-ebf04f20a3e9"
-
-# Cardholder info used during enrollment
-DEMO_FIRST_NAME = "Alex"
-DEMO_LAST_NAME = "Miller"
-DEMO_COUNTRY_CODE = "USA"
-DEMO_LANGUAGE = "en-us"
-DEMO_EMAIL = "alexmiller@example.com"
+DEMO_DOC_ID = os.getenv("VTC_DOC_ID", "ctc-vd-2e30a899-8f02-47c7-89e5-1cee8265b509")
+DEMO_USER_ID = os.getenv("VTC_USER_ID", "b2d1b9cc-fc3f-4a37-b431-ebf04f20a3e9")
 
 # ---------------------------------------------------------------------------
 # Nessie / Capital One spending category → VTC Merchant Control Type

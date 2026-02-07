@@ -64,14 +64,15 @@ class VisaService:
         if not self.api_key or not self.shared_secret:
             raise ValueError("Missing VISA_USER_ID (apiKey) or VISA_PASSWORD (shared secret) environment variables")
 
-        # Query string required by VISA sample auth
-        query_string = f"apiKey={self.api_key}"
+        # Query string required by VISA sample auth (lowercase 'k')
+        query_string = f"apikey={self.api_key}"
 
-        # Resource path for token generation. The working sample uses "helloworld"
-        # for "/vdp/helloworld", so we strip the "vdp/" prefix if present.
+        # Resource path for token generation - strip first path segment
+        # /vctc/customerrules/v1/... -> customerrules/v1/...
+        # /vdp/helloworld -> helloworld
         resource_path = path.lstrip("/")
-        if resource_path.startswith("vdp/"):
-            resource_path = resource_path[len("vdp/") :]
+        parts = resource_path.split("/")
+        resource_path = "/".join(parts[1:]) if len(parts) > 1 else resource_path
 
         body = ""
         headers: dict[str, str] = {"Accept": "application/json"}
@@ -86,14 +87,6 @@ class VisaService:
 
         # Send body exactly as signed (use `content`, not `json=`, to avoid spacing differences)
         response = self.client.request(method, url, headers=headers, content=body if body else None)
-
-        # Compatibility fallback: some VISA samples sign only the last path segment.
-        # If we get an auth error, retry once using the last segment.
-        if response.status_code in (401, 403):
-            alt_resource = resource_path.split("/")[-1]
-            alt_token = self._generate_x_pay_token(alt_resource, query_string, body)
-            headers["x-pay-token"] = alt_token
-            response = self.client.request(method, url, headers=headers, content=body if body else None)
 
         return response
 
@@ -216,6 +209,64 @@ class VisaService:
                 "status": "error",
                 "error": f"VISA API returned {e.response.status_code}",
             }
+        except Exception as e:
+            logger.error(f"Unexpected error calling VISA API: {e}")
+            return {"status": "error", "error": str(e)}
+
+    def get_rules(self, document_id: str) -> dict:
+        """
+        Get all rules for a VTC document.
+
+        GET /vctc/customerrules/v1/consumertransactioncontrols/{documentID}/rules
+
+        Args:
+            document_id: The VISA documentID
+
+        Returns:
+            dict with rules or error
+        """
+        logger.info(f"Fetching VTC rules: {document_id}")
+
+        try:
+            response = self._visa_request(
+                "GET",
+                f"/vctc/customerrules/v1/consumertransactioncontrols/{document_id}/rules",
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            logger.error(f"VISA API error: {e.response.status_code}")
+            return {"status": "error", "error": f"VISA API returned {e.response.status_code}"}
+        except Exception as e:
+            logger.error(f"Unexpected error calling VISA API: {e}")
+            return {"status": "error", "error": str(e)}
+
+    def put_rules(self, document_id: str, rules: dict) -> dict:
+        """
+        Replace all rules for a VTC document.
+
+        PUT /vctc/customerrules/v1/consumertransactioncontrols/{documentID}/rules
+
+        Args:
+            document_id: The VISA documentID
+            rules: Complete rules payload (globalControls, merchantControls, transactionControls)
+
+        Returns:
+            dict with status and response
+        """
+        logger.info(f"Updating VTC rules: {document_id}")
+
+        try:
+            response = self._visa_request(
+                "PUT",
+                f"/vctc/customerrules/v1/consumertransactioncontrols/{document_id}/rules",
+                payload=rules,
+            )
+            response.raise_for_status()
+            return {"status": "success", "response": response.json()}
+        except httpx.HTTPStatusError as e:
+            logger.error(f"VISA API error: {e.response.status_code}")
+            return {"status": "error", "error": f"VISA API returned {e.response.status_code}"}
         except Exception as e:
             logger.error(f"Unexpected error calling VISA API: {e}")
             return {"status": "error", "error": str(e)}
