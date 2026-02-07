@@ -5,6 +5,7 @@ import { StartScreen } from './boot/StartScreen';
 import { NameExitAnimation } from './boot/NameExitAnimation';
 import { BootOverlay } from './boot/BootOverlay';
 import { BootReadout } from './boot/BootReadout';
+import { Viewport3D } from '../viewport/Viewport3D';
 
 interface BootSequenceProps {
   children: React.ReactNode;
@@ -15,6 +16,11 @@ export function BootSequence({ children }: BootSequenceProps) {
 
   return (
     <>
+      {/* 3D viewport — always visible behind everything */}
+      <div className="fixed inset-0 z-0">
+        <Viewport3D />
+      </div>
+
       {/* Start screen - first visit only */}
       {phase === 'start-screen' && <StartScreen onStart={startBoot} />}
 
@@ -29,17 +35,8 @@ export function BootSequence({ children }: BootSequenceProps) {
       {/* Boot readout text — scrolling terminal messages */}
       <BootReadout />
 
-      {/* Bridge content - always mounted after name exits */}
-      <div
-        style={{
-          visibility:
-            phase === 'start-screen' || phase === 'name-exit'
-              ? 'hidden'
-              : 'visible',
-        }}
-      >
-        {children}
-      </div>
+      {/* Bridge content — always rendered, BridgeLayout handles its own opacity */}
+      {children}
     </>
   );
 }
