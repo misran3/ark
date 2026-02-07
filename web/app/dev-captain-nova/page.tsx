@@ -7,6 +7,7 @@ import CaptainNova, {
   type AnimationConfig,
 } from '@/components/three/captain-nova';
 import { NovaVariantDropdown, type NovaVariant } from '@/components/ui/NovaVariantDropdown';
+import { HARDCODED_VARIANTS } from '@/lib/nova-variants';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
@@ -63,13 +64,7 @@ export default function DevCaptainNovaPage() {
   const router = useRouter();
   const novaRef = useRef<CaptainNovaHandle>(null);
 
-  // Hardcoded variants for client-side (in real app, pass via server props)
-  const [variants] = useState<NovaVariant[]>([
-    { type: 'skeletal', label: 'A: Skeletal-less Hierarchical' },
-    { type: 'community', label: 'CAUCASIAN MAN', path: '/3D/CAUCASIAN MAN.glb' },
-    { type: 'community', label: 'Vinayagar', path: '/3D/Vinayagar.glb' },
-    { type: 'community', label: 'https storage googleapis', path: '/3D/https___storage_googleapis_com_ai_services_quality_jobs_xr4enzsf_input_png.glb' },
-  ]);
+  const [variants] = useState<NovaVariant[]>(HARDCODED_VARIANTS);
 
   const [activeVariant, setActiveVariant] = useState<NovaVariant>(variants[0]);
   const [position, setPosition] = useState<[number, number, number]>([0, 0, 0]);
