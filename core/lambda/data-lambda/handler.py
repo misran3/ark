@@ -44,7 +44,7 @@ def _get_data_table_client():
 def _get_nessie_service():
     global _nessie_service
     if _nessie_service is None:
-        from services.nessie_service import NessieService
+        from shared.nessie_service import NessieService
         api_key = os.getenv("NESSIE_API_KEY", "")
         _nessie_service = NessieService(api_key=api_key)
     return _nessie_service
@@ -77,7 +77,7 @@ def _get_snapshot_data() -> dict:
 
         # Fetch fresh from Nessie
         try:
-            from services.nessie_service import NessieApiError
+            from shared.nessie_service import NessieApiError
             nessie = _get_nessie_service()
             snapshot = nessie.build_snapshot()
             snapshot_dict = snapshot.model_dump(mode="json")
@@ -104,7 +104,7 @@ def _get_budget_data() -> dict:
 
     # Compute from snapshot
     from shared.models import FinancialSnapshot
-    from services.budget_engine import calculate
+    from shared.budget_engine import calculate
 
     snapshot_dict = _get_snapshot_data()
     snapshot = FinancialSnapshot.model_validate(snapshot_dict)
