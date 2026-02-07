@@ -1,7 +1,9 @@
 'use client';
 
-import { useEffect, useState, useRef, useMemo, memo } from 'react';
+import { useEffect, useState, useRef, useMemo, memo, useCallback } from 'react';
 import { useAlertStore, ALERT_COLORS } from '@/lib/stores/alert-store';
+import { useThreatStore } from '@/lib/stores/threat-store';
+import { useShieldStore } from '@/lib/stores/shield-store';
 
 /**
  * HUDTopBar - Optimized to prevent unnecessary re-renders
@@ -12,11 +14,40 @@ import { useAlertStore, ALERT_COLORS } from '@/lib/stores/alert-store';
  * - Performance: Reduced from 60 re-renders/min to 1-2 re-renders/min for static elements
  */
 
+// Chromatic aberration wrapper — adds a faint magenta ghost offset 1px right
+const ChromaWrap = memo(function ChromaWrap({
+  children,
+  ghostColor,
+}: {
+  children: React.ReactNode;
+  ghostColor: string;
+}) {
+  return (
+    <div className="relative">
+      {children}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        aria-hidden="true"
+        style={{
+          transform: 'translateX(1px)',
+          color: ghostColor,
+          opacity: 0.1,
+          mixBlendMode: 'screen',
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+});
+
 // Isolated stardate component - only this re-renders every second
 const StardateClock = memo(function StardateClock({
-  textStyle
+  textStyle,
+  ghostColor,
 }: {
-  textStyle: React.CSSProperties
+  textStyle: React.CSSProperties;
+  ghostColor: string;
 }) {
   const [stardate, setStardate] = useState('');
 
@@ -35,9 +66,11 @@ const StardateClock = memo(function StardateClock({
   }, []);
 
   return (
-    <div className="font-mono text-[11px]" style={textStyle}>
-      {stardate}
-    </div>
+    <ChromaWrap ghostColor={ghostColor}>
+      <div className="font-mono text-[11px]" style={textStyle}>
+        {stardate}
+      </div>
+    </ChromaWrap>
   );
 });
 
@@ -45,9 +78,11 @@ const StardateClock = memo(function StardateClock({
 const ShipName = memo(function ShipName({
   alertLevel,
   textStyle,
+  ghostColor,
 }: {
   alertLevel: string;
   textStyle: React.CSSProperties;
+  ghostColor: string;
 }) {
   const [displayedShip, setDisplayedShip] = useState('');
   const [isTyped, setIsTyped] = useState(false);
@@ -74,52 +109,85 @@ const ShipName = memo(function ShipName({
     () => ({
       background: alertLevel === 'red-alert' ? '#ef4444' : '#22c55e',
       boxShadow: `0 0 6px ${alertLevel === 'red-alert' ? '#ef4444' : '#22c55e'}`,
-      animation: 'status-light-pulse 2s ease-in-out infinite',
+      animation: 'status-light-pulse 4s ease-in-out infinite',
     }),
     [alertLevel]
   );
 
   return (
-    <div className="flex items-center gap-2">
-      <div className="w-1.5 h-1.5 rounded-full" style={statusLightStyle} />
-      <div className="font-orbitron text-[11px] font-semibold tracking-wider" style={textStyle}>
-        {displayedShip}
+    <ChromaWrap ghostColor={ghostColor}>
+      <div className="flex items-center gap-2">
+        <div className="w-1.5 h-1.5 rounded-full" style={statusLightStyle} />
+        <div className="font-orbitron text-[11px] font-semibold tracking-wider" style={textStyle}>
+          {displayedShip}
+        </div>
       </div>
-    </div>
+    </ChromaWrap>
   );
 });
 
-// Static status component - never re-renders after typewriter
+// Dynamic status component — reflects real app state with typewriter transitions
 const StatusText = memo(function StatusText({
-  textStyle
+  textStyle,
+  ghostColor,
 }: {
-  textStyle: React.CSSProperties
+  textStyle: React.CSSProperties;
+  ghostColor: string;
 }) {
+  const alertLevel = useAlertStore((state) => state.level);
+  const threatCount = useThreatStore((state) => state.threats.filter((t) => !t.deflected).length);
+  const shieldPercent = useShieldStore((state) => state.overallPercent);
+
+  // Priority-based status resolution
+  const targetStatus = useMemo(() => {
+    if (alertLevel === 'red-alert') return 'RED ALERT — ALL HANDS';
+    if (shieldPercent < 80) return 'SHIELDS ENGAGED';
+    if (threatCount > 0) return `${threatCount} CONTACT${threatCount > 1 ? 'S' : ''} DETECTED`;
+    return 'SYSTEMS NOMINAL';
+  }, [alertLevel, shieldPercent, threatCount]);
+
   const [displayedStatus, setDisplayedStatus] = useState('');
-  const [isTyped, setIsTyped] = useState(false);
+  const [currentTarget, setCurrentTarget] = useState('');
+  const typewriterRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Typewriter effect — runs on initial mount and when targetStatus changes
+  const runTypewriter = useCallback((text: string) => {
+    if (typewriterRef.current) clearInterval(typewriterRef.current);
+    let i = 0;
+    setDisplayedStatus('');
+    typewriterRef.current = setInterval(() => {
+      if (i <= text.length) {
+        setDisplayedStatus(text.slice(0, i));
+        i++;
+      } else {
+        if (typewriterRef.current) clearInterval(typewriterRef.current);
+        typewriterRef.current = null;
+      }
+    }, 35);
+  }, []);
 
   useEffect(() => {
-    if (isTyped) return;
-    const text = 'SYSTEMS NOMINAL';
-    let i = 0;
-    const timer = setTimeout(() => {
-      const typeTimer = setInterval(() => {
-        if (i <= text.length) {
-          setDisplayedStatus(text.slice(0, i));
-          i++;
-        } else {
-          clearInterval(typeTimer);
-          setIsTyped(true);
-        }
-      }, 35);
-    }, 800);
-    return () => clearTimeout(timer);
-  }, [isTyped]);
+    if (targetStatus !== currentTarget) {
+      setCurrentTarget(targetStatus);
+      // Initial mount: delay for boot sequence stagger
+      const delay = currentTarget === '' ? 800 : 100;
+      const timer = setTimeout(() => runTypewriter(targetStatus), delay);
+      return () => clearTimeout(timer);
+    }
+  }, [targetStatus, currentTarget, runTypewriter]);
+
+  useEffect(() => {
+    return () => {
+      if (typewriterRef.current) clearInterval(typewriterRef.current);
+    };
+  }, []);
 
   return (
-    <div className="font-orbitron text-[10px] tracking-[3px]" style={textStyle}>
-      {displayedStatus}
-    </div>
+    <ChromaWrap ghostColor={ghostColor}>
+      <div className="font-orbitron text-[10px] tracking-[3px]" style={textStyle}>
+        {displayedStatus}
+      </div>
+    </ChromaWrap>
   );
 });
 
@@ -159,22 +227,42 @@ export function HUDTopBar() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Chromatic aberration ghost color — magenta-shifted version of hud color
+  const ghostColor = useMemo(() => {
+    // Shift hud color toward magenta for holographic refraction
+    if (alertLevel === 'red-alert') return 'rgba(255, 120, 200, 0.9)';
+    if (alertLevel === 'alert') return 'rgba(255, 140, 180, 0.85)';
+    if (alertLevel === 'caution') return 'rgba(255, 180, 140, 0.8)';
+    return 'rgba(200, 120, 255, 0.7)'; // normal: cyan → magenta shift
+  }, [alertLevel]);
+
   // Memoize text style to prevent recreation every render
   const textStyle = useMemo(
     () => ({
       color: colors.hud,
       textShadow: `0 0 10px ${colors.glow}, 0 0 2px ${colors.hud}`,
       animation: isTyped ? 'hud-drift 12s ease-in-out infinite' : undefined,
+      transition: 'color 200ms ease, text-shadow 200ms ease',
     }),
     [colors.hud, colors.glow, isTyped]
   );
 
-  // Memoize container style
+  // Memoize container style — includes jitter animation
   const containerStyle = useMemo(
     () => ({
       opacity: isTyped ? (alertLevel === 'normal' ? 0.7 : 0.85) : 1,
+      animation: isTyped ? 'hud-jitter 0.8s linear infinite' : undefined,
     }),
     [isTyped, alertLevel]
+  );
+
+  // Separator style — thin pipe at low opacity
+  const separatorStyle = useMemo(
+    () => ({
+      color: colors.hud,
+      opacity: 0.06,
+    }),
+    [colors.hud]
   );
 
   return (
@@ -190,9 +278,16 @@ export function HUDTopBar() {
           background: `linear-gradient(180deg, ${colors.glow}15 0%, transparent 80%)`,
         }}
       />
-      <StardateClock textStyle={textStyle} />
-      <ShipName alertLevel={alertLevel} textStyle={textStyle} />
-      <StatusText textStyle={textStyle} />
+      {/* Scanline overlay — projected-through-glass feel */}
+      <div
+        className="absolute inset-0 pointer-events-none hud-scanlines"
+        aria-hidden="true"
+      />
+      <StardateClock textStyle={textStyle} ghostColor={ghostColor} />
+      <span className="font-mono text-sm" style={separatorStyle}>|</span>
+      <ShipName alertLevel={alertLevel} textStyle={textStyle} ghostColor={ghostColor} />
+      <span className="font-mono text-sm" style={separatorStyle}>|</span>
+      <StatusText textStyle={textStyle} ghostColor={ghostColor} />
     </div>
   );
 }

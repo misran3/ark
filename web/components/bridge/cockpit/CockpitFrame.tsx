@@ -26,10 +26,21 @@ export function CockpitFrame() {
           }}
         >
           {/* Top bevel / gasket line */}
-          <div className="absolute bottom-0 left-12 right-12 h-px" style={{ background: colors.border }} />
+          <div className="absolute bottom-0 left-12 right-12 h-px alert-transition" style={{ background: colors.border }} />
           {/* Frost effect at top corners */}
           <div className="absolute bottom-0 left-0 w-24 h-3 bg-gradient-to-r from-white/[0.02] to-transparent rounded-br" />
           <div className="absolute bottom-0 right-0 w-24 h-3 bg-gradient-to-l from-white/[0.02] to-transparent rounded-bl" />
+
+          {/* Panel numbering stencils */}
+          <div className="hull-stencil absolute top-1 left-[33%]">HP-T1</div>
+          <div className="hull-stencil absolute top-1 right-[33%]">HP-T2</div>
+
+          {/* Rivet row along bottom edge */}
+          <div className="absolute bottom-1 left-[60px] right-[190px] h-[3px] hull-rivets" style={{ backgroundSize: '18px 18px' }} />
+
+          {/* Embedded status lights */}
+          <div className="absolute bottom-[6px] left-[30%] w-[4px] h-[4px] rounded-full bg-green-500" style={{ animation: 'status-light-pulse 4s ease-in-out infinite 0.7s' }} />
+          <div className="absolute bottom-[6px] right-[35%] w-[4px] h-[4px] rounded-full bg-green-500" style={{ animation: 'status-light-pulse 4s ease-in-out infinite 1.3s' }} />
 
           {/* 4A: Overhead light strip — warm white along bottom edge */}
           <div
@@ -58,34 +69,80 @@ export function CockpitFrame() {
           transformOrigin: 'left center',
         }}
       >
-        {/* Panel segment seams */}
-        <div className="absolute top-[30%] left-0 right-0 h-px hull-seam" />
-        <div className="absolute top-[65%] left-0 right-0 h-px hull-seam" />
+        {/* Panel segment seams — 3 plates (top/mid/bottom) */}
+        <div className="absolute top-[25%] left-0 right-0 h-px hull-seam" />
+        <div className="absolute top-[50%] left-0 right-0 h-px hull-seam" />
+        <div className="absolute top-[75%] left-0 right-0 h-px hull-seam" />
 
         {/* Stencil markings */}
-        <div className="hull-stencil absolute top-[15%] left-2 whitespace-nowrap" style={{ transform: 'rotate(-90deg) translateX(-100%)', transformOrigin: 'top left' }}>
+        <div className="hull-stencil absolute top-[12%] left-2 whitespace-nowrap" style={{ transform: 'rotate(-90deg) translateX(-100%)', transformOrigin: 'top left' }}>
           FRAME-L1
         </div>
-        <div className="hull-stencil absolute top-[50%] left-2 whitespace-nowrap" style={{ transform: 'rotate(-90deg) translateX(-100%)', transformOrigin: 'top left' }}>
+        <div className="hull-stencil absolute top-[40%] left-2 whitespace-nowrap" style={{ transform: 'rotate(-90deg) translateX(-100%)', transformOrigin: 'top left' }}>
           HP-03
         </div>
 
-        {/* Status lights */}
-        <div className="absolute top-[20%] right-2 flex flex-col gap-6">
-          <div className="w-[5px] h-[5px] rounded-full bg-green-500" style={{ animation: 'status-light-pulse 3s ease-in-out infinite' }} />
-          <div className="w-[5px] h-[5px] rounded-full bg-green-500" style={{ animation: 'status-light-pulse 3s ease-in-out infinite 0.5s' }} />
-          <div className="w-[5px] h-[5px] rounded-full" style={{ animation: 'damage-flicker 8s ease-in-out infinite' }} />
-          <div className="w-[5px] h-[5px] rounded-full bg-amber-500" style={{ animation: 'status-light-pulse 3s ease-in-out infinite 1.5s' }} />
+        {/* Access hatch panel — recessed maintenance cover */}
+        <div
+          className="absolute left-[5px] right-[8px]"
+          style={{
+            top: '35%',
+            height: '60px',
+            background: 'rgba(6, 10, 22, 0.7)',
+            border: '1px solid rgba(80, 110, 150, 0.08)',
+            boxShadow: 'inset 0 1px 4px rgba(0, 0, 0, 0.5)',
+            borderRadius: '1px',
+          }}
+        >
+          {/* Hex-bolt corners */}
+          <div className="absolute top-[3px] left-[3px] w-[4px] h-[4px] rounded-full border" style={{ borderColor: 'rgba(255,255,255,0.08)' }} />
+          <div className="absolute top-[3px] right-[3px] w-[4px] h-[4px] rounded-full border" style={{ borderColor: 'rgba(255,255,255,0.08)' }} />
+          <div className="absolute bottom-[3px] left-[3px] w-[4px] h-[4px] rounded-full border" style={{ borderColor: 'rgba(255,255,255,0.08)' }} />
+          <div className="absolute bottom-[3px] right-[3px] w-[4px] h-[4px] rounded-full border" style={{ borderColor: 'rgba(255,255,255,0.08)' }} />
+          {/* Hatch stencil */}
+          <div className="hull-stencil absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap" style={{ fontSize: '4px', letterSpacing: '1px' }}>
+            ACC-L2
+          </div>
         </div>
 
-        {/* Under-panel bleed light */}
-        <div className="absolute top-[30%] left-0 right-0 h-[2px]" style={{ background: 'rgba(0, 240, 255, 0.15)', animation: 'seam-bleed 6s ease-in-out infinite' }} />
+        {/* Wiring conduit channel — vertical recessed groove */}
+        <div
+          className="absolute left-[6px] top-[4%] bottom-[4%] w-[3px]"
+          style={{
+            background: 'rgba(2, 5, 14, 0.8)',
+            boxShadow: 'inset 0 0 2px rgba(0, 0, 0, 0.6)',
+            borderRadius: '1px',
+          }}
+        >
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `linear-gradient(180deg, transparent 0%, ${colors.glow} 50%, transparent 100%)`,
+              opacity: 0.3,
+              animation: 'conduit-pulse 4s ease-in-out infinite 0.5s',
+            }}
+          />
+        </div>
+
+        {/* Status lights — extended cluster */}
+        <div className="absolute top-[15%] right-2 flex flex-col gap-5">
+          <div className="w-[5px] h-[5px] rounded-full bg-green-500" style={{ animation: 'status-light-pulse 4s ease-in-out infinite' }} />
+          <div className="w-[5px] h-[5px] rounded-full bg-green-500" style={{ animation: 'status-light-pulse 4s ease-in-out infinite 0.5s' }} />
+          <div className="w-[5px] h-[5px] rounded-full" style={{ animation: 'damage-flicker 8s ease-in-out infinite' }} />
+          <div className="w-[5px] h-[5px] rounded-full bg-amber-500" style={{ animation: 'status-light-pulse 4s ease-in-out infinite 1.5s' }} />
+          <div className="w-[5px] h-[5px] rounded-full bg-green-500" style={{ animation: 'status-light-pulse 4s ease-in-out infinite 2s' }} />
+          <div className="w-[5px] h-[5px] rounded-full bg-amber-500" style={{ animation: 'status-light-pulse 4s ease-in-out infinite 2.5s' }} />
+        </div>
+
+        {/* Under-panel bleed lights at each seam */}
+        <div className="absolute top-[25%] left-0 right-0 h-[2px]" style={{ background: 'rgba(0, 240, 255, 0.15)', animation: 'seam-bleed 6s ease-in-out infinite' }} />
+        <div className="absolute top-[50%] left-0 right-0 h-[2px]" style={{ background: 'rgba(0, 240, 255, 0.1)', animation: 'seam-bleed 6s ease-in-out infinite 2s' }} />
 
         {/* Rivet line */}
         <div className="absolute top-4 right-1 bottom-4 w-[3px] hull-rivets" />
 
         {/* Edge glow */}
-        <div className="absolute top-0 right-0 bottom-0 w-px" style={{ background: colors.glow, animation: 'cockpit-edge-breathe 4s ease-in-out infinite' }} />
+        <div className="absolute top-0 right-0 bottom-0 w-px alert-transition" style={{ background: colors.glow, animation: 'cockpit-edge-breathe 4s ease-in-out infinite' }} />
 
         {/* Reflective glint */}
         <div className="absolute inset-0 overflow-hidden">
@@ -94,6 +151,9 @@ export function CockpitFrame() {
 
         {/* Emergency shutter mark */}
         <div className="absolute top-[10%] right-0 bottom-[10%] w-px bg-white/[0.03]" />
+
+        {/* Thermal discoloration near bottom junction */}
+        <div className="absolute bottom-0 left-0 right-0 h-[20%] hull-thermal" />
 
         {/* Light falloff — lighter near inner edge, darker toward outer wall */}
         <div
@@ -122,12 +182,56 @@ export function CockpitFrame() {
         <div className="hull-stencil absolute top-[10%] right-2 whitespace-nowrap" style={{ transform: 'rotate(90deg) translateX(0%)', transformOrigin: 'top right' }}>
           FRAME-R1
         </div>
+        {/* Station designation stencil */}
+        <div className="hull-stencil absolute top-[4%] left-3 whitespace-nowrap" style={{ fontSize: '5px', letterSpacing: '1.5px', color: 'rgba(255,255,255,0.12)' }}>
+          STN-R1: ADVISORY
+        </div>
+
+        {/* Wiring conduit channel — mirrors left frame */}
+        <div
+          className="absolute right-[6px] top-[4%] bottom-[4%] w-[3px]"
+          style={{
+            background: 'rgba(2, 5, 14, 0.8)',
+            boxShadow: 'inset 0 0 2px rgba(0, 0, 0, 0.6)',
+            borderRadius: '1px',
+          }}
+        >
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `linear-gradient(180deg, transparent 0%, ${colors.glow} 50%, transparent 100%)`,
+              opacity: 0.25,
+              animation: 'conduit-pulse 4s ease-in-out infinite 1.5s',
+            }}
+          />
+        </div>
+
+        {/* Access hatch — smaller than left frame's */}
+        <div
+          className="absolute left-[8px] right-[14px]"
+          style={{
+            top: '60%',
+            height: '45px',
+            background: 'rgba(6, 10, 22, 0.6)',
+            border: '1px solid rgba(80, 110, 150, 0.06)',
+            boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.4)',
+            borderRadius: '1px',
+          }}
+        >
+          <div className="absolute top-[2px] left-[2px] w-[3px] h-[3px] rounded-full border" style={{ borderColor: 'rgba(255,255,255,0.06)' }} />
+          <div className="absolute top-[2px] right-[2px] w-[3px] h-[3px] rounded-full border" style={{ borderColor: 'rgba(255,255,255,0.06)' }} />
+          <div className="absolute bottom-[2px] left-[2px] w-[3px] h-[3px] rounded-full border" style={{ borderColor: 'rgba(255,255,255,0.06)' }} />
+          <div className="absolute bottom-[2px] right-[2px] w-[3px] h-[3px] rounded-full border" style={{ borderColor: 'rgba(255,255,255,0.06)' }} />
+          <div className="hull-stencil absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap" style={{ fontSize: '4px', letterSpacing: '1px' }}>
+            ACC-R1
+          </div>
+        </div>
 
         {/* Status lights */}
         <div className="absolute top-[20%] left-2 flex flex-col gap-6">
-          <div className="w-[5px] h-[5px] rounded-full bg-green-500" style={{ animation: 'status-light-pulse 3s ease-in-out infinite 0.3s' }} />
-          <div className="w-[5px] h-[5px] rounded-full bg-green-500" style={{ animation: 'status-light-pulse 3s ease-in-out infinite 0.8s' }} />
-          <div className="w-[5px] h-[5px] rounded-full bg-amber-500" style={{ animation: 'status-light-pulse 3s ease-in-out infinite 1.2s' }} />
+          <div className="w-[5px] h-[5px] rounded-full bg-green-500" style={{ animation: 'status-light-pulse 4s ease-in-out infinite 0.3s' }} />
+          <div className="w-[5px] h-[5px] rounded-full bg-green-500" style={{ animation: 'status-light-pulse 4s ease-in-out infinite 0.8s' }} />
+          <div className="w-[5px] h-[5px] rounded-full bg-amber-500" style={{ animation: 'status-light-pulse 4s ease-in-out infinite 1.2s' }} />
         </div>
 
         {/* Under-panel bleed light */}
@@ -137,7 +241,7 @@ export function CockpitFrame() {
         <div className="absolute top-4 left-1 bottom-4 w-[3px] hull-rivets" />
 
         {/* Edge glow (inner edge) */}
-        <div className="absolute top-0 left-0 bottom-0 w-px" style={{ background: colors.glow, animation: 'cockpit-edge-breathe 4s ease-in-out infinite 1s' }} />
+        <div className="absolute top-0 left-0 bottom-0 w-px alert-transition" style={{ background: colors.glow, animation: 'cockpit-edge-breathe 4s ease-in-out infinite 1s' }} />
 
         {/* Reflective glint */}
         <div className="absolute inset-0 overflow-hidden">
@@ -214,29 +318,29 @@ export function CockpitFrame() {
       {/* ========== CORNER BRACKETS (viewscreen frame) ========== */}
       {/* Top-left */}
       <div className="absolute top-5 left-[48px]">
-        <div className="w-8 h-8 border-t-2 border-l-2" style={{ borderColor: colors.border }} />
+        <div className="w-8 h-8 border-t-2 border-l-2 alert-transition" style={{ borderColor: colors.border }} />
         <div className="absolute top-1 left-1 w-[6px] h-[6px] rounded-full border" style={{ borderColor: 'rgba(255,255,255,0.1)' }} />
       </div>
       {/* Top-right */}
       <div className="absolute top-5 right-[178px]">
-        <div className="w-8 h-8 border-t-2 border-r-2" style={{ borderColor: colors.border }} />
+        <div className="w-8 h-8 border-t-2 border-r-2 alert-transition" style={{ borderColor: colors.border }} />
         <div className="absolute top-1 right-1 w-[6px] h-[6px] rounded-full border" style={{ borderColor: 'rgba(255,255,255,0.1)' }} />
       </div>
       {/* Bottom-left */}
       <div className="absolute bottom-[219px] left-[48px]">
-        <div className="w-8 h-8 border-b-2 border-l-2" style={{ borderColor: colors.border }} />
+        <div className="w-8 h-8 border-b-2 border-l-2 alert-transition" style={{ borderColor: colors.border }} />
         <div className="absolute bottom-1 left-1 w-[6px] h-[6px] rounded-full border" style={{ borderColor: 'rgba(255,255,255,0.1)' }} />
       </div>
       {/* Bottom-right */}
       <div className="absolute bottom-[219px] right-[178px]">
-        <div className="w-8 h-8 border-b-2 border-r-2" style={{ borderColor: colors.border }} />
+        <div className="w-8 h-8 border-b-2 border-r-2 alert-transition" style={{ borderColor: colors.border }} />
         <div className="absolute bottom-1 right-1 w-[6px] h-[6px] rounded-full border" style={{ borderColor: 'rgba(255,255,255,0.1)' }} />
       </div>
 
       {/* ========== VIEWSCREEN BEVEL / GASKET ========== */}
       {/* Inner glow ring around the viewscreen opening */}
       <div
-        className="absolute pointer-events-none"
+        className="absolute pointer-events-none alert-transition"
         style={{
           ...VIEWPORT_BOUNDS,
           boxShadow: `inset 0 0 12px ${colors.glow}, inset 0 0 2px rgba(0,0,0,0.8)`,
@@ -257,7 +361,7 @@ export function CockpitFrame() {
         />
 
         {/* Top accent line */}
-        <div className="absolute top-0 left-[5%] right-[5%] h-px" style={{ background: `linear-gradient(90deg, transparent, ${colors.border}, transparent)` }} />
+        <div className="absolute top-0 left-[5%] right-[5%] h-px alert-transition" style={{ background: `linear-gradient(90deg, transparent, ${colors.border}, transparent)` }} />
 
         {/* Panel seam across dashboard */}
         <div className="absolute top-[45%] left-0 right-0 h-px hull-seam" />
@@ -270,8 +374,14 @@ export function CockpitFrame() {
         <div className="absolute top-3 left-0 w-12 h-[40px] vent-grille" />
         <div className="absolute top-3 right-0 w-12 h-[40px] vent-grille" />
 
-        {/* Power conduit channels (thin grooves) */}
+        {/* T-bar divider hints — module boundaries */}
+        <div className="absolute top-3 bottom-8 left-[25%] w-px" style={{ background: 'linear-gradient(180deg, rgba(200,220,255,0.06) 0%, rgba(200,220,255,0.03) 50%, rgba(200,220,255,0.06) 100%)' }} />
+        <div className="absolute top-3 bottom-8 left-[50%] w-px" style={{ background: 'linear-gradient(180deg, rgba(200,220,255,0.06) 0%, rgba(200,220,255,0.03) 50%, rgba(200,220,255,0.06) 100%)' }} />
+        <div className="absolute top-3 bottom-8 left-[75%] w-px" style={{ background: 'linear-gradient(180deg, rgba(200,220,255,0.06) 0%, rgba(200,220,255,0.03) 50%, rgba(200,220,255,0.06) 100%)' }} />
+
+        {/* Power conduit channels (twin grooves) */}
         <div className="absolute bottom-8 left-[10%] right-[10%] h-[2px]" style={{ background: 'rgba(0, 240, 255, 0.06)', animation: 'conduit-pulse 4s ease-in-out infinite' }} />
+        <div className="absolute bottom-[44px] left-[12%] right-[12%] h-[2px]" style={{ background: 'rgba(0, 240, 255, 0.04)', animation: 'conduit-pulse 4s ease-in-out infinite 1s' }} />
 
         {/* Grip edge / lip at the very bottom */}
         <div className="absolute bottom-0 left-0 right-0 h-3 bg-gradient-to-t from-black/60 to-transparent" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.04)' }} />
@@ -283,8 +393,9 @@ export function CockpitFrame() {
           </div>
         </div>
 
-        {/* Scuff marks near console area */}
+        {/* Scuff marks — concentrated near grip edge (high-traffic wear) */}
         <div className="absolute top-8 left-[15%] right-[15%] bottom-12 hull-scuffs" />
+        <div className="absolute bottom-3 left-[8%] right-[8%] h-[20px] hull-scuffs" style={{ opacity: 0.8 }} />
       </div>
     </div>
   );

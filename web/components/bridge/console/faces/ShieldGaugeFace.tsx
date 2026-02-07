@@ -15,12 +15,16 @@ export function ShieldGaugeFace() {
   // Gauge sweep is 270 degrees total
   const targetAngle = -135 + (overallPercent / 100) * 270;
 
-  // Needle jitter when threats are active
+  // Needle jitter only when threats are active — no rAF when idle
   useEffect(() => {
+    if (threatCount === 0) {
+      setDisplayAngle(targetAngle);
+      return;
+    }
     let animId: number;
     const animate = () => {
-      const jitterAmount = threatCount > 0 ? Math.min(threatCount * 2, 12) : 0.3;
-      const speed = threatCount > 0 ? 0.08 + threatCount * 0.02 : 0.02;
+      const jitterAmount = Math.min(threatCount * 2, 12);
+      const speed = 0.08 + threatCount * 0.02;
       jitterRef.current += speed;
       const jitter = Math.sin(jitterRef.current) * jitterAmount +
                      Math.sin(jitterRef.current * 2.3) * (jitterAmount * 0.4);

@@ -32,7 +32,7 @@ export function useBootSequence() {
 
   // Check localStorage on mount
   useEffect(() => {
-    const hasSeenBootStorage = storage.getItem('synesthesiapay:hasSeenBoot');
+    const hasSeenBootStorage = storage.getItem('ark:hasSeenBoot');
     if (hasSeenBootStorage === 'true') {
       setHasSeenBoot(true);
       skipBoot(); // Skip directly to complete
@@ -42,7 +42,7 @@ export function useBootSequence() {
   // Save to localStorage when hasSeenBoot changes
   useEffect(() => {
     if (hasSeenBoot) {
-      storage.setItem('synesthesiapay:hasSeenBoot', 'true');
+      storage.setItem('ark:hasSeenBoot', 'true');
     }
   }, [hasSeenBoot]);
 

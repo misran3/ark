@@ -80,10 +80,15 @@ export function StarfieldBackground() {
     const twinkleSpeeds = new Float32Array(STAR_COUNT);
 
     for (let i = 0; i < STAR_COUNT; i++) {
-      // Distribute in a box: x/y spread wide, z behind camera
-      positions[i * 3] = rand() * 2000 - 1000;       // x: -1000 to 1000
-      positions[i * 3 + 1] = rand() * 2000 - 1000;   // y: -1000 to 1000
-      positions[i * 3 + 2] = -(rand() * 1000 + 850);  // z: -850 to -1850 (all behind Sun at z=-800)
+      // Spherical shell distribution for even sky coverage
+      // Random direction on hemisphere facing camera (-Z)
+      const theta = rand() * Math.PI * 2;              // azimuth: full circle
+      const phi = Math.acos(1 - rand() * 1.2);         // polar: biased forward (0 to ~100°)
+      const r = 900 + rand() * 900;                     // radius: 900 to 1800
+
+      positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);      // x
+      positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);  // y
+      positions[i * 3 + 2] = -r * Math.cos(phi);                   // z: always behind camera
 
       // Size: 95% small (8-18), 5% hero (22-35)
       const isHero = rand() < 0.05;

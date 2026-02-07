@@ -40,6 +40,14 @@ const VOICE_PROFILES: Record<string, VoiceProfile> = {
     volume: 1.0,
   },
 
+  // Stacy — professional, crisp, clear
+  'Stacy': {
+    preferredVoices: ['Samantha', 'Karen', 'Google US English', 'Microsoft Zira'],
+    pitch: 1.0,
+    rate: 1.0,
+    volume: 1.0,
+  },
+
   // THE POPE — regal, solemn, authoritative
   'THE POPE': {
     preferredVoices: ['Daniel', 'Thomas', 'Google UK English Male', 'Microsoft Mark'],

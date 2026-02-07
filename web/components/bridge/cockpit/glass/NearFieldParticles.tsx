@@ -50,6 +50,7 @@ export function NearFieldParticles() {
       style={{
         ...VIEWPORT_BOUNDS,
         zIndex: 5,
+        filter: 'blur(1.8px)',
       }}
       aria-hidden="true"
     >
@@ -63,7 +64,6 @@ export function NearFieldParticles() {
             left: p.startX,
             top: p.startY,
             background: `rgba(200, 220, 255, ${p.opacity})`,
-            filter: `blur(${p.blur}px)`,
             willChange: 'transform, opacity',
             animation:
               `near-particle-drift-${p.id % 3} ${p.duration}s linear ${p.delay}s infinite, ` +

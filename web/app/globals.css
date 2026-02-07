@@ -676,6 +676,15 @@ body {
   75% { transform: translate(0.3px, -0.5px); }
 }
 
+/* HUD micro-jitter — fast vertical vibration from holographic emitter */
+@keyframes hud-jitter {
+  0%, 100% { transform: translateY(0); }
+  20% { transform: translateY(-0.3px); }
+  40% { transform: translateY(0.2px); }
+  60% { transform: translateY(-0.5px); }
+  80% { transform: translateY(0.3px); }
+}
+
 /* HUD interference flicker */
 @keyframes hud-flicker {
   0%, 94%, 100% { opacity: 1; transform: translateX(0); }
@@ -802,6 +811,22 @@ body {
   letter-spacing: 1px;
   color: rgba(255, 255, 255, 0.08);
   text-transform: uppercase;
+}
+
+/* Smooth alert color transitions — applied to elements that shift with alert level */
+.alert-transition {
+  transition: color 200ms ease, background 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+}
+
+/* HUD scanline overlay — repeating 2px horizontal lines */
+.hud-scanlines {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 1px,
+    rgba(255, 255, 255, 0.03) 1px,
+    rgba(255, 255, 255, 0.03) 2px
+  );
 }
 
 /* ========================================

@@ -9,6 +9,7 @@ export const HARDCODED_VARIANTS: NovaVariant[] = [
   { type: 'community', label: 'CAUCASIAN MAN', path: '/models/caucasian-man.glb' },
   { type: 'community', label: 'Vinayagar', path: '/models/vinayagar.glb' },
   { type: 'community', label: 'THE POPE', path: '/models/googleapis-model.glb' },
+  { type: 'community', label: 'Stacy', path: '/models/stacy.glb', yOffset: -0.6, zOffset: -2 },
 ];
 
 /**

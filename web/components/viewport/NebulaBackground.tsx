@@ -40,7 +40,7 @@ const nebulaFragmentShader = /* glsl */ `
   float fbm(vec2 p) {
     float value = 0.0;
     float amplitude = 0.5;
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 3; i++) {
       value += amplitude * noise(p);
       p *= 2.0;
       amplitude *= 0.5;

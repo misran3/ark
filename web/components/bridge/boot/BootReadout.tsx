@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useBootStore } from '@/lib/stores/boot-store';
 
 const BOOT_MESSAGES = [
-  'SYNESTHESIAPAY BRIDGE v4.2.0',
+  'ARK BRIDGE v4.2.0',
   'QUANTUM PROCESSOR ............ ONLINE',
   'THREAT DETECTION ARRAY ....... CALIBRATING',
   'SHIELD GENERATOR ............. STANDBY',

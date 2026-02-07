@@ -20,7 +20,7 @@ export const DEMO_THREATS: Threat[] = [
   {
     id: 'gym-membership',
     type: 'asteroid',
-    position: [3, 2, -15],
+    position: [20, 14, -35],
     size: 1.3,
     color: '#ff5733',
     label: 'GYM $49.99/mo',
@@ -35,7 +35,7 @@ export const DEMO_THREATS: Threat[] = [
   {
     id: 'dining-overspend',
     type: 'ion_storm',
-    position: [-4, -1, -20],
+    position: [26, 16, -42],
     size: 1.5,
     color: '#a855f7',
     label: 'DINING +142%',
@@ -48,7 +48,7 @@ export const DEMO_THREATS: Threat[] = [
   {
     id: 'streaming',
     type: 'solar_flare',
-    position: [0, 3, -25],
+    position: [18, 15, -38],
     size: 2,
     color: '#fbbf24',
     label: 'STREAMING $31.98',
@@ -61,7 +61,7 @@ export const DEMO_THREATS: Threat[] = [
   {
     id: 'missed-rewards',
     type: 'asteroid',
-    position: [-2, -3, -18],
+    position: [24, 12, -45],
     size: 0.7,
     color: '#06b6d4',
     label: 'MISSED REWARDS',
@@ -76,7 +76,7 @@ export const DEMO_THREATS: Threat[] = [
   {
     id: 'credit-card-debt',
     type: 'black_hole',
-    position: [5, -2, -22],
+    position: [30, 18, -48],
     size: 1.5,
     color: '#4c1d95',
     label: 'DEBT SPIRAL',
@@ -89,7 +89,7 @@ export const DEMO_THREATS: Threat[] = [
   {
     id: 'savings-opportunity',
     type: 'wormhole',
-    position: [-5, 1, -30],
+    position: [19, 20, -50],
     size: 1,
     color: '#60a5fa',
     label: 'SAVINGS PORTAL',
@@ -102,7 +102,7 @@ export const DEMO_THREATS: Threat[] = [
   {
     id: 'fraud-alert',
     type: 'enemy_cruiser',
-    position: [2, -3, -18],
+    position: [25, 14, -36],
     size: 1.2,
     color: '#991b1b',
     label: 'FRAUD ALERT',

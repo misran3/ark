@@ -13,7 +13,7 @@ export function NameExitAnimation() {
           textShadow: '0 0 20px rgba(0, 240, 255, 0.5)',
         }}
       >
-        SYNESTHESIAPAY
+        ARK
       </h1>
     </div>
   );

@@ -8,7 +8,7 @@ import { HUDAmbient } from './hud/HUDAmbient';
 import { CommandConsole } from './console/CommandConsole';
 import { CaptainNovaStation } from './hud/CaptainNovaPanel';
 import { CockpitFrame } from './cockpit/CockpitFrame';
-import { LeftDataStrip } from './cockpit/LeftDataStrip';
+
 import { Viewport3D } from '../viewport/Viewport3D';
 import { ViewportGlass } from './cockpit/ViewportGlass';
 import { EnvironmentalCohesion } from './cockpit/EnvironmentalCohesion';
@@ -59,7 +59,6 @@ export function BridgeLayout() {
 
         {/* Layer 2: Cockpit frame (structural hull overlay) */}
         <CockpitFrame />
-        <LeftDataStrip />
 
         {/* Layer 3: Captain Nova station (inside right frame area) */}
         <div
@@ -83,7 +82,15 @@ export function BridgeLayout() {
         >
           <HUDTopBar />
         </div>
-        
+
+        {/* Frame-to-HUD gradient bridge — connects floating HUD to physical frame */}
+        <div
+          className="absolute top-10 left-[50px] right-[180px] h-4 z-25 pointer-events-none"
+          style={{
+            background: 'linear-gradient(180deg, rgba(0, 240, 255, 0.03) 0%, transparent 100%)',
+          }}
+        />
+
         {/* Threats list - flickers on after top bar */}
         <div
           className="absolute top-12 left-14 z-30"

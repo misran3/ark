@@ -6,7 +6,7 @@ import { DevDashboardLoader } from "@/components/dev/DevDashboardLoader";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "SynesthesiaPay — Bridge Command",
+  title: "Ark — Bridge Command",
   description: "Your financial command center",
 };
 

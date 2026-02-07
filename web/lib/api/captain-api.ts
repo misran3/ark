@@ -11,7 +11,7 @@ import type {
 
 // Direct to deployed API Gateway — CORS is enabled (Access-Control-Allow-Origin: *)
 export const CAPTAIN_API_BASE =
-  'https://hpjg3vun6j.execute-api.us-east-1.amazonaws.com/dev/api/captain';
+  'https://three-years-doubt.loca.lt/api/captain';
 
 async function fetchEndpoint<T>(path: string): Promise<T | null> {
   try {

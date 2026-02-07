@@ -1,8 +1,8 @@
 'use client';
 
-import { useRef, useMemo, useState } from 'react';
+import { useRef, useMemo, useState, useCallback } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Group, Color } from 'three';
+import { Group, Color, MathUtils, Mesh } from 'three';
 import { Text } from '@react-three/drei';
 import { createRingArc } from '@/lib/hologram/ring-geometry';
 import '@/lib/hologram/ring-segment-material';
@@ -33,6 +33,7 @@ export function ShieldRing({
 }: ShieldRingProps) {
   const groupRef = useRef<Group>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const meshScales = useRef<Map<string, number>>(new Map());
 
   // Pre-compute arc geometries
   const arcs = useMemo(() => {
@@ -49,16 +50,33 @@ export function ShieldRing({
     });
   }, [segments, innerRadius, outerRadius]);
 
+  const handlePointerEnter = useCallback((e: any, id: string) => {
+    e.stopPropagation();
+    setHoveredId(id);
+  }, []);
+
+  const handlePointerLeave = useCallback(() => {
+    setHoveredId(null);
+  }, []);
+
   useFrame(({ clock }) => {
     if (groupRef.current && rotationSpeed) {
       groupRef.current.rotation.z += rotationSpeed * 0.001;
     }
 
-    // Update shader uniforms
+    // Smoothly lerp scales and update shader uniforms
     groupRef.current?.children.forEach((child) => {
-      const mesh = child as any;
-      if (mesh.material?.uniforms) {
-        mesh.material.uniforms.uTime.value = clock.getElapsedTime();
+      const mesh = child as Mesh & { userData: { segId?: string } };
+      if (!mesh.userData.segId) return;
+
+      const targetScale = hoveredId === mesh.userData.segId ? 1.05 : 1;
+      const current = meshScales.current.get(mesh.userData.segId) ?? 1;
+      const lerped = MathUtils.lerp(current, targetScale, 0.12);
+      meshScales.current.set(mesh.userData.segId, lerped);
+      mesh.scale.setScalar(lerped);
+
+      if ((mesh.material as any)?.uniforms) {
+        (mesh.material as any).uniforms.uTime.value = clock.getElapsedTime();
       }
     });
   });
@@ -74,12 +92,9 @@ export function ShieldRing({
           <mesh
             key={arc.id}
             geometry={arc.geometry}
-            scale={isHovered ? 1.08 : 1}
-            onPointerEnter={(e) => {
-              e.stopPropagation();
-              setHoveredId(arc.id);
-            }}
-            onPointerLeave={() => setHoveredId(null)}
+            userData={{ segId: arc.id }}
+            onPointerEnter={(e) => handlePointerEnter(e, arc.id)}
+            onPointerLeave={handlePointerLeave}
           >
             <ringSegmentMaterial
               uColor={color}
@@ -92,7 +107,7 @@ export function ShieldRing({
               side={2} // DoubleSide
             />
             {isHovered && (
-              <group position={[0, 0, 0.1]}>
+              <group position={[0, 0, 0.1]} raycast={() => null}>
                 <Text
                   fontSize={0.14}
                   color={color}
@@ -102,6 +117,7 @@ export function ShieldRing({
                   outlineColor={color}
                   outlineOpacity={0.4}
                   position={[0, 0.15, 0]}
+                  raycast={() => null}
                 >
                   {arc.label}
                 </Text>
@@ -112,6 +128,7 @@ export function ShieldRing({
                   anchorY="middle"
                   fillOpacity={0.8}
                   position={[0, -0.05, 0]}
+                  raycast={() => null}
                 >
                   {`${arc.value}% / ${arc.max}%  ·  ${(fillLevel * 100).toFixed(0)}% allocated`}
                 </Text>

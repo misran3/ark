@@ -1,5 +1,5 @@
 const CAPTAIN_API =
-  'https://hpjg3vun6j.execute-api.us-east-1.amazonaws.com/dev/api/captain';
+  'https://three-years-doubt.loca.lt/api/captain';
 
 export async function POST(
   request: Request,

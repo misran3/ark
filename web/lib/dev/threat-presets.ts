@@ -4,7 +4,7 @@ import { Threat } from '@/lib/stores/threat-store';
 export const THREAT_PRESETS: Record<Threat['type'], Omit<Threat, 'id'>> = {
   asteroid: {
     type: 'asteroid',
-    position: [3, 2, -15],
+    position: [20, 14, -35],
     size: 1.3,
     color: '#ff5733',
     label: 'DEV ASTEROID',
@@ -16,7 +16,7 @@ export const THREAT_PRESETS: Record<Threat['type'], Omit<Threat, 'id'>> = {
   },
   ion_storm: {
     type: 'ion_storm',
-    position: [-4, -1, -20],
+    position: [26, 16, -42],
     size: 1.5,
     color: '#a855f7',
     label: 'DEV ION STORM',
@@ -28,7 +28,7 @@ export const THREAT_PRESETS: Record<Threat['type'], Omit<Threat, 'id'>> = {
   },
   solar_flare: {
     type: 'solar_flare',
-    position: [0, 3, -25],
+    position: [18, 15, -38],
     size: 2.0,
     color: '#fbbf24',
     label: 'DEV SOLAR FLARE',
@@ -40,7 +40,7 @@ export const THREAT_PRESETS: Record<Threat['type'], Omit<Threat, 'id'>> = {
   },
   black_hole: {
     type: 'black_hole',
-    position: [0, 0, -20],
+    position: [30, 18, -48],
     size: 3.0,
     color: '#4c1d95',
     label: 'DEV BLACK HOLE',
@@ -52,7 +52,7 @@ export const THREAT_PRESETS: Record<Threat['type'], Omit<Threat, 'id'>> = {
   },
   wormhole: {
     type: 'wormhole',
-    position: [4, 1, -22],
+    position: [19, 20, -50],
     size: 2.5,
     color: '#60a5fa',
     label: 'DEV WORMHOLE',
@@ -64,7 +64,7 @@ export const THREAT_PRESETS: Record<Threat['type'], Omit<Threat, 'id'>> = {
   },
   enemy_cruiser: {
     type: 'enemy_cruiser',
-    position: [-3, 2, -18],
+    position: [25, 14, -36],
     size: 2.0,
     color: '#991b1b',
     label: 'DEV ENEMY CRUISER',
@@ -81,7 +81,7 @@ export const DEMO_SCENE_THREATS: Threat[] = [
   {
     id: 'demo-asteroid-1',
     type: 'asteroid',
-    position: [4, 2.5, -14],
+    position: [22, 15, -37],
     size: 1.5,
     color: '#ff5733',
     label: 'GYM $49.99/mo',
@@ -94,7 +94,7 @@ export const DEMO_SCENE_THREATS: Threat[] = [
   {
     id: 'demo-ion-storm',
     type: 'ion_storm',
-    position: [-5, -0.5, -22],
+    position: [28, 17, -44],
     size: 1.8,
     color: '#a855f7',
     label: 'DINING +142%',
@@ -107,7 +107,7 @@ export const DEMO_SCENE_THREATS: Threat[] = [
   {
     id: 'demo-solar-flare',
     type: 'solar_flare',
-    position: [1, 4, -28],
+    position: [19, 16, -40],
     size: 2.2,
     color: '#fbbf24',
     label: 'STREAMING $31.98',
@@ -120,7 +120,7 @@ export const DEMO_SCENE_THREATS: Threat[] = [
   {
     id: 'demo-black-hole',
     type: 'black_hole',
-    position: [-1, -2, -18],
+    position: [32, 20, -50],
     size: 3.5,
     color: '#4c1d95',
     label: 'CREDIT DEBT $4,500',
@@ -133,7 +133,7 @@ export const DEMO_SCENE_THREATS: Threat[] = [
   {
     id: 'demo-wormhole',
     type: 'wormhole',
-    position: [6, 0, -25],
+    position: [24, 13, -46],
     size: 2.0,
     color: '#60a5fa',
     label: 'MISSED REWARDS $156/yr',

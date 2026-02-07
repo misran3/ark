@@ -141,7 +141,7 @@ export const useDevStore = create<DevDashboardState>()(
         }),
     }),
     {
-      name: 'synesthesiapay-dev-dashboard',
+      name: 'ark-dev-dashboard',
       partialize: (state) => ({
         isOpen: state.isOpen,
         activeTab: state.activeTab,

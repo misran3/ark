@@ -134,20 +134,20 @@ function ThrottledInvalidator() {
   return null;
 }
 
-function GLBModel({ path }: { path: string }) {
+function GLBModel({ path, yOffset = 0, zOffset = 0 }: { path: string; yOffset?: number; zOffset?: number }) {
   const { scene } = useGLTF(path);
   const clonedScene = useMemo(() => {
     const clone = scene.clone(true);
     const box = new THREE.Box3().setFromObject(clone);
     const center = box.getCenter(new THREE.Vector3());
     const size = box.getSize(new THREE.Vector3());
-    const maxDim = Math.max(size.x, size.y, size.z);
-    const scale = 2 / maxDim; // normalize to ~2 units tall
-    // Center model at origin (not feet-on-ground)
-    clone.position.set(-center.x * scale, -center.y * scale, -center.z * scale);
+    // Scale based on height only — more reliable for humanoid models
+    const scale = 2.2 / Math.max(size.y, 0.01);
+    // Feet on ground at y=0, centered XZ, then apply yOffset
+    clone.position.set(-center.x * scale, -box.min.y * scale + yOffset, -center.z * scale + zOffset);
     clone.scale.setScalar(scale);
     return clone;
-  }, [scene]);
+  }, [scene, yOffset, zOffset]);
 
   useEffect(() => {
     return () => {
@@ -170,13 +170,13 @@ function NovaInlineRenderer() {
   const { activeVariant } = useNovaVariant();
 
   if (activeVariant.type === 'skeletal') {
-    return <CaptainNova position={[0, -0.5, 0]} />;
+    return <CaptainNova position={[0, -1, 0]} />;
   }
 
   if (activeVariant.type === 'community' && activeVariant.path) {
     return (
       <Suspense fallback={null}>
-        <GLBModel path={activeVariant.path} />
+        <GLBModel path={activeVariant.path} yOffset={activeVariant.yOffset} zOffset={activeVariant.zOffset} />
       </Suspense>
     );
   }
@@ -271,13 +271,14 @@ export function CaptainNovaStation() {
                 }}
               />
               <Canvas
-                camera={{ position: [0, 0, 3], fov: 45 }}
+                camera={{ position: [0, 0.5, 3.5], fov: 50 }}
                 gl={{ antialias: false, alpha: true, powerPreference: 'low-power' }}
                 style={{ background: 'transparent' }}
                 frameloop="demand"
               >
                 <ThrottledInvalidator />
-                <ambientLight intensity={0.4} />
+                <ambientLight intensity={0.6} />
+                <directionalLight position={[0, 2, 3]} intensity={0.5} />
                 <pointLight position={[2, 3, 3]} intensity={0.6} color="#06b6d4" />
                 <pointLight position={[-2, -1, 2]} intensity={0.3} color="#8b5cf6" />
                 <NovaInlineRenderer />

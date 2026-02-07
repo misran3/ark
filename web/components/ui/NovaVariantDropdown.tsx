@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 
 export type NovaVariant =
   | { type: 'skeletal'; label: string }
-  | { type: 'community'; label: string; path: string };
+  | { type: 'community'; label: string; path: string; yOffset?: number; zOffset?: number };
 
 export interface NovaVariantDropdownProps {
   /** Currently selected variant */

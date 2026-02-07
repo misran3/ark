@@ -49,4 +49,4 @@ apiStack.addDependency(storageStack);
 cdk.Tags.of(app).add('Project', APP_NAME);
 cdk.Tags.of(app).add('Environment', process.env.ENVIRONMENT || 'dev');
 cdk.Tags.of(app).add('Purpose', process.env.PROJECT_PURPOSE || 'Built for TartanHacks 2026');
-cdk.Tags.of(app).add('Owner', process.env.PROJECT_OWNER || 'Snatched Team');
+cdk.Tags.of(app).add('Owner', process.env.PROJECT_OWNER || 'Ark Team');

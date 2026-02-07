@@ -34,8 +34,9 @@ export function Viewport3D() {
           position: [0, 0, 5],
           fov: 75,
           near: 0.1,
-          far: 2000,
+          far: 3000,
         }}
+        dpr={[1, 1.5]}
         gl={{
           antialias: false,
           alpha: true,

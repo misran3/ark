@@ -15,7 +15,7 @@ export function StartScreen({ onStart }: StartScreenProps) {
           textShadow: '0 0 20px rgba(0, 240, 255, 0.5), 0 0 40px rgba(0, 240, 255, 0.3)',
         }}
       >
-        SYNESTHESIAPAY
+        ARK
       </h1>
 
       {/* Start Button */}

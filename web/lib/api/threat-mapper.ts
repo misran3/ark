@@ -18,16 +18,6 @@ function hashCode(str: string): number {
   return hash;
 }
 
-/** Each threat type gets a sector angle (radians) so they cluster in different regions */
-const SECTOR_ANGLES: Record<Threat['type'], number> = {
-  asteroid: 0,                    // 12 o'clock
-  ion_storm: Math.PI / 3,        // 2 o'clock
-  solar_flare: (2 * Math.PI) / 3, // 4 o'clock
-  black_hole: Math.PI,           // 6 o'clock
-  wormhole: (4 * Math.PI) / 3,   // 8 o'clock
-  enemy_cruiser: (5 * Math.PI) / 3, // 10 o'clock
-};
-
 const THREAT_COLORS: Record<Threat['type'], string> = {
   asteroid: '#ff5733',
   ion_storm: '#a855f7',
@@ -38,20 +28,16 @@ const THREAT_COLORS: Record<Threat['type'], string> = {
 };
 
 function positionInSector(
-  type: Threat['type'],
+  _type: Threat['type'],
   index: number,
   key: string,
 ): [number, number, number] {
-  const baseAngle = SECTOR_ANGLES[type];
-  const h = hashCode(key);
-  // Spread items within a ±30° arc of their sector
-  const spread = ((h % 100) / 100 - 0.5) * (Math.PI / 3);
-  const angle = baseAngle + spread;
-  // Distance from origin: 15-25 range
-  const distance = 15 + (index * 4) + ((Math.abs(h) % 5));
-  const x = Math.sin(angle) * (distance * 0.3);
-  const y = ((h % 50) / 50 - 0.5) * 4; // -2 to +2 vertical
-  const z = -distance;
+  const h = Math.abs(hashCode(key));
+  // Spawn all threats in the upper-right, far from camera.
+  // They drift toward center over time (handled by ThreatsLayer).
+  const x = 18 + ((h % 100) / 10) + index * 2;
+  const y = 12 + (((h >> 8) % 80) / 10) + index * 1;
+  const z = -(35 + ((h >> 16) % 15) + index * 3);
   return [
     Math.round(x * 10) / 10,
     Math.round(y * 10) / 10,
@@ -70,7 +56,7 @@ export function mapScansToThreats(scans: AllScansResult): Threat[] {
 
   // Subscriptions → Asteroids
   if (scans.subscriptions) {
-    scans.subscriptions.subscriptions.forEach((item: SubscriptionItem, i: number) => {
+    scans.subscriptions.subscriptions.filter((item: SubscriptionItem) => item.name).forEach((item: SubscriptionItem, i: number) => {
       threats.push({
         id: `sub-${item.name.toLowerCase().replace(/\s+/g, '-')}`,
         type: 'asteroid',
@@ -91,7 +77,7 @@ export function mapScansToThreats(scans: AllScansResult): Threat[] {
 
   // Budget Overruns → Ion Storms
   if (scans.budgetOverruns) {
-    scans.budgetOverruns.overruns.forEach((item: BudgetOverrunItem, i: number) => {
+    scans.budgetOverruns.overruns.filter((item: BudgetOverrunItem) => item.category).forEach((item: BudgetOverrunItem, i: number) => {
       if (item.overspend_amount <= 0) return; // Under budget — not a threat
       threats.push({
         id: `overrun-${item.category}`,
@@ -111,7 +97,7 @@ export function mapScansToThreats(scans: AllScansResult): Threat[] {
 
   // Upcoming Bills → Solar Flares
   if (scans.upcomingBills) {
-    scans.upcomingBills.bills.forEach((item: UpcomingBillItem, i: number) => {
+    scans.upcomingBills.bills.filter((item: UpcomingBillItem) => item.name).forEach((item: UpcomingBillItem, i: number) => {
       threats.push({
         id: `bill-${item.name.toLowerCase().replace(/\s+/g, '-')}`,
         type: 'solar_flare',
@@ -130,7 +116,7 @@ export function mapScansToThreats(scans: AllScansResult): Threat[] {
 
   // Debt Spirals → Black Holes
   if (scans.debtSpirals) {
-    scans.debtSpirals.debts.forEach((item: DebtItem, i: number) => {
+    scans.debtSpirals.debts.filter((item: DebtItem) => item.account).forEach((item: DebtItem, i: number) => {
       threats.push({
         id: `debt-${item.account.toLowerCase().replace(/\s+/g, '-')}`,
         type: 'black_hole',
@@ -149,7 +135,7 @@ export function mapScansToThreats(scans: AllScansResult): Threat[] {
 
   // Missed Rewards → Wormholes
   if (scans.missedRewards) {
-    scans.missedRewards.missed_rewards.forEach((item: MissedRewardItem, i: number) => {
+    scans.missedRewards.missed_rewards.filter((item: MissedRewardItem) => item.category).forEach((item: MissedRewardItem, i: number) => {
       threats.push({
         id: `reward-${item.category}`,
         type: 'wormhole',
@@ -168,7 +154,7 @@ export function mapScansToThreats(scans: AllScansResult): Threat[] {
 
   // Fraud Alerts → Enemy Cruisers
   if (scans.fraudAlerts) {
-    scans.fraudAlerts.alerts.forEach((item: FraudAlertItem, i: number) => {
+    scans.fraudAlerts.alerts.filter((item: FraudAlertItem) => item.merchant).forEach((item: FraudAlertItem, i: number) => {
       threats.push({
         id: `fraud-${item.merchant.toLowerCase().replace(/\s+/g, '-')}`,
         type: 'enemy_cruiser',

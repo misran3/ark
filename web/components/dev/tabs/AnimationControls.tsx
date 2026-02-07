@@ -239,7 +239,7 @@ export function AnimationControls() {
         <div style={sectionTitleStyle}>Boot Sequence</div>
         <button
           onClick={() => {
-            storage.removeItem('synesthesiapay:hasSeenBoot');
+            storage.removeItem('ark:hasSeenBoot');
             // Set phase and flags without zeroing consoleIntensity —
             // StartScreen's opaque bg covers everything, and the boot
             // sequence will animate intensity naturally when it replays.

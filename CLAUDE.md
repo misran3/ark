@@ -1,4 +1,4 @@
-# Snatched - Project Guidelines
+# Ark - Project Guidelines
 
 ## Project Structure
 
