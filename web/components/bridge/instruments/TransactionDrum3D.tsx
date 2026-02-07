@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { Group } from 'three';
@@ -85,6 +85,23 @@ function createDrumTexture(transactions: Transaction[]): THREE.CanvasTexture {
   return texture;
 }
 
+/** Static fade mask — created once, reused across all instances */
+const fadeMaskCanvas = (() => {
+  if (typeof document === 'undefined') return null; // SSR guard
+  const c = document.createElement('canvas');
+  c.width = 2;
+  c.height = 64;
+  const ctx = c.getContext('2d')!;
+  const g = ctx.createLinearGradient(0, 0, 0, 64);
+  g.addColorStop(0, 'rgba(6, 10, 22, 1)');
+  g.addColorStop(0.3, 'rgba(6, 10, 22, 0)');
+  g.addColorStop(0.7, 'rgba(6, 10, 22, 0)');
+  g.addColorStop(1, 'rgba(6, 10, 22, 1)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 2, 64);
+  return c;
+})();
+
 function DrumScene({ transactions }: TransactionDrum3DProps) {
   const drumRef = useRef<Group>(null);
   const targetRotRef = useRef(0);
@@ -92,6 +109,13 @@ function DrumScene({ transactions }: TransactionDrum3DProps) {
   const velocityRef = useRef(0);
 
   const drumTexture = useMemo(() => createDrumTexture(transactions), [transactions]);
+
+  // Dispose GPU texture on unmount or when transactions change
+  useEffect(() => {
+    return () => {
+      drumTexture.dispose();
+    };
+  }, [drumTexture]);
 
   useFrame((_, delta) => {
     if (!drumRef.current) return;
@@ -127,23 +151,9 @@ function DrumScene({ transactions }: TransactionDrum3DProps) {
       <mesh position={[0, 0, 0.62]}>
         <planeGeometry args={[1.7, 1.2]} />
         <meshBasicMaterial transparent opacity={0.5} depthWrite={false}>
-          <canvasTexture
-            attach="map"
-            image={(() => {
-              const c = document.createElement('canvas');
-              c.width = 2;
-              c.height = 64;
-              const ctx = c.getContext('2d')!;
-              const g = ctx.createLinearGradient(0, 0, 0, 64);
-              g.addColorStop(0, 'rgba(6, 10, 22, 1)');
-              g.addColorStop(0.3, 'rgba(6, 10, 22, 0)');
-              g.addColorStop(0.7, 'rgba(6, 10, 22, 0)');
-              g.addColorStop(1, 'rgba(6, 10, 22, 1)');
-              ctx.fillStyle = g;
-              ctx.fillRect(0, 0, 2, 64);
-              return c;
-            })()}
-          />
+          {fadeMaskCanvas && (
+            <canvasTexture attach="map" image={fadeMaskCanvas} />
+          )}
         </meshBasicMaterial>
       </mesh>
     </group>
