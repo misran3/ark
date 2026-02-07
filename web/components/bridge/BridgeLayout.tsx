@@ -9,6 +9,8 @@ import { CaptainNovaStation } from './hud/CaptainNovaPanel';
 import { CockpitFrame } from './cockpit/CockpitFrame';
 import { LeftDataStrip } from './cockpit/LeftDataStrip';
 import { Viewport3D } from '../viewport/Viewport3D';
+import { ViewportGlass } from './cockpit/ViewportGlass';
+import { PerfMonitor } from './cockpit/PerfMonitor';
 
 export function BridgeLayout() {
   const phase = useBootStore((state) => state.phase);
@@ -21,6 +23,16 @@ export function BridgeLayout() {
       {/* Layer 1: Full-screen 3D viewport (behind everything) */}
       <div className="absolute inset-0 z-0">
         <Viewport3D />
+      </div>
+
+      {/* Glass layers: z-5 through z-8 between viewport and frame */}
+      <div
+        style={{
+          opacity: showFrame ? 1 : 0,
+          transition: 'opacity 1.2s ease-out 0.3s',
+        }}
+      >
+        <ViewportGlass />
       </div>
 
       {/* Layer 2: Cockpit frame (structural hull overlay) */}
@@ -86,6 +98,8 @@ export function BridgeLayout() {
       >
         <CommandConsole />
       </div>
+      {/* Dev: Performance monitor (enable with ?perf) */}
+      <PerfMonitor />
     </div>
   );
 }

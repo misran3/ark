@@ -772,6 +772,113 @@ body {
   text-transform: uppercase;
 }
 
+/* ========================================
+   VIEWPORT GLASS SYSTEM
+   ======================================== */
+
+/* Glass specular highlight drift — overhead strip light reflection */
+@keyframes glass-specular-drift {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(3%, 1%) rotate(0.3deg);
+  }
+  50% {
+    transform: translate(5%, 2%) rotate(0.5deg);
+  }
+  75% {
+    transform: translate(2%, -1%) rotate(0.2deg);
+  }
+}
+
+.viewport-glass-specular {
+  will-change: transform;
+}
+
+/* Glass reflection breath — very slow scale oscillation */
+@keyframes glass-reflection-breathe {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.002);
+  }
+}
+
+.glass-reflection-breathe {
+  animation: glass-reflection-breathe 9s ease-in-out infinite;
+}
+
+/* Near-field particle drift patterns — 3 varied paths */
+@keyframes near-particle-drift-0 {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  25% {
+    transform: translate3d(60px, -30px, 0);
+  }
+  50% {
+    transform: translate3d(120px, 10px, 0);
+  }
+  75% {
+    transform: translate3d(80px, 40px, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes near-particle-drift-1 {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  25% {
+    transform: translate3d(-40px, 25px, 0);
+  }
+  50% {
+    transform: translate3d(-90px, -15px, 0);
+  }
+  75% {
+    transform: translate3d(-50px, -40px, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes near-particle-drift-2 {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  25% {
+    transform: translate3d(30px, 50px, 0);
+  }
+  50% {
+    transform: translate3d(-20px, 80px, 0);
+  }
+  75% {
+    transform: translate3d(-60px, 35px, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Near-field particle light-catch pulse */
+@keyframes near-particle-pulse {
+  0%, 80%, 100% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 2.5;
+    filter: blur(0.5px) brightness(2);
+  }
+  90% {
+    opacity: 1;
+  }
+}
+
 /* Ventilation grille pattern */
 .vent-grille {
   background: repeating-linear-gradient(
