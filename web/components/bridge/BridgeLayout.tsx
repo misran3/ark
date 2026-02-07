@@ -17,6 +17,7 @@ import { DashboardProjection } from './cockpit/DashboardProjection';
 import { PerfMonitor } from './cockpit/PerfMonitor';
 import { useCaptainScans } from '@/hooks/useCaptainScans';
 import { NovaDialogueOverlay } from './hud/NovaDialogueOverlay';
+import { useNovaHoverSpeech } from '@/hooks/useNovaHoverSpeech';
 
 export function BridgeLayout() {
   const phase = useBootStore((state) => state.phase);
@@ -34,6 +35,8 @@ export function BridgeLayout() {
 
   // Fire Captain API scans when boot completes
   useCaptainScans();
+  // Nova speaks threat verdicts on hover
+  useNovaHoverSpeech();
 
   // Trigger power lifecycle cold start when console-boot phase begins
   const coldStartTriggered = useRef(false);
