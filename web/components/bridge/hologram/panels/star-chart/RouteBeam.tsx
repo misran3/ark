@@ -4,7 +4,9 @@ import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import {
   BufferGeometry,
+  Color,
   Float32BufferAttribute,
+  Line as ThreeLine,
   ShaderMaterial,
   AdditiveBlending,
   Vector3,
@@ -13,7 +15,7 @@ import {
 interface RouteBeamProps {
   from: [number, number, number];
   to: [number, number, number];
-  color: THREE.Color;
+  color: Color;
   /** 0 = dim idle, 1 = fully energized */
   energize: number;
   visible: boolean;
@@ -53,9 +55,9 @@ const fragmentShader = /* glsl */ `
 `;
 
 export function RouteBeam({ from, to, color, energize, visible }: RouteBeamProps) {
-  const materialRef = useRef<ShaderMaterial>(null!);
+  const lineRef = useRef<ThreeLine>(null);
 
-  const { geometry, material } = useMemo(() => {
+  const lineObject = useMemo(() => {
     const segments = 32;
     const positions = new Float32Array((segments + 1) * 3);
     const progress = new Float32Array(segments + 1);
@@ -89,15 +91,16 @@ export function RouteBeam({ from, to, color, energize, visible }: RouteBeamProps
       depthWrite: false,
     });
 
-    return { geometry: geo, material: mat };
+    return new ThreeLine(geo, mat);
   }, [from, to, color]);
 
   useFrame(({ clock }) => {
-    material.uniforms.uTime.value = clock.getElapsedTime();
-    material.uniforms.uEnergize.value = energize;
+    const mat = lineObject.material as ShaderMaterial;
+    mat.uniforms.uTime.value = clock.getElapsedTime();
+    mat.uniforms.uEnergize.value = energize;
   });
 
   if (!visible) return null;
 
-  return <line geometry={geometry} material={material} />;
+  return <primitive ref={lineRef} object={lineObject} />;
 }

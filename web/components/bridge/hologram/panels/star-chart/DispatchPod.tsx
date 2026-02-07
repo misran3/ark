@@ -5,6 +5,7 @@ import { useFrame } from '@react-three/fiber';
 import {
   Group,
   Color,
+  Line as ThreeLine,
   ShaderMaterial,
   AdditiveBlending,
   DoubleSide,
@@ -95,15 +96,16 @@ export function DispatchPod({ from, to, color, progress, isIncome }: DispatchPod
     });
   }, [color]);
 
-  const trailGeometry = useMemo(() => {
+  const { trailGeometry, trailLine } = useMemo(() => {
     const geo = new BufferGeometry();
     const positions = new Float32Array((TRAIL_SEGMENTS + 1) * 3);
     const alphas = new Float32Array(TRAIL_SEGMENTS + 1);
     geo.setAttribute('position', new Float32BufferAttribute(positions, 3));
     geo.setAttribute('aAlpha', new Float32BufferAttribute(alphas, 1));
     trailGeoRef.current = geo;
-    return geo;
-  }, []);
+    const line = new ThreeLine(geo, trailMaterial);
+    return { trailGeometry: geo, trailLine: line };
+  }, [trailMaterial]);
 
   useFrame(() => {
     if (!groupRef.current) return;
@@ -148,7 +150,7 @@ export function DispatchPod({ from, to, color, progress, isIncome }: DispatchPod
       </group>
 
       {/* Trail */}
-      <line geometry={trailGeometry} material={trailMaterial} />
+      <primitive object={trailLine} />
     </>
   );
 }

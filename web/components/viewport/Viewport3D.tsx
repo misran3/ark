@@ -14,7 +14,7 @@ import { useBootStore } from '@/lib/stores/boot-store';
 import { HologramOverlay } from '@/components/bridge/hologram/HologramOverlay';
 import { DefenseGrid } from '@/components/bridge/hologram/panels/DefenseGrid';
 import { AssetNavigation } from '@/components/bridge/hologram/panels/AssetNavigation';
-import { SensorLog } from '@/components/bridge/hologram/panels/SensorLog';
+import { StarChart } from '@/components/bridge/hologram/panels/star-chart/StarChart';
 import { FleetCommand } from '@/components/bridge/hologram/panels/FleetCommand';
 import { useConsoleStore } from '@/lib/stores/console-store';
 
@@ -65,7 +65,7 @@ export function Viewport3D() {
         <HologramOverlay>
           {expandedPanel === 'shields' && <DefenseGrid />}
           {expandedPanel === 'networth' && <AssetNavigation />}
-          {expandedPanel === 'transactions' && <SensorLog />}
+          {expandedPanel === 'transactions' && <StarChart />}
           {expandedPanel === 'cards' && <FleetCommand />}
         </HologramOverlay>
 
