@@ -34,7 +34,7 @@ export default function SceneEffects({
     <EffectComposer multisampling={0}>
       <Bloom
         intensity={bloomIntensity}
-        luminanceThreshold={0.15}
+        luminanceThreshold={0.6}
         luminanceSmoothing={0.9}
         radius={bloomRadius}
         blendFunction={BlendFunction.ADD}
