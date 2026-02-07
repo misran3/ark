@@ -1,0 +1,57 @@
+[
+  {
+    "id": "ast_001",
+    "threat_type": "unused_service",
+    "severity": "warning",
+    "title": "Gym Membership Unused",
+    "detail": "Planet Fitness membership ($24.99/mo) - no visits detected in 47 days",
+    "amount": 24.99,
+    "days_until": 23,
+    "recommended_action": "deflect",
+    "reasoning": "No correlated gym visits or fitness app activity detected since December 21st. Canceling saves $299.88/year. Consider pausing membership if you plan to return."
+  },
+  {
+    "id": "ast_002",
+    "threat_type": "budget_overrun",
+    "severity": "danger",
+    "title": "Dining Budget Critical",
+    "detail": "Recreation Deck dining sector at 142% of allocated budget",
+    "amount": 76.22,
+    "days_until": 0,
+    "recommended_action": "redirect",
+    "reasoning": "Dining spending ($256.22) exceeds $180 budget by $76.22. DoorDash and Uber Eats account for 65% of dining spend. Recommend activating VISA spending controls on food delivery apps."
+  },
+  {
+    "id": "ast_003",
+    "threat_type": "subscription_renewal",
+    "severity": "info",
+    "title": "Netflix Renewal Incoming",
+    "detail": "Netflix subscription renews in 5 days - $15.99",
+    "amount": 15.99,
+    "days_until": 5,
+    "recommended_action": "absorb",
+    "reasoning": "Regular entertainment expense within budget allocation. Last 30 days show 12 hours of viewing activity. No action needed unless you want to downgrade plan."
+  },
+  {
+    "id": "ast_004",
+    "threat_type": "spending_spike",
+    "severity": "warning",
+    "title": "Electronics Purchase Spike",
+    "detail": "Best Buy purchase ($199.99) is 3x your typical shopping transaction",
+    "amount": 199.99,
+    "days_until": 0,
+    "recommended_action": "absorb",
+    "reasoning": "Single large purchase detected. While unusual, shopping category is over budget this month. Consider whether this was planned or impulse buying."
+  },
+  {
+    "id": "ast_005",
+    "threat_type": "bill_due",
+    "severity": "info",
+    "title": "Rent Due Soon",
+    "detail": "Rent payment ($1,650) due in 19 days",
+    "amount": 1650.00,
+    "days_until": 19,
+    "recommended_action": "absorb",
+    "reasoning": "Regular monthly expense. Current checking balance ($4,250) covers this payment with $2,600 remaining. Life Support systems nominal."
+  }
+]
