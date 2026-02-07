@@ -21,10 +21,10 @@
 
 | Person | Role | Modules Owned |
 |--------|------|---------------|
-| **Akshat** | Backend — Data & Logic | Module 1 (Nessie Data) + Module 2 (Budget Engine) |
-| **Varun** | Backend — AI & Integrations | Module 3 (Captain Nova Agent) + Module 4 (VISA Integration) |
-| **Misran** | Frontend — Core Experience | Module 5 (Bridge UI Core: Shell, Captain Panel, Shield Bars) |
-| **Ben** | Frontend — Data Displays | Module 6 (Bridge UI Data: Balance HUD, Tx Log, Asteroid UI) |
+| **Varun** | Backend — Data & Logic | Module 1 (Nessie Data) + Module 2 (Budget Engine) |
+| **Misran/Varun** | Backend — AI & Integrations | Module 3 (Captain Nova Agent) + Module 4 (VISA Integration) |
+| **Ben** | Frontend — Core Experience | Module 5 (Bridge UI Core: Shell, Captain Panel, Shield Bars) |
+| **Akshat** | Frontend — Data Displays | Module 6 (Bridge UI Data: Balance HUD, Tx Log, Asteroid UI) |
 
 Asteroid detection logic lives inside Module 2 (Budget Engine) as a sub-function, not a separate module. This keeps Akshat's scope clean — the budget analysis naturally produces both the `BudgetReport` and the `list[Asteroid]` from the same transaction data.
 
