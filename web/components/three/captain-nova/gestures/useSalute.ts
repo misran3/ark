@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import gsap from 'gsap';
 import * as THREE from 'three';
 
@@ -18,22 +18,22 @@ export function useSalute(
   config: SaluteConfig = {}
 ) {
   const { duration = 1, holdTime = 0.5 } = config;
-  const isPlaying = useRef(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   const timeline = useRef<gsap.core.Timeline | null>(null);
 
   const play = () => {
-    if (isPlaying.current || !characterRef.current) return;
+    if (isPlaying || !characterRef.current) return;
 
     const rightArm = characterRef.current.getObjectByName('rightArm');
     const rightHand = characterRef.current.getObjectByName('rightHand');
     if (!rightArm || !rightHand) return;
 
-    isPlaying.current = true;
+    setIsPlaying(true);
 
     // Create timeline
     timeline.current = gsap.timeline({
       onComplete: () => {
-        isPlaying.current = false;
+        setIsPlaying(false);
       },
     });
 
@@ -65,9 +65,9 @@ export function useSalute(
   const stop = () => {
     if (timeline.current) {
       timeline.current.kill();
-      isPlaying.current = false;
+      setIsPlaying(false);
     }
   };
 
-  return { play, stop, isPlaying: isPlaying.current };
+  return { play, stop, isPlaying };
 }

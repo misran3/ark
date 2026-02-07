@@ -1,0 +1,13 @@
+Download the React DevTools for a better development experience: https://react.dev/link/react-devtools node_modules_next_dist_f3530cac._.js:2298:28
+[HMR] connected node_modules_next_dist_f3530cac._.js:2298:28
+The result of getServerSnapshot should be cached to avoid an infinite loop node_modules_next_dist_f3530cac._.js:3128:32
+Uncaught Error: Maximum update depth exceeded. This can happen when a component repeatedly calls setState inside componentWillUpdate or componentDidUpdate. React limits the number of nested updates to prevent infinite loops.
+    getRootForUpdatedFiber react-dom-client.development.js:4901
+    enqueueConcurrentRenderForLane react-dom-client.development.js:4865
+    forceStoreRerender react-dom-client.development.js:8583
+    updateStoreInstance react-dom-client.development.js:8563
+    react_stack_bottom_frame react-dom-client.development.js:28123
+    runWithFiberInDEV react-dom-client.development.js:989
+    commitHookEffectListMount react-dom-client.development.js:13692
+node_modules_next_dist_compiled_react-dom_1e674e59._.js:2997:171
+Cross-Origin Request Blocked: The Same Origin Policy disallows reading the remote resource at http://localhost:3001/api/snapshot. (Reason: CORS request did not succeed). Status code: (null).

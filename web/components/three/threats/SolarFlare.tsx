@@ -1,8 +1,78 @@
 'use client';
 
-import { useRef, useMemo, useCallback, useEffect } from 'react';
+import { useRef, useMemo, useCallback, useEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { shaderMaterial } from '@react-three/drei';
+import { extend } from '@react-three/fiber';
+import '@/lib/materials/VolumetricGlowMaterial';
+import '@/lib/materials/EnergyFlowMaterial';
+import { InstancedParticleSystem } from '@/lib/particles';
+import { noiseGLSL, fresnelGLSL, gradientGLSL } from '@/lib/shaders';
+import { tubeFromPoints } from '@/lib/utils/geometry';
+
+// ---- Custom Solar Surface Shader Material ----
+const SolarSurfaceMaterial = shaderMaterial(
+  {
+    time: 0,
+    emissiveIntensity: 5.0,
+  },
+  // vertex
+  /* glsl */ `
+    varying vec3 vNormal;
+    varying vec3 vWorldPosition;
+    varying vec3 vViewDir;
+    void main() {
+      vNormal = normalize(normalMatrix * normal);
+      vec4 wp = modelMatrix * vec4(position, 1.0);
+      vWorldPosition = wp.xyz;
+      vViewDir = normalize(cameraPosition - wp.xyz);
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  // fragment
+  `${noiseGLSL}\n${fresnelGLSL}\n${gradientGLSL}\n` + /* glsl */ `
+    uniform float time;
+    uniform float emissiveIntensity;
+    varying vec3 vNormal;
+    varying vec3 vWorldPosition;
+    varying vec3 vViewDir;
+
+    void main() {
+      // Two layers of FBM noise at different speeds for turbulence
+      float n1 = fbm(vWorldPosition * 3.0 + vec3(0.0, time * 0.2, 0.0), 4) * 0.5 + 0.5;
+      float n2 = fbm(vWorldPosition * 6.0 - vec3(time * 0.15, 0.0, time * 0.1), 3) * 0.5 + 0.5;
+      float combined = n1 * 0.6 + n2 * 0.4;
+
+      // 3-stop gradient: white-hot → gold → orange
+      vec3 surface = gradient3(
+        vec3(0.996, 0.953, 0.78),   // #fef3c7 white-hot
+        vec3(0.984, 0.749, 0.141),  // #fbbf24 gold
+        vec3(0.976, 0.451, 0.086),  // #f97316 orange
+        combined
+      );
+
+      // Fresnel rim — white glow
+      float rim = fresnel(normalize(vViewDir), normalize(vNormal), 2.0);
+      surface += vec3(1.0, 1.0, 0.95) * rim * 0.6;
+
+      // Apply emissive intensity for bloom pickup
+      surface *= emissiveIntensity;
+
+      gl_FragColor = vec4(surface, 1.0);
+    }
+  `
+);
+
+extend({ SolarSurfaceMaterial });
+
+declare module '@react-three/fiber' {
+  interface ThreeElements {
+    solarSurfaceMaterial: any;
+  }
+}
+
+// ---- Component ----
 
 interface SolarFlareProps {
   position: [number, number, number];
@@ -12,29 +82,43 @@ interface SolarFlareProps {
   onClick?: () => void;
 }
 
-interface TendrilData {
-  geometry: THREE.BufferGeometry;
-  baseAngle: number;
-  positions: Float32Array;
-}
+// Generate a parabolic arc path from surface point, arcing outward, returning to surface
+function generateProminenceArc(
+  solarRadius: number,
+  arcIndex: number,
+  arcCount: number,
+  height: number,
+  segments = 12
+): THREE.Vector3[] {
+  const baseAngle = (arcIndex / arcCount) * Math.PI * 2;
+  const pts: THREE.Vector3[] = [];
 
-interface TendrilSystem {
-  tendrils: TendrilData[];
-  count: number;
-  pointsPerTendril: number;
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const angle = baseAngle + (t - 0.5) * 0.6; // Spread ~0.6 radians
+    const r = solarRadius + Math.sin(t * Math.PI) * height;
+
+    pts.push(new THREE.Vector3(
+      Math.cos(angle) * r,
+      Math.sin(angle) * r,
+      Math.sin(t * Math.PI) * height * 0.3, // slight Z curve
+    ));
+  }
+
+  return pts;
 }
 
 /**
- * Solar Flare threat visual: represents upcoming charges and auto-renewals.
- *
- * Features:
- * - Radiant core with pulsing opacity
- * - Corona particle system (120 particles radiating outward)
- * - Multiple expanding wave rings (countdown rings)
- * - Animated flare rays with length variation
- * - Outer glow with pulse
- * - Targeting brackets on hover
- * - Point light for local illumination
+ * Solar Flare — "The Radiant Star"
+ * 8-layer composition:
+ * 1. Outer Corona (VolumetricGlowMaterial, 2.0× size)
+ * 2. Mid Corona (VolumetricGlowMaterial, 1.4× size)
+ * 3. Solar Surface (custom FBM shader, 0.4× size)
+ * 4. Magnetic Field Loop Arcs (TubeGeometry prominences)
+ * 5. Corona Particles (InstancedParticleSystem, radiate outward)
+ * 6. Volumetric Flare Rays (cone meshes)
+ * 7. Countdown Rings (expanding torus)
+ * 8. Lens Flare (spheres + anamorphic streaks)
  */
 export default function SolarFlare({
   position,
@@ -44,126 +128,49 @@ export default function SolarFlare({
   onClick,
 }: SolarFlareProps) {
   const groupRef = useRef<THREE.Group>(null);
-  const coreRef = useRef<THREE.Mesh>(null);
-  const outerGlowRef = useRef<THREE.Mesh>(null);
-  const outerGlow2Ref = useRef<THREE.Mesh>(null);
-  const coronaRef = useRef<THREE.Points>(null);
-  const coronaTrailRef = useRef<THREE.Points>(null);
+  const outerCoronaRef = useRef<any>(null);
+  const midCoronaRef = useRef<any>(null);
+  const surfaceRef = useRef<any>(null);
+  const surfaceMeshRef = useRef<THREE.Mesh>(null);
   const raysRef = useRef<THREE.Group>(null);
   const ringsRef = useRef<THREE.Group>(null);
-  const bracketsRef = useRef<THREE.Group>(null);
   const lensFlareRef = useRef<THREE.Group>(null);
-  const flashSphereRef = useRef<THREE.Mesh>(null);
-  const tendrillGroupRef = useRef<THREE.Group>(null);
+  const flashRef = useRef<THREE.Mesh>(null);
+  const bracketsRef = useRef<THREE.Group>(null);
   const isHoveredRef = useRef(false);
   const isCollapsingRef = useRef(false);
   const collapseStartTimeRef = useRef(0);
 
-  // Corona particle system
-  const coronaSystem = useMemo(() => {
-    const count = 120;
-    const positions = new Float32Array(count * 3);
-    const colors = new Float32Array(count * 3);
-    const radii = new Float32Array(count);
-    const angles = new Float32Array(count);
-    const speeds = new Float32Array(count);
-    const maxRadii = new Float32Array(count);
+  // Prominence arc tube geometries — regenerate periodically
+  const arcTimerRef = useRef(0);
+  const [arcGeos, setArcGeos] = useState<THREE.TubeGeometry[]>([]);
+  const arcEnergyRefs = useRef<any[]>([]);
 
-    const goldColor = new THREE.Color('#fbbf24');
-    const orangeColor = new THREE.Color('#f97316');
-    const whiteColor = new THREE.Color('#fef3c7');
+  const ARC_COUNT = 7;
+  const solarRadius = size * 0.4;
 
-    for (let i = 0; i < count; i++) {
-      angles[i] = Math.random() * Math.PI * 2;
-      radii[i] = size * 0.3 + Math.random() * size * 0.7;
-      speeds[i] = 0.3 + Math.random() * 0.5;
-      maxRadii[i] = size * (1.0 + Math.random() * 0.8);
-
-      const angle = angles[i];
-      const r = radii[i];
-      positions[i * 3] = Math.cos(angle) * r;
-      positions[i * 3 + 1] = Math.sin(angle) * r;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * size * 0.3;
-
-      // Color gradient: white near core → gold → orange at edge
-      const t = (r - size * 0.3) / (size * 0.7);
-      let particleColor: THREE.Color;
-      if (t < 0.3) {
-        particleColor = new THREE.Color().lerpColors(whiteColor, goldColor, t / 0.3);
-      } else {
-        particleColor = new THREE.Color().lerpColors(goldColor, orangeColor, (t - 0.3) / 0.7);
-      }
-      colors[i * 3] = particleColor.r;
-      colors[i * 3 + 1] = particleColor.g;
-      colors[i * 3 + 2] = particleColor.b;
+  // Generate initial prominence arcs
+  const regenerateArcs = useCallback(() => {
+    const newGeos: THREE.TubeGeometry[] = [];
+    for (let i = 0; i < ARC_COUNT; i++) {
+      const height = (0.5 + Math.random() * 0.7) * size;
+      const pts = generateProminenceArc(solarRadius, i, ARC_COUNT, height);
+      const geo = tubeFromPoints(pts, 0.03 + Math.random() * 0.03, 20, 5);
+      newGeos.push(geo);
     }
+    return newGeos;
+  }, [solarRadius, size, ARC_COUNT]);
 
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-    // Corona trail system (for particle trails)
-    const trailPositions = new Float32Array(count * 3);
-    const trailColors = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) {
-      trailPositions[i * 3] = positions[i * 3];
-      trailPositions[i * 3 + 1] = positions[i * 3 + 1];
-      trailPositions[i * 3 + 2] = positions[i * 3 + 2];
-      trailColors[i * 3] = colors[i * 3] * 0.6;
-      trailColors[i * 3 + 1] = colors[i * 3 + 1] * 0.6;
-      trailColors[i * 3 + 2] = colors[i * 3 + 2] * 0.6;
-    }
-    const trailGeometry = new THREE.BufferGeometry();
-    trailGeometry.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3));
-    trailGeometry.setAttribute('color', new THREE.BufferAttribute(trailColors, 3));
-
-    return { geometry, positions, colors, count, radii, angles, speeds, maxRadii, trailGeometry, trailPositions, trailColors };
-  }, [size]);
-
-  // Plasma tendril system
-  const tendrilSystem = useMemo(() => {
-    const count = 6;
-    const pointsPerTendril = 12;
-    const tendrils: TendrilData[] = [];
-
-    for (let t = 0; t < count; t++) {
-      const baseAngle = (t / count) * Math.PI * 2;
-      const positions = new Float32Array(pointsPerTendril * 3);
-
-      // Initialize positions along the tendril path
-      for (let p = 0; p < pointsPerTendril; p++) {
-        const progress = p / (pointsPerTendril - 1);
-        const radius = size * 0.3 + progress * (size * 0.9);
-        positions[p * 3] = Math.cos(baseAngle) * radius;
-        positions[p * 3 + 1] = Math.sin(baseAngle) * radius;
-        positions[p * 3 + 2] = 0;
-      }
-
-      const geometry = new THREE.BufferGeometry();
-      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-
-      tendrils.push({ geometry, baseAngle, positions });
-    }
-
-    return { tendrils, count, pointsPerTendril };
-  }, [size]);
-
-  // Targeting bracket geometry
+  // Bracket geometry
   const bracketGeometry = useMemo(() => {
     const s = size * 1.8;
     const len = s * 0.3;
     const points: number[] = [];
-
-    const corners = [
-      [-s, s, 0], [s, s, 0], [s, -s, 0], [-s, -s, 0],
-    ];
+    const corners = [[-s, s, 0], [s, s, 0], [s, -s, 0], [-s, -s, 0]];
     const dirs = [
-      [[1, 0, 0], [0, -1, 0]],
-      [[-1, 0, 0], [0, -1, 0]],
-      [[-1, 0, 0], [0, 1, 0]],
-      [[1, 0, 0], [0, 1, 0]],
+      [[1, 0, 0], [0, -1, 0]], [[-1, 0, 0], [0, -1, 0]],
+      [[-1, 0, 0], [0, 1, 0]], [[1, 0, 0], [0, 1, 0]],
     ];
-
     for (let c = 0; c < 4; c++) {
       const [cx, cy, cz] = corners[c];
       for (const [dx, dy, dz] of dirs[c]) {
@@ -171,22 +178,27 @@ export default function SolarFlare({
         points.push(cx + dx * len, cy + dy * len, cz + dz * len);
       }
     }
-
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(points, 3));
     return geo;
   }, [size]);
 
+  // Ray angles for volumetric flare rays
+  const rayData = useMemo(() =>
+    Array.from({ length: 10 }, (_, i) => ({
+      angle: (i / 10) * Math.PI * 2,
+      length: (0.4 + Math.random() * 0.4) * size,
+      phase: Math.random() * Math.PI * 2,
+    })),
+    [size]
+  );
+
   useEffect(() => {
     return () => {
-      coronaSystem.geometry.dispose();
-      coronaSystem.trailGeometry.dispose();
       bracketGeometry.dispose();
-      tendrilSystem.tendrils.forEach(tendril => {
-        tendril.geometry.dispose();
-      });
+      arcGeos.forEach(g => g.dispose());
     };
-  }, [coronaSystem.geometry, coronaSystem.trailGeometry, bracketGeometry, tendrilSystem.tendrils]);
+  }, [bracketGeometry, arcGeos]);
 
   const handlePointerOver = useCallback(() => {
     isHoveredRef.current = true;
@@ -208,524 +220,310 @@ export default function SolarFlare({
 
   useFrame(({ clock }, delta) => {
     if (!groupRef.current) return;
-
     const time = clock.getElapsedTime();
+    const hovered = isHoveredRef.current;
 
-    // Update collapse timer
+    // Collapse
+    if (isCollapsingRef.current && collapseStartTimeRef.current === 0) {
+      collapseStartTimeRef.current = time;
+    }
+    let cp = 0;
     if (isCollapsingRef.current) {
-      collapseStartTimeRef.current += delta;
+      cp = Math.min((time - collapseStartTimeRef.current) / 2.5, 1);
     }
 
-    const elapsed = collapseStartTimeRef.current;
-    const progress = Math.min(elapsed / 2.5, 1.0);
-
-    // Slow rotation
+    // Slow Z-rotation
     groupRef.current.rotation.z += 0.015;
 
-    // Core animation with collapse phases
-    if (coreRef.current) {
-      let corePulse = Math.sin(time * 3) * 0.2 + 0.8;
-      let coreScale = isHoveredRef.current ? 1.2 : 1.0;
-      coreScale += Math.sin(time * 4) * 0.05;
+    // ---- Layer 1 & 2: Corona materials ----
+    if (outerCoronaRef.current) outerCoronaRef.current.time = time;
+    if (midCoronaRef.current) midCoronaRef.current.time = time;
 
-      const coreMat = coreRef.current.material as THREE.MeshBasicMaterial;
-
-      if (isCollapsingRef.current) {
-        if (progress < 0.32) {
-          // Phase 1: CME - core brightens and scales up
-          corePulse = 1.0 + (progress / 0.32) * 0.5;
-          coreScale = 1.0 + (progress / 0.32) * 0.5;
-          const whiteColor = new THREE.Color('#ffffff');
-          const goldColor = new THREE.Color('#fbbf24');
-          coreMat.color.lerpColors(goldColor, whiteColor, progress / 0.32);
-        } else if (progress < 0.68) {
-          // Phase 2: Collapse - core shrinks rapidly
-          const collapseProgress = (progress - 0.32) / 0.36;
-          coreScale = 1.5 * (1.0 - collapseProgress * collapseProgress);
-          corePulse = 1.5 * (1.0 - collapseProgress);
-          const whiteColor = new THREE.Color('#ffffff');
-          const goldColor = new THREE.Color('#fbbf24');
-          coreMat.color.lerpColors(whiteColor, goldColor, collapseProgress);
-        } else {
-          // Phase 3: Afterglow - fade out
-          const afterglowProgress = (progress - 0.68) / 0.32;
-          coreScale = 0.1 * (1.0 - afterglowProgress);
-          corePulse = 0.1 * (1.0 - afterglowProgress);
-        }
-      }
-
-      coreMat.opacity = corePulse;
-      coreRef.current.scale.setScalar(Math.max(0.01, coreScale));
+    // ---- Layer 3: Solar surface shader ----
+    if (surfaceRef.current) {
+      surfaceRef.current.time = time;
+      surfaceRef.current.emissiveIntensity = hovered ? 6.5 : 5.0;
     }
 
-    // Animate corona particles — radiate outward, respawn at core
-    if (coronaRef.current && coronaTrailRef.current) {
-      const posAttr = coronaRef.current.geometry.attributes.position;
-      const colAttr = coronaRef.current.geometry.attributes.color;
-      const trailPosAttr = coronaTrailRef.current.geometry.attributes.position;
-      const trailColAttr = coronaTrailRef.current.geometry.attributes.color;
-
-      const pos = posAttr.array as Float32Array;
-      const col = colAttr.array as Float32Array;
-      const trailPos = trailPosAttr.array as Float32Array;
-      const trailCol = trailColAttr.array as Float32Array;
-
-      const goldColor = new THREE.Color('#fbbf24');
-      const orangeColor = new THREE.Color('#f97316');
-      const whiteColor = new THREE.Color('#fef3c7');
-
-      for (let i = 0; i < coronaSystem.count; i++) {
-        // Copy current position to trail before updating
-        trailPos[i * 3] = pos[i * 3];
-        trailPos[i * 3 + 1] = pos[i * 3 + 1];
-        trailPos[i * 3 + 2] = pos[i * 3 + 2];
-        trailCol[i * 3] = col[i * 3] * 0.6;
-        trailCol[i * 3 + 1] = col[i * 3 + 1] * 0.6;
-        trailCol[i * 3 + 2] = col[i * 3 + 2] * 0.6;
-
-        // Move outward
-        let speed = coronaSystem.speeds[i];
-        if (isCollapsingRef.current) {
-          if (progress < 0.32) {
-            // Phase 1: accelerate outward
-            speed *= 3;
-          } else if (progress < 0.68) {
-            // Phase 2: scatter far outward
-            coronaSystem.radii[i] = (size * 0.3 + Math.random() * size * 0.7) + (progress - 0.32) / 0.36 * size * 3;
-            speed = 0;
-          } else {
-            // Phase 3: fade out
-            const fadeProgress = (progress - 0.68) / 0.32;
-            const coronaMat = coronaRef.current.material as THREE.PointsMaterial;
-            const coronaTrailMat = coronaTrailRef.current.material as THREE.PointsMaterial;
-            coronaMat.opacity = Math.max(0, 0.7 * (1 - fadeProgress));
-            coronaTrailMat.opacity = Math.max(0, 0.28 * (1 - fadeProgress));
-          }
-        }
-
-        if (progress < 0.68 || !isCollapsingRef.current) {
-          coronaSystem.radii[i] += speed * delta;
-        }
-
-        // Respawn at core when reaching max
-        if (coronaSystem.radii[i] > coronaSystem.maxRadii[i]) {
-          coronaSystem.radii[i] = size * 0.3;
-          coronaSystem.angles[i] = Math.random() * Math.PI * 2;
-          coronaSystem.speeds[i] = 0.3 + Math.random() * 0.5;
-        }
-
-        const angle = coronaSystem.angles[i];
-        const r = coronaSystem.radii[i];
-
-        pos[i * 3] = Math.cos(angle) * r;
-        pos[i * 3 + 1] = Math.sin(angle) * r;
-        pos[i * 3 + 2] = Math.sin(time + i) * size * 0.05; // Slight Z wobble
-
-        // Update color based on distance
-        const t = (r - size * 0.3) / (coronaSystem.maxRadii[i] - size * 0.3);
-        let particleColor: THREE.Color;
-        if (t < 0.3) {
-          particleColor = new THREE.Color().lerpColors(whiteColor, goldColor, t / 0.3);
-        } else {
-          particleColor = new THREE.Color().lerpColors(goldColor, orangeColor, (t - 0.3) / 0.7);
-        }
-        col[i * 3] = particleColor.r;
-        col[i * 3 + 1] = particleColor.g;
-        col[i * 3 + 2] = particleColor.b;
-      }
-
-      posAttr.needsUpdate = true;
-      colAttr.needsUpdate = true;
-      trailPosAttr.needsUpdate = true;
-      trailColAttr.needsUpdate = true;
+    // ---- Layer 4: Prominence arcs — regenerate every 4 seconds ----
+    arcTimerRef.current += delta;
+    if (arcTimerRef.current > 4.0) {
+      arcTimerRef.current = 0;
+      arcGeos.forEach(g => g.dispose());
+      setArcGeos(regenerateArcs());
     }
 
-    // Animate plasma tendrils
-    if (tendrillGroupRef.current) {
-      const tendrillGroup = tendrillGroupRef.current;
-      tendrilSystem.tendrils.forEach((tendril, idx) => {
-        const positions = tendril.positions;
-        const frequency = 1.0 + idx * 0.3;
-        const phase = time * frequency;
+    // Update arc energy flow materials
+    arcEnergyRefs.current.forEach(ref => {
+      if (ref) ref.time = time;
+    });
 
-        let lengthMultiplier = 1.0;
-        let waveFreq = 1.0;
-        let tendrillOpacity = 0.6;
-
-        if (isCollapsingRef.current) {
-          if (progress < 0.32) {
-            // Phase 1: extend to maximum length
-            lengthMultiplier = 1.0 + (progress / 0.32) * 0.5;
-            waveFreq = 1.0 + (progress / 0.32) * 1.0;
-          } else if (progress < 0.68) {
-            // Phase 2: retract and fade
-            lengthMultiplier = 1.5 * (1.0 - (progress - 0.32) / 0.36);
-            tendrillOpacity = 0.6 * (1.0 - (progress - 0.32) / 0.36);
-          } else {
-            // Phase 3: fully fade
-            lengthMultiplier = 0;
-            tendrillOpacity = 0;
-          }
-        } else {
-          // Normal hover behavior
-          if (isHoveredRef.current) {
-            lengthMultiplier = 1.3;
-            waveFreq = 2.0;
-          }
-        }
-
-        // Update tendril positions
-        for (let p = 0; p < tendrilSystem.pointsPerTendril; p++) {
-          const progressAlongTendril = p / (tendrilSystem.pointsPerTendril - 1);
-          const baseRadius = size * 0.3 + progressAlongTendril * size * 0.9;
-          const radius = baseRadius * lengthMultiplier;
-
-          // Wave perpendicular to tendril direction
-          const waveAmplitude = 0.15 * size;
-          const wave = Math.sin(phase * waveFreq + p * 0.5) * waveAmplitude;
-
-          const angle = tendril.baseAngle;
-          const perpAngle = angle + Math.PI / 2;
-
-          positions[p * 3] = Math.cos(angle) * radius + Math.cos(perpAngle) * wave;
-          positions[p * 3 + 1] = Math.sin(angle) * radius + Math.sin(perpAngle) * wave;
-          positions[p * 3 + 2] = Math.sin(time + idx) * size * 0.05;
-        }
-
-        const line = tendrillGroup.children[idx] as THREE.Line;
-        if (line) {
-          const attr = line.geometry.attributes.position;
-          attr.needsUpdate = true;
-
-          // Update material opacity
-          const mat = line.material as THREE.LineBasicMaterial;
-          mat.opacity = tendrillOpacity;
-
-          // Pulse tendril length
-          const pulseFactor = Math.sin(phase * 0.5) * 0.3 + 0.7;
-          line.scale.y = pulseFactor * lengthMultiplier;
-        }
-      });
-    }
-
-    // Animate flare rays — pulsing length
+    // ---- Layer 6: Volumetric Flare Rays ----
     if (raysRef.current) {
       raysRef.current.children.forEach((child, i) => {
         const mesh = child as THREE.Mesh;
-        let rayPulse = Math.sin(time * 3 + i * 0.8) * 0.3 + 0.7;
-        let hoverBoost = isHoveredRef.current ? 1.3 : 1.0;
-
-        if (isCollapsingRef.current) {
-          if (progress < 0.32) {
-            // Phase 1: extend to maximum
-            rayPulse = 1.0 + (progress / 0.32) * 0.5;
-          } else if (progress < 0.68) {
-            // Phase 2: shorten and fade
-            rayPulse = 1.5 * (1.0 - (progress - 0.32) / 0.36);
-          } else {
-            // Phase 3: fade out
-            rayPulse = 0.1 * (1.0 - (progress - 0.68) / 0.32);
-          }
-        }
-
-        mesh.scale.y = rayPulse * hoverBoost;
-
-        const mat = mesh.material as THREE.MeshBasicMaterial;
-        mat.opacity = 0.2 + rayPulse * 0.15;
+        const data = rayData[i];
+        const pulse = Math.sin(time * 2 + data.phase) * 0.3 + 0.7;
+        const lengthScale = hovered ? 1.3 : 1.0;
+        mesh.scale.y = pulse * lengthScale;
+        (mesh.material as THREE.MeshBasicMaterial).opacity = 0.15 + pulse * 0.1;
       });
     }
 
-    // Animate expanding rings
+    // ---- Layer 7: Countdown Rings ----
     if (ringsRef.current) {
       ringsRef.current.children.forEach((child, i) => {
         const mesh = child as THREE.Mesh;
-        let ringPhase = (time * 0.5 + i * 0.33) % 1.0;
-
-        if (isCollapsingRef.current) {
-          // Rings expand faster during phase 1
-          if (progress < 0.32) {
-            ringPhase = (time * 1.0 + i * 0.33) % 1.0;
-          } else {
-            // Rings fade during collapse
-            ringPhase = 0;
-          }
-        }
-
-        const ringScale = 0.8 + ringPhase * 0.6;
-        mesh.scale.setScalar(ringScale);
-
-        const mat = mesh.material as THREE.MeshBasicMaterial;
-        mat.opacity = (1 - ringPhase) * 0.25;
+        const ringPhase = (time * 0.5 + i * 0.33) % 1.0;
+        mesh.scale.setScalar(1.0 + ringPhase * 0.4);
+        (mesh.material as THREE.MeshBasicMaterial).opacity = (1 - ringPhase) * 0.2;
       });
     }
 
-    // Outer glow (primary)
-    if (outerGlowRef.current) {
-      const mat = outerGlowRef.current.material as THREE.MeshBasicMaterial;
-      let glowOpacity = isHoveredRef.current ? 0.1 : 0.05;
-
-      if (isCollapsingRef.current && progress > 0.68) {
-        // Phase 3: fade outer glow
-        const afterglowProgress = (progress - 0.68) / 0.32;
-        glowOpacity = Math.max(0, glowOpacity * (1.0 - afterglowProgress));
-      }
-
-      mat.opacity = glowOpacity;
-      const glowPulse = Math.sin(time * 2) * 0.05;
-      outerGlowRef.current.scale.setScalar(1.0 + glowPulse);
-    }
-
-    // Outer glow (secondary, larger)
-    if (outerGlow2Ref.current) {
-      const mat = outerGlow2Ref.current.material as THREE.MeshBasicMaterial;
-      let glowOpacity = isHoveredRef.current ? 0.05 : 0.03;
-
-      if (isCollapsingRef.current && progress > 0.68) {
-        const afterglowProgress = (progress - 0.68) / 0.32;
-        glowOpacity = Math.max(0, glowOpacity * (1.0 - afterglowProgress));
-      }
-
-      mat.opacity = glowOpacity;
-      const glowPulse = Math.sin(time * 1.6) * 0.03;
-      outerGlow2Ref.current.scale.setScalar(2.0 + glowPulse);
-    }
-
-    // Lens flare dots
+    // ---- Layer 8: Lens Flare ----
     if (lensFlareRef.current) {
       lensFlareRef.current.children.forEach((child, i) => {
-        const mesh = child as THREE.Mesh;
-        const basePulse = Math.sin(time * 2 + i * Math.PI / 2) * 0.2 + 0.4;
-        const mat = mesh.material as THREE.MeshBasicMaterial;
-        mat.opacity = basePulse;
-
-        if (isCollapsingRef.current && progress > 0.68) {
-          const afterglowProgress = (progress - 0.68) / 0.32;
-          mat.opacity = Math.max(0, basePulse * (1.0 - afterglowProgress));
-        }
+        const mat = (child as THREE.Mesh).material as THREE.MeshBasicMaterial;
+        mat.opacity = Math.sin(time * 2.5 + i * 1.2) * 0.15 + 0.25;
       });
     }
 
-    // Flash sphere (appears during collapse)
-    if (flashSphereRef.current) {
-      if (isCollapsingRef.current) {
-        flashSphereRef.current.visible = true;
-        let flashOpacity = 0;
-        let flashScale = 1.0;
-
-        if (progress < 0.32) {
-          // Phase 1: flash starts to appear
-          flashOpacity = (progress / 0.32) * 0.8;
-          flashScale = 1.0 + (progress / 0.32) * 0.3;
-        } else if (progress < 0.68) {
-          // Phase 2: flash peaks then fades
-          const collapseProgress = (progress - 0.32) / 0.36;
-          flashOpacity = 0.8 * (1.0 - collapseProgress * collapseProgress);
-          flashScale = 1.3;
-        } else {
-          // Phase 3: flash fades completely
-          const afterglowProgress = (progress - 0.68) / 0.32;
-          flashOpacity = Math.max(0, 0.8 * (1.0 - afterglowProgress));
-          flashScale = 1.0;
+    // ---- Collapse ----
+    if (isCollapsingRef.current && cp < 1) {
+      if (cp < 0.32) {
+        // Phase 1: CME — arcs extend, core goes white, particles accelerate
+        const p1 = cp / 0.32;
+        if (surfaceRef.current) {
+          surfaceRef.current.emissiveIntensity = 5.0 + p1 * 5.0;
         }
-
-        const mat = flashSphereRef.current.material as THREE.MeshBasicMaterial;
-        mat.opacity = flashOpacity;
-        flashSphereRef.current.scale.setScalar(flashScale);
+        if (surfaceMeshRef.current) {
+          surfaceMeshRef.current.scale.setScalar(1 + p1 * 0.3);
+        }
+      } else if (cp < 0.68) {
+        // Phase 2: Collapse — core shrinks, arcs retract
+        const p2 = (cp - 0.32) / 0.36;
+        if (surfaceMeshRef.current) {
+          surfaceMeshRef.current.scale.setScalar(1.3 * (1 - p2 * 0.9));
+        }
+        if (surfaceRef.current) {
+          surfaceRef.current.emissiveIntensity = 10.0 * (1 - p2);
+        }
       } else {
-        flashSphereRef.current.visible = false;
+        // Phase 3: Afterglow — everything fades
+        const p3 = (cp - 0.68) / 0.32;
+        if (outerCoronaRef.current) outerCoronaRef.current.opacity = (1 - p3);
+        if (midCoronaRef.current) midCoronaRef.current.opacity = (1 - p3);
+        if (surfaceMeshRef.current) surfaceMeshRef.current.visible = false;
       }
     }
 
-    // Targeting brackets
+    // Reset
+    if (isCollapsingRef.current && cp >= 1) {
+      isCollapsingRef.current = false;
+      if (surfaceMeshRef.current) {
+        surfaceMeshRef.current.visible = true;
+        surfaceMeshRef.current.scale.setScalar(1);
+      }
+      if (surfaceRef.current) surfaceRef.current.emissiveIntensity = 5.0;
+      if (outerCoronaRef.current) outerCoronaRef.current.opacity = 1.0;
+      if (midCoronaRef.current) midCoronaRef.current.opacity = 1.0;
+    }
+
+    // Brackets
     if (bracketsRef.current) {
-      bracketsRef.current.visible = isHoveredRef.current && !isCollapsingRef.current;
-      if (isHoveredRef.current) {
-        bracketsRef.current.rotation.z = time * 0.3;
-      }
+      bracketsRef.current.visible = hovered && cp === 0;
+      if (hovered) bracketsRef.current.rotation.z = time * 0.3;
     }
-
-    // Hover scale
-    const targetScale = isHoveredRef.current ? 1.15 : 1.0;
-    groupRef.current.scale.lerp(
-      new THREE.Vector3(targetScale, targetScale, targetScale),
-      delta * 5
-    );
   });
-
-  // Pre-compute ray angles
-  const rayAngles = useMemo(() =>
-    Array.from({ length: 10 }, (_, i) => (i / 10) * Math.PI * 2),
-    []
-  );
 
   return (
     <group ref={groupRef} position={position}>
-      {/* Radiant core */}
+      {/* ===== Layer 1: Outer Corona ===== */}
+      <mesh>
+        <sphereGeometry args={[size * 2.0, 24, 24]} />
+        <volumetricGlowMaterial
+          ref={outerCoronaRef}
+          color="#fbbf24"
+          noiseScale={1.5}
+          noiseSpeed={0.3}
+          rimPower={1.5}
+          glowStrength={0.3}
+          opacity={1.0}
+          transparent
+          side={THREE.BackSide}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+          toneMapped={false}
+        />
+      </mesh>
+
+      {/* ===== Layer 2: Mid Corona ===== */}
+      <mesh>
+        <sphereGeometry args={[size * 1.4, 24, 24]} />
+        <volumetricGlowMaterial
+          ref={midCoronaRef}
+          color="#f97316"
+          noiseScale={2.5}
+          noiseSpeed={0.6}
+          rimPower={2.0}
+          glowStrength={0.5}
+          opacity={1.0}
+          transparent
+          side={THREE.BackSide}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+          toneMapped={false}
+        />
+      </mesh>
+
+      {/* ===== Layer 3: Solar Surface ===== */}
       <mesh
-        ref={coreRef}
+        ref={surfaceMeshRef}
         onPointerOver={handlePointerOver}
         onPointerOut={handlePointerOut}
         onClick={handleClick}
       >
-        <sphereGeometry args={[size * 0.3, 16, 16]} />
-        <meshBasicMaterial
-          color={color}
-          transparent
-          opacity={0.8}
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
+        <sphereGeometry args={[solarRadius, 32, 32]} />
+        <solarSurfaceMaterial
+          ref={surfaceRef}
+          key={SolarSurfaceMaterial.key}
+          toneMapped={false}
         />
       </mesh>
 
-      {/* Inner bright core (white-hot center) */}
-      <mesh>
-        <sphereGeometry args={[size * 0.15, 12, 12]} />
-        <meshBasicMaterial
-          color="#fef3c7"
-          transparent
-          opacity={0.6}
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
-        />
-      </mesh>
+      {/* ===== Layer 4: Magnetic Field Loop Arcs (prominences) ===== */}
+      {arcGeos.map((geo, i) => (
+        <mesh key={`arc-${i}`} geometry={geo}>
+          <energyFlowMaterial
+            ref={(el: any) => { if (el) arcEnergyRefs.current[i] = el; }}
+            color1="#fbbf24"
+            color2="#fef3c7"
+            flowSpeed={2.0}
+            stripeCount={4.0}
+            opacity={0.7}
+            transparent
+            depthWrite={false}
+            blending={THREE.AdditiveBlending}
+            toneMapped={false}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      ))}
 
-      {/* Plasma tendrils */}
-      <group ref={tendrillGroupRef}>
-        {tendrilSystem.tendrils.map((tendril, i) => (
-          <lineSegments key={i} geometry={tendril.geometry}>
-            <lineBasicMaterial
-              color="#fbbf24"
-              transparent
-              opacity={0.6}
-              blending={THREE.AdditiveBlending}
-              depthWrite={false}
-            />
-          </lineSegments>
-        ))}
-      </group>
+      {/* ===== Layer 5: Corona Particles ===== */}
+      <InstancedParticleSystem
+        count={250}
+        color="#fef3c7"
+        colorEnd="#f97316"
+        size={0.08}
+        lifespan={[1.5, 3.0]}
+        velocityMin={[-0.3, -0.3, -0.3]}
+        velocityMax={[0.3, 0.3, 0.3]}
+        spawnRadius={solarRadius * 1.2}
+        emitRate={100}
+        loop
+      />
 
-      {/* Corona particles */}
-      <points ref={coronaRef} geometry={coronaSystem.geometry}>
-        <pointsMaterial
-          size={0.12}
-          vertexColors
-          transparent
-          opacity={0.7}
-          sizeAttenuation
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
-        />
-      </points>
-
-      {/* Corona particle trail */}
-      <points ref={coronaTrailRef} geometry={coronaSystem.trailGeometry}>
-        <pointsMaterial
-          size={0.072}
-          vertexColors
-          transparent
-          opacity={0.28}
-          sizeAttenuation
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
-        />
-      </points>
-
-      {/* Animated flare rays */}
+      {/* ===== Layer 6: Volumetric Flare Rays ===== */}
       <group ref={raysRef}>
-        {rayAngles.map((angle, i) => (
+        {rayData.map((data, i) => (
           <mesh
-            key={i}
+            key={`ray-${i}`}
             position={[
-              Math.cos(angle) * size * 0.7,
-              Math.sin(angle) * size * 0.7,
+              Math.cos(data.angle) * (solarRadius + data.length * 0.5),
+              Math.sin(data.angle) * (solarRadius + data.length * 0.5),
               0,
             ]}
-            rotation={[0, 0, angle - Math.PI / 2]}
+            rotation={[0, 0, data.angle - Math.PI / 2]}
           >
-            <coneGeometry args={[0.08, size * 0.6, 4]} />
+            <coneGeometry args={[0.02, data.length, 4, 1, true]} />
             <meshBasicMaterial
-              color={color}
-              transparent
-              opacity={0.3}
-              blending={THREE.AdditiveBlending}
-              depthWrite={false}
-            />
-          </mesh>
-        ))}
-      </group>
-
-      {/* Expanding countdown rings */}
-      <group ref={ringsRef}>
-        {[0, 1, 2].map((i) => (
-          <mesh key={i} rotation={[Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[size * 1.0, 0.03, 8, 48]} />
-            <meshBasicMaterial
-              color={color}
+              color="#fbbf24"
               transparent
               opacity={0.2}
               blending={THREE.AdditiveBlending}
               depthWrite={false}
+              toneMapped={false}
             />
           </mesh>
         ))}
       </group>
 
-      {/* Outer glow (primary) */}
-      <mesh ref={outerGlowRef}>
-        <sphereGeometry args={[size * 1.5, 16, 16]} />
-        <meshBasicMaterial
-          color={color}
-          transparent
-          opacity={0.05}
-          side={THREE.BackSide}
-          depthWrite={false}
-          blending={THREE.AdditiveBlending}
-        />
-      </mesh>
+      {/* ===== Layer 7: Countdown Rings ===== */}
+      <group ref={ringsRef}>
+        {[1.0, 1.2, 1.4].map((scale, i) => (
+          <mesh key={`ring-${i}`} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[size * scale, 0.02, 8, 48]} />
+            <meshBasicMaterial
+              color={color}
+              transparent
+              opacity={0.15}
+              blending={THREE.AdditiveBlending}
+              depthWrite={false}
+              toneMapped={false}
+            />
+          </mesh>
+        ))}
+      </group>
 
-      {/* Outer glow (secondary, larger) */}
-      <mesh ref={outerGlow2Ref}>
-        <sphereGeometry args={[size * 2.0, 16, 16]} />
-        <meshBasicMaterial
-          color={color}
-          transparent
-          opacity={0.03}
-          side={THREE.BackSide}
-          depthWrite={false}
-          blending={THREE.AdditiveBlending}
-        />
-      </mesh>
-
-      {/* Lens flare dots */}
+      {/* ===== Layer 8: Lens Flare ===== */}
       <group ref={lensFlareRef}>
+        {/* 4 cardinal dots */}
         {[
           [size * 1.2, 0, 0],
           [-size * 1.2, 0, 0],
           [0, size * 1.2, 0],
           [0, -size * 1.2, 0],
         ].map((pos, i) => (
-          <mesh key={i} position={pos as [number, number, number]}>
-            <sphereGeometry args={[size * 0.08, 8, 8]} />
+          <mesh key={`lens-dot-${i}`} position={pos as [number, number, number]}>
+            <sphereGeometry args={[size * 0.06, 8, 8]} />
             <meshBasicMaterial
               color="#fbbf24"
               transparent
               opacity={0.3}
               blending={THREE.AdditiveBlending}
               depthWrite={false}
+              toneMapped={false}
             />
           </mesh>
         ))}
+        {/* 2 anamorphic streaks (thin wide planes) */}
+        <mesh rotation={[0, 0, 0]}>
+          <planeGeometry args={[size * 3, size * 0.04]} />
+          <meshBasicMaterial
+            color="#fef3c7"
+            transparent
+            opacity={0.12}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+            toneMapped={false}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+        <mesh rotation={[0, 0, Math.PI / 2]}>
+          <planeGeometry args={[size * 2.5, size * 0.03]} />
+          <meshBasicMaterial
+            color="#fef3c7"
+            transparent
+            opacity={0.08}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+            toneMapped={false}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
       </group>
 
-      {/* Flash sphere (collapse animation) */}
-      <mesh ref={flashSphereRef} visible={false}>
+      {/* Flash sphere (collapse) */}
+      <mesh ref={flashRef} visible={false}>
         <sphereGeometry args={[size * 0.5, 16, 16]} />
         <meshBasicMaterial
           color="#ffffff"
           transparent
-          opacity={0.0}
+          opacity={0}
           blending={THREE.AdditiveBlending}
           depthWrite={false}
+          toneMapped={false}
         />
       </mesh>
 
@@ -745,14 +543,6 @@ export default function SolarFlare({
           />
         </mesh>
       </group>
-
-      {/* Point light */}
-      <pointLight
-        color={color}
-        intensity={1.0}
-        distance={size * 8}
-        decay={2}
-      />
     </group>
   );
 }

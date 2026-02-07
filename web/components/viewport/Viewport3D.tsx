@@ -4,6 +4,7 @@ import { Canvas } from '@react-three/fiber';
 import { StarfieldBackground } from './StarfieldBackground';
 import { Sun } from './Sun';
 import { ThreatsLayer } from './ThreatsLayer';
+import SceneEffects from '@/components/three/SceneEffects';
 import { useThreatStore } from '@/lib/stores/threat-store';
 
 export function Viewport3D() {
@@ -35,6 +36,9 @@ export function Viewport3D() {
 
         {/* Threat objects */}
         <ThreatsLayer threats={threats} />
+
+        {/* Post-processing: bloom, chromatic aberration, vignette */}
+        <SceneEffects />
       </Canvas>
     </div>
   );

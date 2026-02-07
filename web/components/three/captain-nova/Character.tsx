@@ -5,16 +5,17 @@ import { assembleCharacter, NovaGeometryConfig } from './geometry';
 import { createHologramMaterial } from './materials';
 
 export interface CharacterProps {
-  auroraColor1: string;
-  auroraColor2: string;
   geometryConfig?: NovaGeometryConfig;
   materialRef?: React.RefObject<THREE.ShaderMaterial>;
   onCharacterReady?: (character: THREE.Group) => void;
 }
 
+/**
+ * Captain Nova character mesh with hologram material
+ *
+ * Note: Colors are managed by parent component via updateHologramUniforms
+ */
 export function Character({
-  auroraColor1,
-  auroraColor2,
   geometryConfig,
   materialRef,
   onCharacterReady,
@@ -26,7 +27,8 @@ export function Character({
     if (!groupRef.current) return;
 
     const character = assembleCharacter(geometryConfig);
-    const material = createHologramMaterial(auroraColor1, auroraColor2);
+    // Use default colors - parent updates via updateHologramUniforms in useFrame
+    const material = createHologramMaterial();
 
     if (materialRef) {
       (materialRef as any).current = material;
@@ -48,10 +50,16 @@ export function Character({
     }
 
     return () => {
+      // Dispose geometries to prevent memory leaks
+      character.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          child.geometry.dispose();
+        }
+      });
       groupRef.current?.remove(character);
       material.dispose();
     };
-  }, [geometryConfig]);
+  }, [geometryConfig, materialRef, onCharacterReady]);
 
   return <group ref={groupRef} name="captain-nova-character" />;
 }

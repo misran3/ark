@@ -3,51 +3,7 @@
 import { shaderMaterial } from '@react-three/drei';
 import { extend } from '@react-three/fiber';
 import * as THREE from 'three';
-
-// Shared GLSL noise utilities (used in both vertex and fragment shaders)
-const noiseGLSL = /* glsl */ `
-  float hash(vec3 p) {
-    p = fract(p * vec3(443.897, 441.423, 437.195));
-    p += dot(p, p.yzx + 19.19);
-    return fract((p.x + p.y) * p.z);
-  }
-
-  float noise3D(vec3 p) {
-    vec3 i = floor(p);
-    vec3 f = fract(p);
-    f = f * f * (3.0 - 2.0 * f);
-
-    float n000 = hash(i);
-    float n100 = hash(i + vec3(1.0, 0.0, 0.0));
-    float n010 = hash(i + vec3(0.0, 1.0, 0.0));
-    float n110 = hash(i + vec3(1.0, 1.0, 0.0));
-    float n001 = hash(i + vec3(0.0, 0.0, 1.0));
-    float n101 = hash(i + vec3(1.0, 0.0, 1.0));
-    float n011 = hash(i + vec3(0.0, 1.0, 1.0));
-    float n111 = hash(i + vec3(1.0, 1.0, 1.0));
-
-    float n00 = mix(n000, n100, f.x);
-    float n10 = mix(n010, n110, f.x);
-    float n01 = mix(n001, n101, f.x);
-    float n11 = mix(n011, n111, f.x);
-
-    float n0 = mix(n00, n10, f.y);
-    float n1 = mix(n01, n11, f.y);
-
-    return mix(n0, n1, f.z);
-  }
-
-  float fbm(vec3 p) {
-    float value = 0.0;
-    float amplitude = 0.5;
-    for (int i = 0; i < 4; i++) {
-      value += amplitude * noise3D(p);
-      p *= 2.0;
-      amplitude *= 0.5;
-    }
-    return value;
-  }
-`;
+import { noiseGLSL, fresnelGLSL } from '@/lib/shaders';
 
 const vertexShader = /* glsl */ `
   uniform float time;
@@ -57,7 +13,7 @@ const vertexShader = /* glsl */ `
   varying vec3 vNormal;
   varying vec3 vWorldPosition;
   varying vec3 vLocalPosition;
-  varying float vNoise;
+  varying vec3 vViewDir;
 
   ${noiseGLSL}
 
@@ -65,26 +21,30 @@ const vertexShader = /* glsl */ `
     vUv = uv;
     vLocalPosition = position;
 
-    // Displace vertices along normal using seeded noise
-    vec3 noiseInput = position * 2.0 + vec3(seed);
-    float displacement = fbm(noiseInput) * 0.3;
-    vNoise = displacement;
+    // FBM vertex displacement — 2 octaves for craggy surface
+    vec3 noiseInput = position * 2.0 + vec3(seed * 0.37);
+    float displacement = fbm(noiseInput, 2) * 0.35;
 
     vec3 displaced = position + normal * displacement;
 
     vNormal = normalize(normalMatrix * normal);
     vec4 worldPos = modelMatrix * vec4(displaced, 1.0);
     vWorldPosition = worldPos.xyz;
+    vViewDir = normalize(cameraPosition - worldPos.xyz);
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4(displaced, 1.0);
   }
 `;
 
-const fragmentShader = /* glsl */ `
+const fragmentShader = `
+  ${noiseGLSL}
+  ${fresnelGLSL}
+` + /* glsl */ `
   uniform float time;
   uniform float seed;
   uniform float heatIntensity;
   uniform vec3 crackColor;
+  uniform vec3 crackColorInner;
   uniform vec3 baseColor;
   uniform float emissiveStrength;
 
@@ -92,46 +52,52 @@ const fragmentShader = /* glsl */ `
   varying vec3 vNormal;
   varying vec3 vWorldPosition;
   varying vec3 vLocalPosition;
-  varying float vNoise;
-
-  ${noiseGLSL}
+  varying vec3 vViewDir;
 
   void main() {
-    // Lava crack pattern - high frequency noise creates vein-like cracks
-    vec3 crackInput = vLocalPosition * 6.0 + vec3(seed * 0.1);
-    float crackNoise = fbm(crackInput);
-    // Sharpen cracks: values near threshold become bright veins
-    float crackMask = smoothstep(0.38, 0.42, crackNoise) * (1.0 - smoothstep(0.42, 0.52, crackNoise));
-    crackMask += smoothstep(0.62, 0.66, crackNoise) * (1.0 - smoothstep(0.66, 0.76, crackNoise));
-    crackMask = clamp(crackMask * 2.0, 0.0, 1.0);
+    // --- Voronoi lava cracks ---
+    // Scroll UV slowly so cracks shift over time
+    vec2 voronoiUV = vLocalPosition.xz * 4.0 + vec2(seed * 0.13) + vec2(time * 0.06, time * 0.04);
+    vec2 cell = voronoi(voronoiUV);
 
-    // Heat gradient - hotter toward center (distance from origin in local space)
+    // Thin bright lines at cell edges
+    float crackWidth = smoothstep(0.06, 0.0, cell.x);
+
+    // Secondary crack layer at different scale for detail
+    vec2 cell2 = voronoi(vLocalPosition.yz * 6.0 + vec2(seed * 0.29) + vec2(time * 0.03));
+    float crackWidth2 = smoothstep(0.04, 0.0, cell2.x) * 0.5;
+    crackWidth = max(crackWidth, crackWidth2);
+
+    // --- Heat gradient — hotter toward center ---
     float distFromCenter = length(vLocalPosition);
-    float heatFactor = 1.0 - smoothstep(0.3, 1.2, distFromCenter);
+    float heatFactor = 1.0 - smoothstep(0.3, 1.5, distFromCenter);
     heatFactor *= heatIntensity;
 
-    // Animate crack glow with subtle pulse
-    float pulse = sin(time * 2.0) * 0.15 + 0.85;
-    crackMask *= pulse;
+    // Pulse the cracks subtly
+    float pulse = sin(time * 2.0 + cell.y * 6.28) * 0.15 + 0.85;
+    crackWidth *= pulse;
 
-    // Fresnel rim glow
-    vec3 viewDirection = normalize(cameraPosition - vWorldPosition);
-    float fresnel = pow(1.0 - max(0.0, dot(viewDirection, vNormal)), 3.0);
+    // --- Fresnel rim glow ---
+    vec3 n = normalize(vNormal);
+    float rim = fresnel(normalize(vViewDir), n, 3.0);
 
-    // Compose final color
-    vec3 rockColor = baseColor;
-    vec3 hotColor = crackColor;
+    // --- Compose final color ---
+    vec3 rockColor = baseColor; // charcoal #1a1a1a
 
-    // Base surface: dark rock with subtle heat toward center
-    vec3 surface = mix(rockColor, hotColor * 0.3, heatFactor * 0.4);
+    // Lava crack color: orange at outer edges, red-hot toward center
+    vec3 lavaColor = mix(crackColor, crackColorInner, heatFactor);
+
+    // Base surface: dark rock with subtle heat glow toward center
+    vec3 surface = mix(rockColor, lavaColor * 0.25, heatFactor * 0.4);
 
     // Add glowing cracks
-    surface = mix(surface, hotColor * emissiveStrength, crackMask);
+    float crackEmissive = crackWidth * emissiveStrength * (0.5 + heatFactor * 0.5);
+    surface = mix(surface, lavaColor * emissiveStrength, crackWidth);
 
-    // Add fresnel rim
-    vec3 rimColor = hotColor * 0.6;
-    surface += rimColor * fresnel * 0.5;
+    // Fresnel rim — orange glow at glancing angles
+    surface += crackColor * rim * 0.5;
 
+    // Output with emissive energy for bloom pickup
     gl_FragColor = vec4(surface, 1.0);
   }
 `;
@@ -141,9 +107,10 @@ const AsteroidShaderMaterial = shaderMaterial(
     time: 0,
     seed: 0,
     heatIntensity: 1.0,
-    crackColor: new THREE.Color(0.976, 0.451, 0.086), // #f97316 orange
-    baseColor: new THREE.Color(0.1, 0.1, 0.1), // charcoal
-    emissiveStrength: 2.0,
+    crackColor: new THREE.Color(0.976, 0.451, 0.086),     // #f97316 orange
+    crackColorInner: new THREE.Color(0.863, 0.149, 0.149), // #dc2626 red
+    baseColor: new THREE.Color(0.102, 0.102, 0.102),       // #1a1a1a charcoal
+    emissiveStrength: 3.0,
   },
   vertexShader,
   fragmentShader

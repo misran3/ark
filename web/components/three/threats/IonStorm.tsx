@@ -1,9 +1,12 @@
 'use client';
 
-import { useRef, useMemo, useCallback, useEffect } from 'react';
+import { useRef, useMemo, useCallback, useEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { Clock } from 'three';
+import '@/lib/materials/VolumetricGlowMaterial';
+import '@/lib/materials/EnergyFlowMaterial';
+import { InstancedParticleSystem, type ParticleState } from '@/lib/particles';
+import { generateLightningPath, tubeFromPoints } from '@/lib/utils/geometry';
 
 interface IonStormProps {
   position: [number, number, number];
@@ -13,16 +16,34 @@ interface IonStormProps {
   onClick?: () => void;
 }
 
+// Nebula cloud sphere config
+interface CloudSphere {
+  noiseScale: number;
+  color: string;
+  orbitSpeed: number;
+  orbitPhase: number;
+}
+
+const CLOUD_CONFIGS: CloudSphere[] = [
+  { noiseScale: 1.5, color: '#a855f7', orbitSpeed: 0.3, orbitPhase: 0 },
+  { noiseScale: 2.0, color: '#c084fc', orbitSpeed: 0.4, orbitPhase: 1.2 },
+  { noiseScale: 2.5, color: '#ec4899', orbitSpeed: 0.5, orbitPhase: 2.5 },
+  { noiseScale: 3.0, color: '#a855f7', orbitSpeed: 0.35, orbitPhase: 3.8 },
+  { noiseScale: 3.5, color: '#c084fc', orbitSpeed: 0.45, orbitPhase: 5.0 },
+];
+
+const OUTER_ARC_COUNT = 8;
+const CORE_ARC_COUNT = 4;
+
 /**
- * Ion Storm threat visual: represents budget overspending surges.
- *
- * Features:
- * - 350 particles in vortex formation with purple-to-pink vertex colors
- * - Animated lightning arcs (always-on, intensify on hover)
- * - Outer nebula glow sphere with additive blending
- * - Core glow with pulsing intensity
- * - Targeting brackets on hover
- * - Point light for local illumination
+ * Ion Storm — "The Electric Maelstrom"
+ * 6-layer composition:
+ * 1. Outer Electromagnetic Field (VolumetricGlowMaterial)
+ * 2. Volumetric Nebula Cloud (5 overlapping spheres)
+ * 3. Core Energy Sphere (custom FBM shader)
+ * 4. Lightning Arc System (TubeGeometry via generateLightningPath)
+ * 5. Vortex Particles + Electric Sparks
+ * 6. Energy Shield Rings (EnergyFlowMaterial)
  */
 export default function IonStorm({
   position,
@@ -32,96 +53,40 @@ export default function IonStorm({
   onClick,
 }: IonStormProps) {
   const groupRef = useRef<THREE.Group>(null);
-  const particlesRef = useRef<THREE.Points>(null);
-  const particleTrailRef = useRef<THREE.Points>(null);
-  const coreGlowRef = useRef<THREE.Mesh>(null);
-  const outerGlowRef = useRef<THREE.Mesh>(null);
+  const emFieldRef = useRef<any>(null);
+  const emFieldMeshRef = useRef<THREE.Mesh>(null);
+  const cloudRefs = useRef<(any)[]>([]);
+  const cloudMeshRefs = useRef<THREE.Mesh[]>([]);
+  const coreRef = useRef<THREE.Mesh>(null);
+  const outerArcsGroupRef = useRef<THREE.Group>(null);
+  const coreArcsGroupRef = useRef<THREE.Group>(null);
+  const ring1Ref = useRef<any>(null);
+  const ring2Ref = useRef<any>(null);
+  const ring1MeshRef = useRef<THREE.Mesh>(null);
+  const ring2MeshRef = useRef<THREE.Mesh>(null);
   const bracketsRef = useRef<THREE.Group>(null);
-  const arcsRef = useRef<THREE.Group>(null);
-  const plasmaSpheresRef = useRef<THREE.Mesh[]>([]);
   const flashRef = useRef<THREE.Mesh>(null);
-  const coreArcsRef = useRef<THREE.Group>(null);
   const isHoveredRef = useRef(false);
   const isCollapsingRef = useRef(false);
   const collapseStartTimeRef = useRef(0);
 
-  // Particle system with vertex colors
-  const particleSystem = useMemo(() => {
-    const count = 350;
-    const positions = new Float32Array(count * 3);
-    const colors = new Float32Array(count * 3);
-    const orbitRadii = new Float32Array(count);
-    const orbitAngles = new Float32Array(count);
-    const orbitSpeeds = new Float32Array(count);
-    const verticalOffsets = new Float32Array(count);
-    const initialOrbitRadii = new Float32Array(count);
+  // Frame counter for arc regeneration
+  const frameCountRef = useRef(0);
 
-    const purpleColor = new THREE.Color('#a855f7');
-    const pinkColor = new THREE.Color('#ec4899');
-
-    for (let i = 0; i < count; i++) {
-      const radius = Math.random() * size;
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos(Math.random() * 2 - 1);
-
-      orbitRadii[i] = radius;
-      initialOrbitRadii[i] = radius;
-      orbitAngles[i] = theta;
-      orbitSpeeds[i] = 0.3 + Math.random() * 0.7;
-      verticalOffsets[i] = (Math.random() - 0.5) * size * 0.6;
-
-      positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
-      positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
-      positions[i * 3 + 2] = radius * Math.cos(phi);
-
-      // Purple at center, pink at outer edge
-      const t = radius / size;
-      const particleColor = new THREE.Color().lerpColors(purpleColor, pinkColor, t);
-      colors[i * 3] = particleColor.r;
-      colors[i * 3 + 1] = particleColor.g;
-      colors[i * 3 + 2] = particleColor.b;
-    }
-
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-    return { geometry, positions, colors, count, orbitRadii, orbitAngles, orbitSpeeds, verticalOffsets, initialOrbitRadii };
-  }, [size]);
-
-  // Lightning arc geometry (6 outer arcs + 2-3 core arcs)
-  const arcData = useMemo(() => {
-    const outerArcCount = 6;
-    const coreArcCount = 3;
-    const segmentsPerArc = 12;
-    const arcs: Float32Array[] = [];
-    const coreArcs: Float32Array[] = [];
-
-    for (let a = 0; a < outerArcCount; a++) {
-      arcs.push(new Float32Array(segmentsPerArc * 2 * 3));
-    }
-    for (let a = 0; a < coreArcCount; a++) {
-      coreArcs.push(new Float32Array(segmentsPerArc * 2 * 3));
-    }
-    return { arcs, coreArcs, outerArcCount, coreArcCount, segmentsPerArc };
-  }, []);
+  // Lightning arc geometries — store TubeGeometry refs for disposal
+  const [outerArcGeos, setOuterArcGeos] = useState<THREE.TubeGeometry[]>([]);
+  const [coreArcGeos, setCoreArcGeos] = useState<THREE.TubeGeometry[]>([]);
 
   // Targeting bracket geometry
   const bracketGeometry = useMemo(() => {
     const s = size * 1.8;
     const len = s * 0.3;
     const points: number[] = [];
-
-    const corners = [
-      [-s, s, 0], [s, s, 0], [s, -s, 0], [-s, -s, 0],
-    ];
+    const corners = [[-s, s, 0], [s, s, 0], [s, -s, 0], [-s, -s, 0]];
     const dirs = [
-      [[1, 0, 0], [0, -1, 0]],
-      [[-1, 0, 0], [0, -1, 0]],
-      [[-1, 0, 0], [0, 1, 0]],
-      [[1, 0, 0], [0, 1, 0]],
+      [[1, 0, 0], [0, -1, 0]], [[-1, 0, 0], [0, -1, 0]],
+      [[-1, 0, 0], [0, 1, 0]], [[1, 0, 0], [0, 1, 0]],
     ];
-
     for (let c = 0; c < 4; c++) {
       const [cx, cy, cz] = corners[c];
       for (const [dx, dy, dz] of dirs[c]) {
@@ -129,68 +94,18 @@ export default function IonStorm({
         points.push(cx + dx * len, cy + dy * len, cz + dz * len);
       }
     }
-
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(points, 3));
     return geo;
   }, [size]);
 
-  // Plasma cloud geometry
-  const plasmaGeometry = useMemo(() => {
-    const count = 4;
-    const spheres: { geometry: THREE.BufferGeometry; radius: number; offsetX: number; offsetY: number; offsetZ: number; driftRadius: number; driftSpeed: number }[] = [];
-    const colors = ['#a855f7', '#c084fc', '#ec4899'];
-
-    for (let i = 0; i < count; i++) {
-      const radius = size * (0.3 + Math.random() * 0.2);
-      const offsetX = (Math.random() - 0.5) * size;
-      const offsetY = (Math.random() - 0.5) * size * 0.6;
-      const offsetZ = (Math.random() - 0.5) * size;
-      const driftRadius = 0.2;
-      const driftSpeed = 0.5 + Math.random() * 1.0;
-
-      const geo = new THREE.IcosahedronGeometry(radius, 8);
-      spheres.push({ geometry: geo, radius, offsetX, offsetY, offsetZ, driftRadius, driftSpeed });
-    }
-
-    return { spheres, count };
-  }, [size]);
-
-  // Trail particle geometry
-  const trailGeometry = useMemo(() => {
-    const count = particleSystem.count;
-    const positions = new Float32Array(count * 3);
-    const colors = new Float32Array(count * 3);
-
-    // Initialize with particle colors dimmed
-    const purpleColor = new THREE.Color('#a855f7');
-    const pinkColor = new THREE.Color('#ec4899');
-
-    for (let i = 0; i < count; i++) {
-      const t = particleSystem.initialOrbitRadii[i] / size;
-      const particleColor = new THREE.Color().lerpColors(purpleColor, pinkColor, t);
-      colors[i * 3] = particleColor.r * 0.6;
-      colors[i * 3 + 1] = particleColor.g * 0.6;
-      colors[i * 3 + 2] = particleColor.b * 0.6;
-    }
-
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-    return { geometry, positions, colors, count };
-  }, [particleSystem.count, particleSystem.initialOrbitRadii, size]);
-
   useEffect(() => {
     return () => {
-      particleSystem.geometry.dispose();
       bracketGeometry.dispose();
-      trailGeometry.geometry.dispose();
-      plasmaGeometry.spheres.forEach((sphere) => sphere.geometry.dispose());
-      arcData.arcs.forEach(() => {}); // arcs are disposed with lineSegments
-      arcData.coreArcs.forEach(() => {}); // coreArcs are disposed with lineSegments
+      outerArcGeos.forEach(g => g.dispose());
+      coreArcGeos.forEach(g => g.dispose());
     };
-  }, [particleSystem.geometry, bracketGeometry, trailGeometry.geometry, plasmaGeometry, arcData]);
+  }, [bracketGeometry, outerArcGeos, coreArcGeos]);
 
   const handlePointerOver = useCallback(() => {
     isHoveredRef.current = true;
@@ -210,383 +125,392 @@ export default function IonStorm({
     }
   }, [onClick]);
 
+  // Generate a random lightning arc between inner and outer sphere surfaces
+  const generateOuterArc = useCallback((arcIndex: number, time: number) => {
+    const innerR = size * 0.35;
+    const outerR = size * 1.0;
+    const theta1 = (arcIndex / OUTER_ARC_COUNT) * Math.PI * 2 + time * 0.3;
+    const phi1 = Math.PI * 0.5 + (Math.random() - 0.5) * Math.PI * 0.6;
+    const theta2 = theta1 + (Math.random() - 0.5) * Math.PI;
+    const phi2 = Math.PI * 0.5 + (Math.random() - 0.5) * Math.PI * 0.6;
+
+    const start = new THREE.Vector3(
+      innerR * Math.sin(phi1) * Math.cos(theta1),
+      innerR * Math.cos(phi1),
+      innerR * Math.sin(phi1) * Math.sin(theta1)
+    );
+    const end = new THREE.Vector3(
+      outerR * Math.sin(phi2) * Math.cos(theta2),
+      outerR * Math.cos(phi2),
+      outerR * Math.sin(phi2) * Math.sin(theta2)
+    );
+
+    const points = generateLightningPath(start, end, 10, size * 0.15);
+    return tubeFromPoints(points, 0.015, 16, 4);
+  }, [size]);
+
+  const generateCoreArc = useCallback((arcIndex: number, time: number) => {
+    const endR = size * 0.5;
+    const theta = (arcIndex / CORE_ARC_COUNT) * Math.PI * 2 + time * 0.2;
+    const phi = Math.PI * 0.5 + (Math.random() - 0.5) * Math.PI * 0.4;
+
+    const start = new THREE.Vector3(0, 0, 0);
+    const end = new THREE.Vector3(
+      endR * Math.sin(phi) * Math.cos(theta),
+      endR * Math.cos(phi),
+      endR * Math.sin(phi) * Math.sin(theta)
+    );
+
+    const points = generateLightningPath(start, end, 8, size * 0.1);
+    return tubeFromPoints(points, 0.025, 12, 4);
+  }, [size]);
+
+  // Vortex particle custom tick — orbit in vortex pattern
+  const vortexTick = useCallback((data: ParticleState, delta: number, elapsed: number) => {
+    const { positions, velocities, lifetimes, maxLifetimes, count } = data;
+    for (let i = 0; i < count; i++) {
+      const i3 = i * 3;
+      if (lifetimes[i] < 0) continue;
+
+      const x = positions[i3];
+      const z = positions[i3 + 2];
+      const r = Math.sqrt(x * x + z * z) + 0.01;
+      const angle = Math.atan2(z, x);
+
+      // Angular velocity increases toward center (vortex)
+      const angularSpeed = 1.5 / (r + 0.5);
+      const newAngle = angle + angularSpeed * delta;
+
+      // Slowly spiral inward
+      const newR = r - 0.02 * delta;
+      positions[i3] = Math.cos(newAngle) * Math.max(0.1, newR);
+      positions[i3 + 2] = Math.sin(newAngle) * Math.max(0.1, newR);
+
+      // Gentle vertical oscillation
+      positions[i3 + 1] += Math.sin(elapsed * 2 + i * 0.3) * 0.002;
+    }
+  }, []);
+
   useFrame(({ clock }, delta) => {
-    if (!groupRef.current || !particlesRef.current) return;
-
+    if (!groupRef.current) return;
     const time = clock.getElapsedTime();
+    const hovered = isHoveredRef.current;
+    frameCountRef.current++;
 
-    // Calculate collapse progress
-    let collapseProgress = 0;
+    // Collapse progress
+    if (isCollapsingRef.current && collapseStartTimeRef.current === 0) {
+      collapseStartTimeRef.current = time;
+    }
+    let cp = 0;
     if (isCollapsingRef.current) {
-      if (collapseStartTimeRef.current === 0) {
-        collapseStartTimeRef.current = time;
-      }
-      const elapsed = time - collapseStartTimeRef.current;
-      collapseProgress = Math.min(elapsed / 2.0, 1.0);
-      if (collapseProgress >= 1.0) {
-        isCollapsingRef.current = false;
-      }
+      cp = Math.min((time - collapseStartTimeRef.current) / 2.5, 1);
     }
 
-    // Vortex rotation
+    // Group rotation: slow Y spin + gentle X wobble
     groupRef.current.rotation.y += 0.008;
     groupRef.current.rotation.x = Math.sin(time * 0.3) * 0.15;
 
-    // Animate particles in vortex pattern
-    const posAttr = particlesRef.current.geometry.attributes.position;
-    const pos = posAttr.array as Float32Array;
-    const pointsOpacity = particlesRef.current.material as THREE.PointsMaterial;
-
-    // Copy current positions to trail before updating
-    if (particleTrailRef.current && collapseProgress === 0) {
-      const trailPos = particleTrailRef.current.geometry.attributes.position.array as Float32Array;
-      for (let i = 0; i < particleSystem.count; i++) {
-        const i3 = i * 3;
-        trailPos[i3] = pos[i3];
-        trailPos[i3 + 1] = pos[i3 + 1];
-        trailPos[i3 + 2] = pos[i3 + 2];
-      }
-      particleTrailRef.current.geometry.attributes.position.needsUpdate = true;
+    // ---- Layer 1: Outer EM Field ----
+    if (emFieldRef.current) {
+      emFieldRef.current.time = time;
+    }
+    if (emFieldMeshRef.current && !isCollapsingRef.current) {
+      const wobble = 1.0 + Math.sin(time * 1.2) * 0.03 + Math.sin(time * 2.1) * 0.02;
+      emFieldMeshRef.current.scale.setScalar(wobble);
     }
 
-    for (let i = 0; i < particleSystem.count; i++) {
-      const i3 = i * 3;
+    // ---- Layer 2: Nebula Clouds ----
+    CLOUD_CONFIGS.forEach((cfg, i) => {
+      const matRef = cloudRefs.current[i];
+      const meshRef = cloudMeshRefs.current[i];
+      if (matRef) matRef.time = time;
+      if (meshRef && !isCollapsingRef.current) {
+        const driftX = Math.cos(time * cfg.orbitSpeed + cfg.orbitPhase) * 0.2;
+        const driftZ = Math.sin(time * cfg.orbitSpeed + cfg.orbitPhase) * 0.2;
+        meshRef.position.set(driftX, 0, driftZ);
+      }
+    });
 
-      let radius = particleSystem.orbitRadii[i];
-      const initialRadius = particleSystem.initialOrbitRadii[i];
+    // ---- Layer 3: Core Energy Sphere ----
+    if (coreRef.current && !isCollapsingRef.current) {
+      const corePulse = 1.0 + Math.sin(time * 3 * Math.PI * 2) * 0.08;
+      coreRef.current.scale.setScalar(corePulse);
+      const mat = coreRef.current.material as THREE.MeshBasicMaterial;
+      mat.opacity = hovered ? 0.7 : 0.5;
+    }
 
-      // Apply collapse phases
-      if (collapseProgress > 0) {
-        if (collapseProgress < 0.3) {
-          // Phase 1 (0-0.3): Containment Pulse - tighten particles inward
-          const phase1Progress = collapseProgress / 0.3;
-          radius = initialRadius * (1 - phase1Progress * 0.5);
-        } else if (collapseProgress < 0.65) {
-          // Phase 2 (0.3-0.65): Dispersal - scatter particles outward
-          const phase2Progress = (collapseProgress - 0.3) / 0.35;
-          radius = initialRadius * (1 + phase2Progress * 3);
-        } else {
-          // Phase 3 (0.65-1.0): Fade Out - scatter to large radius
-          const phase3Progress = (collapseProgress - 0.65) / 0.35;
-          radius = initialRadius * (1 + (0.35 + phase3Progress * 4));
+    // ---- Layer 4: Lightning Arcs — regenerate as TubeGeometry ----
+    const outerRegenRate = hovered ? 2 : 4; // frames between regen
+    const coreRegenRate = hovered ? 1 : 3;
+
+    if (frameCountRef.current % outerRegenRate === 0 && outerArcsGroupRef.current) {
+      const newGeos: THREE.TubeGeometry[] = [];
+      // Dispose old geometries
+      outerArcGeos.forEach(g => g.dispose());
+
+      for (let i = 0; i < OUTER_ARC_COUNT; i++) {
+        const geo = generateOuterArc(i, time);
+        newGeos.push(geo);
+      }
+      setOuterArcGeos(newGeos);
+    }
+
+    if (frameCountRef.current % coreRegenRate === 0 && coreArcsGroupRef.current) {
+      const newGeos: THREE.TubeGeometry[] = [];
+      coreArcGeos.forEach(g => g.dispose());
+
+      for (let i = 0; i < CORE_ARC_COUNT; i++) {
+        const geo = generateCoreArc(i, time);
+        newGeos.push(geo);
+      }
+      setCoreArcGeos(newGeos);
+    }
+
+    // ---- Layer 6: Shield Rings ----
+    if (ring1Ref.current) ring1Ref.current.time = time;
+    if (ring2Ref.current) ring2Ref.current.time = time;
+    if (ring1MeshRef.current) ring1MeshRef.current.rotation.z += 0.5 * delta;
+    if (ring2MeshRef.current) ring2MeshRef.current.rotation.x += 0.5 * delta;
+
+    // Ring opacity
+    const ringOpacity = hovered ? 0.4 : 0.15;
+    if (ring1Ref.current) ring1Ref.current.opacity = ringOpacity;
+    if (ring2Ref.current) ring2Ref.current.opacity = ringOpacity;
+
+    // ---- Collapse Animation ----
+    if (isCollapsingRef.current && cp < 1) {
+      if (cp < 0.3) {
+        // Phase 1: Containment pulse — arcs converge, core brightens
+        const p1 = cp / 0.3;
+        if (coreRef.current) {
+          coreRef.current.scale.setScalar(1 + p1 * 1.5);
+          (coreRef.current.material as THREE.MeshBasicMaterial).opacity = 0.5 + p1 * 0.5;
         }
-      }
-
-      // Update orbit angle (faster near center = vortex)
-      const speedMultiplier = 1 - (radius / size) * 0.6;
-      particleSystem.orbitAngles[i] += particleSystem.orbitSpeeds[i] * speedMultiplier * delta;
-
-      const angle = particleSystem.orbitAngles[i];
-      const vertOff = particleSystem.verticalOffsets[i];
-
-      // Vortex: particles orbit in XZ plane with Y offset + turbulence
-      pos[i3] = Math.cos(angle) * radius;
-      pos[i3 + 1] = vertOff + Math.sin(time * 2 + i * 0.1) * size * 0.08;
-      pos[i3 + 2] = Math.sin(angle) * radius;
-    }
-    posAttr.needsUpdate = true;
-
-    // Particle opacity during collapse
-    if (collapseProgress > 0.65) {
-      const phase3Progress = (collapseProgress - 0.65) / 0.35;
-      pointsOpacity.opacity = 0.7 * (1 - phase3Progress);
-    } else {
-      pointsOpacity.opacity = 0.7;
-    }
-
-    // Core glow pulse and collapse animation
-    if (coreGlowRef.current) {
-      let coreOpacity = 0.3;
-      let coreScale = 1.0;
-
-      if (collapseProgress > 0) {
-        if (collapseProgress < 0.3) {
-          // Phase 1: expand and brighten
-          const phase1Progress = collapseProgress / 0.3;
-          coreScale = 1.0 + phase1Progress * 1.5;
-          coreOpacity = 0.3 + phase1Progress * 0.5;
-        } else if (collapseProgress < 0.65) {
-          // Phase 2: maintain then dim
-          const phase2Progress = (collapseProgress - 0.3) / 0.35;
-          coreScale = 2.5 * (1 - phase2Progress * 0.2);
-          coreOpacity = 0.8 * (1 - phase2Progress);
-        } else {
-          // Phase 3: fade
-          coreOpacity = 0;
-          coreScale = 1.0;
+        if (flashRef.current) {
+          flashRef.current.visible = true;
+          flashRef.current.scale.setScalar(1 + p1 * 2);
+          (flashRef.current.material as THREE.MeshBasicMaterial).opacity = 0.6 * (1 - p1);
         }
-      } else {
-        const basePulse = Math.sin(time * 3) * 0.15 + 0.85;
-        coreOpacity = isHoveredRef.current ? 0.5 * basePulse : 0.3 * basePulse;
-        coreScale = isHoveredRef.current ? 1.3 : 1.0;
-      }
+      } else if (cp < 0.65) {
+        // Phase 2: Dispersal — clouds scatter, particles fly out
+        const p2 = (cp - 0.3) / 0.35;
+        if (flashRef.current) flashRef.current.visible = false;
 
-      const mat = coreGlowRef.current.material as THREE.MeshBasicMaterial;
-      mat.opacity = coreOpacity;
-      coreGlowRef.current.scale.setScalar(coreScale);
-    }
-
-    // Flash sphere for containment pulse
-    if (flashRef.current) {
-      if (collapseProgress > 0 && collapseProgress < 0.3) {
-        flashRef.current.visible = true;
-        const phase1Progress = collapseProgress / 0.3;
-        flashRef.current.scale.setScalar(1.0 + phase1Progress * 2.0);
-        const flashMat = flashRef.current.material as THREE.MeshBasicMaterial;
-        flashMat.opacity = 0.6 * (1 - phase1Progress);
-      } else {
-        flashRef.current.visible = false;
-      }
-    }
-
-    // Outer glow
-    if (outerGlowRef.current) {
-      const mat = outerGlowRef.current.material as THREE.MeshBasicMaterial;
-
-      if (collapseProgress > 0.65) {
-        const phase3Progress = (collapseProgress - 0.65) / 0.35;
-        mat.opacity = 0.06 * (1 - phase3Progress);
-      } else {
-        mat.opacity = isHoveredRef.current ? 0.12 : 0.06;
-      }
-
-      const glowPulse = Math.sin(time * 1.5) * 0.05;
-      outerGlowRef.current.scale.setScalar(1.0 + glowPulse);
-    }
-
-    // Plasma spheres
-    if (plasmaGeometry.spheres.length > 0) {
-      plasmaGeometry.spheres.forEach((sphere, idx) => {
-        if (idx >= plasmaSpheresRef.current.length) return;
-
-        const mesh = plasmaSpheresRef.current[idx];
-        const phase = (idx / plasmaGeometry.count) * Math.PI * 2;
-        const driftX = Math.cos(time * sphere.driftSpeed + phase) * sphere.driftRadius;
-        const driftZ = Math.sin(time * sphere.driftSpeed + phase) * sphere.driftRadius;
-
-        mesh.position.set(sphere.offsetX + driftX, sphere.offsetY, sphere.offsetZ + driftZ);
-
-        const mat = mesh.material as THREE.MeshBasicMaterial;
-        const baseSine = Math.sin(time * 2 + idx * Math.PI / 2);
-        let opacity = 0.04 + (baseSine * 0.5 + 0.5) * 0.08;
-
-        // Scatter plasma clouds during dispersal
-        if (collapseProgress > 0.6 && collapseProgress < 1.0) {
-          const dispersalProgress = (collapseProgress - 0.6) / 0.4;
-          const scatterDistance = 3.0 * dispersalProgress;
-          mesh.scale.setScalar(1.0 + scatterDistance);
-          opacity *= (1 - dispersalProgress);
-        } else {
-          mesh.scale.setScalar(1.0);
-        }
-
-        mat.opacity = opacity;
-      });
-    }
-
-    // Animated lightning arcs (outer arcs)
-    if (arcsRef.current) {
-      let arcOpacity = isHoveredRef.current ? 0.6 : 0.2;
-
-      // During phase 1 of collapse, intensify arcs
-      if (collapseProgress > 0 && collapseProgress < 0.3) {
-        arcOpacity = 0.8;
-      } else if (collapseProgress > 0.3 && collapseProgress < 0.65) {
-        // Phase 2: fade arcs
-        const phase2Progress = (collapseProgress - 0.3) / 0.35;
-        arcOpacity = 0.8 * (1 - phase2Progress);
-      } else if (collapseProgress >= 0.65) {
-        arcOpacity = 0;
-      }
-
-      arcsRef.current.children.forEach((child, arcIndex) => {
-        if (!(child instanceof THREE.LineSegments)) return;
-
-        const arcPos = child.geometry.attributes.position.array as Float32Array;
-        const segCount = arcData.segmentsPerArc;
-
-        // Generate new arc path - 10% chance normally, every frame during phase 1
-        const shouldRegenerate = (collapseProgress > 0 && collapseProgress < 0.3) || Math.random() < 0.3;
-
-        if (shouldRegenerate) {
-          const startTheta = (arcIndex / arcData.outerArcCount) * Math.PI * 2 + time * 0.5;
-          const startRadius = size * (0.2 + Math.random() * 0.3);
-          const endRadius = size * (0.6 + Math.random() * 0.4);
-          const endTheta = startTheta + (Math.random() - 0.5) * Math.PI;
-
-          for (let s = 0; s < segCount; s++) {
-            const t = s / (segCount - 1);
-            const nextT = (s + 1) / segCount;
-
-            const r1 = startRadius + (endRadius - startRadius) * t;
-            const a1 = startTheta + (endTheta - startTheta) * t;
-            const jitter1 = (Math.random() - 0.5) * size * 0.15;
-
-            const r2 = startRadius + (endRadius - startRadius) * nextT;
-            const a2 = startTheta + (endTheta - startTheta) * nextT;
-            const jitter2 = (Math.random() - 0.5) * size * 0.15;
-
-            const idx = s * 6;
-            arcPos[idx] = Math.cos(a1) * r1 + jitter1;
-            arcPos[idx + 1] = (Math.random() - 0.5) * size * 0.3;
-            arcPos[idx + 2] = Math.sin(a1) * r1 + jitter1;
-            arcPos[idx + 3] = Math.cos(a2) * r2 + jitter2;
-            arcPos[idx + 4] = (Math.random() - 0.5) * size * 0.3;
-            arcPos[idx + 5] = Math.sin(a2) * r2 + jitter2;
+        CLOUD_CONFIGS.forEach((_, i) => {
+          const mesh = cloudMeshRefs.current[i];
+          if (mesh) {
+            mesh.scale.setScalar(1 + p2 * 3);
+            const mat = mesh.material as any;
+            if (mat && mat.opacity !== undefined) mat.opacity = 0.12 * (1 - p2);
           }
-          child.geometry.attributes.position.needsUpdate = true;
+        });
+
+        if (coreRef.current) {
+          coreRef.current.scale.setScalar(2.5 * (1 - p2));
+          (coreRef.current.material as THREE.MeshBasicMaterial).opacity = 1.0 * (1 - p2);
         }
 
-        const mat = child.material as THREE.LineBasicMaterial;
-        mat.opacity = arcOpacity * (0.5 + Math.random() * 0.5);
-      });
-    }
-
-    // Core arcs (emanate from center)
-    if (coreArcsRef.current) {
-      let coreArcOpacity = isHoveredRef.current ? 0.3 : 0.1;
-
-      if (collapseProgress > 0 && collapseProgress < 0.3) {
-        coreArcOpacity = 0.9;
-      } else if (collapseProgress > 0.3 && collapseProgress < 0.65) {
-        const phase2Progress = (collapseProgress - 0.3) / 0.35;
-        coreArcOpacity = 0.9 * (1 - phase2Progress);
-      } else if (collapseProgress >= 0.65) {
-        coreArcOpacity = 0;
+        if (emFieldMeshRef.current) {
+          emFieldMeshRef.current.scale.setScalar(1 + p2 * 2);
+        }
+      } else {
+        // Phase 3: Fade — everything goes transparent
+        const p3 = (cp - 0.65) / 0.35;
+        if (emFieldRef.current) emFieldRef.current.opacity = (1 - p3);
+        if (coreRef.current) {
+          (coreRef.current.material as THREE.MeshBasicMaterial).opacity = 0;
+        }
       }
+    }
 
-      coreArcsRef.current.children.forEach((child, arcIndex) => {
-        if (!(child instanceof THREE.LineSegments)) return;
-
-        const arcPos = child.geometry.attributes.position.array as Float32Array;
-        const segCount = arcData.segmentsPerArc;
-
-        const shouldRegenerate = (collapseProgress > 0 && collapseProgress < 0.3) || Math.random() < 0.2;
-
-        if (shouldRegenerate) {
-          const endTheta = (arcIndex / arcData.coreArcCount) * Math.PI * 2 + time * 0.3;
-          const endRadius = size * (0.8 + Math.random() * 0.4);
-
-          for (let s = 0; s < segCount; s++) {
-            const t = s / (segCount - 1);
-            const nextT = (s + 1) / segCount;
-
-            const r1 = endRadius * t;
-            const a1 = endTheta;
-            const jitter1 = (Math.random() - 0.5) * size * 0.1;
-
-            const r2 = endRadius * nextT;
-            const a2 = endTheta;
-            const jitter2 = (Math.random() - 0.5) * size * 0.1;
-
-            const idx = s * 6;
-            arcPos[idx] = Math.cos(a1) * r1 + jitter1;
-            arcPos[idx + 1] = (Math.random() - 0.5) * size * 0.2;
-            arcPos[idx + 2] = Math.sin(a1) * r1 + jitter1;
-            arcPos[idx + 3] = Math.cos(a2) * r2 + jitter2;
-            arcPos[idx + 4] = (Math.random() - 0.5) * size * 0.2;
-            arcPos[idx + 5] = Math.sin(a2) * r2 + jitter2;
-          }
-          child.geometry.attributes.position.needsUpdate = true;
-        }
-
-        const mat = child.material as THREE.LineBasicMaterial;
-        // Mix white-pink color
-        const colorMix = 0.3 + Math.sin(time * 4 + arcIndex) * 0.7;
-        const white = new THREE.Color(0xffffff);
-        const pink = new THREE.Color('#ec4899');
-        const mixedColor = new THREE.Color().lerpColors(white, pink, colorMix);
-        mat.color = mixedColor;
-        mat.opacity = coreArcOpacity * (0.5 + Math.random() * 0.5);
+    // Reset after collapse
+    if (isCollapsingRef.current && cp >= 1) {
+      isCollapsingRef.current = false;
+      if (coreRef.current) {
+        coreRef.current.scale.setScalar(1);
+        (coreRef.current.material as THREE.MeshBasicMaterial).opacity = 0.5;
+      }
+      if (emFieldRef.current) emFieldRef.current.opacity = 1.0;
+      if (emFieldMeshRef.current) emFieldMeshRef.current.scale.setScalar(1);
+      CLOUD_CONFIGS.forEach((_, i) => {
+        const mesh = cloudMeshRefs.current[i];
+        if (mesh) mesh.scale.setScalar(1);
       });
     }
 
-    // Targeting brackets
+    // Brackets
     if (bracketsRef.current) {
-      bracketsRef.current.visible = isHoveredRef.current && collapseProgress === 0;
-      if (isHoveredRef.current && collapseProgress === 0) {
-        bracketsRef.current.rotation.z = time * 0.3;
-      }
+      bracketsRef.current.visible = hovered && cp === 0;
+      if (hovered) bracketsRef.current.rotation.z = time * 0.3;
     }
-
-    // Hover scale
-    const targetScale = isHoveredRef.current && collapseProgress === 0 ? 1.1 : 1.0;
-    groupRef.current.scale.lerp(
-      new THREE.Vector3(targetScale, targetScale, targetScale),
-      delta * 5
-    );
   });
 
   return (
     <group ref={groupRef} position={position}>
-      {/* Particle vortex cloud */}
-      <points
-        ref={particlesRef}
-        geometry={particleSystem.geometry}
+      {/* ===== Layer 1: Outer Electromagnetic Field ===== */}
+      <mesh
+        ref={emFieldMeshRef}
         onPointerOver={handlePointerOver}
         onPointerOut={handlePointerOut}
         onClick={handleClick}
       >
-        <pointsMaterial
-          size={0.1}
-          vertexColors
+        <sphereGeometry args={[size * 1.6, 24, 24]} />
+        <volumetricGlowMaterial
+          ref={emFieldRef}
+          color={color}
+          noiseScale={3.0}
+          noiseSpeed={1.2}
+          rimPower={2.0}
+          glowStrength={0.4}
+          opacity={1.0}
           transparent
-          opacity={0.7}
-          sizeAttenuation
-          blending={THREE.AdditiveBlending}
+          side={THREE.BackSide}
           depthWrite={false}
-        />
-      </points>
-
-      {/* Particle trail effect */}
-      <points
-        ref={particleTrailRef}
-        geometry={trailGeometry.geometry}
-      >
-        <pointsMaterial
-          size={0.06}
-          vertexColors
-          transparent
-          opacity={0.5}
-          sizeAttenuation
           blending={THREE.AdditiveBlending}
-          depthWrite={false}
+          toneMapped={false}
         />
-      </points>
+      </mesh>
 
-      {/* Plasma cloud spheres */}
-      {plasmaGeometry.spheres.map((sphere, i) => (
+      {/* ===== Layer 2: Volumetric Nebula Cloud (5 spheres) ===== */}
+      {CLOUD_CONFIGS.map((cfg, i) => (
         <mesh
-          key={`plasma-${i}`}
-          ref={(el) => {
-            if (el) plasmaSpheresRef.current[i] = el;
-          }}
+          key={`cloud-${i}`}
+          ref={(el) => { if (el) cloudMeshRefs.current[i] = el; }}
         >
-          <sphereGeometry args={[sphere.radius, 12, 12]} />
-          <meshBasicMaterial
-            color={['#a855f7', '#c084fc', '#ec4899'][i % 3]}
+          <icosahedronGeometry args={[size * (0.5 + i * 0.1), 3]} />
+          <volumetricGlowMaterial
+            ref={(el: any) => { if (el) cloudRefs.current[i] = el; }}
+            color={cfg.color}
+            noiseScale={cfg.noiseScale}
+            noiseSpeed={0.6}
+            rimPower={2.0}
+            glowStrength={0.3}
+            opacity={0.12}
             transparent
-            opacity={0.08}
-            blending={THREE.AdditiveBlending}
-            depthWrite={false}
             side={THREE.DoubleSide}
+            depthWrite={false}
+            blending={THREE.AdditiveBlending}
+            toneMapped={false}
           />
         </mesh>
       ))}
 
-      {/* Core glow */}
-      <mesh ref={coreGlowRef}>
-        <sphereGeometry args={[size * 0.3, 16, 16]} />
+      {/* ===== Layer 3: Core Energy Sphere ===== */}
+      <mesh ref={coreRef}>
+        <sphereGeometry args={[size * 0.35, 24, 24]} />
         <meshBasicMaterial
-          color={color}
+          color="#ffffff"
           transparent
-          opacity={0.3}
+          opacity={0.5}
           blending={THREE.AdditiveBlending}
           depthWrite={false}
+          toneMapped={false}
         />
       </mesh>
 
-      {/* Flash sphere for containment pulse */}
+      {/* ===== Layer 4: Lightning Arc System ===== */}
+
+      {/* Outer arcs (8) — TubeGeometry via generateLightningPath */}
+      <group ref={outerArcsGroupRef}>
+        {outerArcGeos.map((geo, i) => (
+          <mesh key={`outer-arc-${i}-${frameCountRef.current}`} geometry={geo}>
+            <meshBasicMaterial
+              color="#ec4899"
+              transparent
+              opacity={isHoveredRef.current ? 0.7 : 0.35}
+              blending={THREE.AdditiveBlending}
+              depthWrite={false}
+              toneMapped={false}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+        ))}
+      </group>
+
+      {/* Core arcs (4) — thicker, white-pink */}
+      <group ref={coreArcsGroupRef}>
+        {coreArcGeos.map((geo, i) => (
+          <mesh key={`core-arc-${i}-${frameCountRef.current}`} geometry={geo}>
+            <meshBasicMaterial
+              color="#ffffff"
+              transparent
+              opacity={isHoveredRef.current ? 0.6 : 0.3}
+              blending={THREE.AdditiveBlending}
+              depthWrite={false}
+              toneMapped={false}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+        ))}
+      </group>
+
+      {/* ===== Layer 5: Vortex Particles + Electric Sparks ===== */}
+
+      {/* Vortex particles — 500 orbiting in vortex pattern */}
+      <InstancedParticleSystem
+        count={500}
+        color="#a855f7"
+        colorEnd="#ec4899"
+        size={0.06}
+        lifespan={[2.0, 4.0]}
+        spawnRadius={size * 0.8}
+        emitRate={120}
+        loop
+        onTick={vortexTick}
+      />
+
+      {/* Electric sparks — rapid pop, white, short lifespan */}
+      <InstancedParticleSystem
+        count={60}
+        color="#ffffff"
+        size={0.04}
+        lifespan={[0.1, 0.3]}
+        velocityMin={[-2, -2, -2]}
+        velocityMax={[2, 2, 2]}
+        spawnRadius={size * 0.5}
+        emitRate={20}
+        loop
+      />
+
+      {/* ===== Layer 6: Energy Shield Rings ===== */}
+
+      {/* Ring 1 — XY plane */}
+      <mesh ref={ring1MeshRef}>
+        <torusGeometry args={[size * 1.2, 0.04, 8, 48]} />
+        <energyFlowMaterial
+          ref={ring1Ref}
+          color1="#a855f7"
+          color2="#ec4899"
+          flowSpeed={1.5}
+          stripeCount={8.0}
+          opacity={0.15}
+          transparent
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+          toneMapped={false}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+
+      {/* Ring 2 — XZ plane (perpendicular) */}
+      <mesh ref={ring2MeshRef} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[size * 1.2, 0.04, 8, 48]} />
+        <energyFlowMaterial
+          ref={ring2Ref}
+          color1="#c084fc"
+          color2="#ec4899"
+          flowSpeed={1.5}
+          stripeCount={8.0}
+          opacity={0.15}
+          transparent
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+          toneMapped={false}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+
+      {/* ===== Interaction: Flash sphere + Brackets ===== */}
       <mesh ref={flashRef} visible={false}>
         <sphereGeometry args={[size * 0.5, 16, 16]} />
         <meshBasicMaterial
@@ -595,63 +519,10 @@ export default function IonStorm({
           opacity={0.6}
           blending={THREE.AdditiveBlending}
           depthWrite={false}
+          toneMapped={false}
         />
       </mesh>
 
-      {/* Outer nebula glow */}
-      <mesh ref={outerGlowRef}>
-        <sphereGeometry args={[size * 1.4, 16, 16]} />
-        <meshBasicMaterial
-          color={color}
-          transparent
-          opacity={0.06}
-          side={THREE.BackSide}
-          depthWrite={false}
-          blending={THREE.AdditiveBlending}
-        />
-      </mesh>
-
-      {/* Animated lightning arcs */}
-      <group ref={arcsRef}>
-        {Array.from({ length: arcData.outerArcCount }).map((_, i) => (
-          <lineSegments key={`arc-${i}`}>
-            <bufferGeometry>
-              <bufferAttribute
-                attach="attributes-position"
-                args={[arcData.arcs[i], 3]}
-              />
-            </bufferGeometry>
-            <lineBasicMaterial
-              color="#ec4899"
-              transparent
-              opacity={0.3}
-              blending={THREE.AdditiveBlending}
-            />
-          </lineSegments>
-        ))}
-      </group>
-
-      {/* Core arcs (emanate from center) */}
-      <group ref={coreArcsRef}>
-        {Array.from({ length: arcData.coreArcCount }).map((_, i) => (
-          <lineSegments key={`core-arc-${i}`}>
-            <bufferGeometry>
-              <bufferAttribute
-                attach="attributes-position"
-                args={[arcData.coreArcs[i], 3]}
-              />
-            </bufferGeometry>
-            <lineBasicMaterial
-              color="#ffffff"
-              transparent
-              opacity={0.3}
-              blending={THREE.AdditiveBlending}
-            />
-          </lineSegments>
-        ))}
-      </group>
-
-      {/* Targeting brackets */}
       <group ref={bracketsRef} visible={false}>
         <lineSegments geometry={bracketGeometry}>
           <lineBasicMaterial color={color} opacity={0.8} transparent />
@@ -667,14 +538,6 @@ export default function IonStorm({
           />
         </mesh>
       </group>
-
-      {/* Point light for local illumination */}
-      <pointLight
-        color={color}
-        intensity={0.8}
-        distance={size * 6}
-        decay={2}
-      />
     </group>
   );
 }

@@ -44,9 +44,8 @@ export default function CaptainNova({
   return (
     <group ref={groupRef} position={position} name="captain-nova">
       <ProjectionBase auroraColor1={colors[0]} auroraColor2={colors[1]} />
+      {/* Colors updated via useFrame + updateHologramUniforms above */}
       <Character
-        auroraColor1={colors[0]}
-        auroraColor2={colors[1]}
         geometryConfig={geometryConfig}
         materialRef={materialRef}
         onCharacterReady={handleCharacterReady}

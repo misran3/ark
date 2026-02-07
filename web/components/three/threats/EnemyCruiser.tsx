@@ -3,6 +3,10 @@
 import { useRef, useMemo, useCallback, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import '@/lib/materials/VolumetricGlowMaterial';
+import '@/lib/materials/EnergyFlowMaterial';
+import '@/lib/materials/HolographicMaterial';
+import { InstancedParticleSystem, TrailRibbon } from '@/lib/particles';
 
 interface EnemyCruiserProps {
   position: [number, number, number];
@@ -12,57 +16,64 @@ interface EnemyCruiserProps {
   onClick?: () => void;
 }
 
+// Running light positions: [x, y, z, blinkPhase]
+const LIGHT_CONFIGS = [
+  { pos: [-0.15, 0, 0.8], phase: 0.0, color: '#dc2626' },    // front-port
+  { pos: [0.15, 0, 0.8], phase: 0.2, color: '#dc2626' },     // front-starboard
+  { pos: [-0.2, 0.15, 0], phase: 0.4, color: '#dc2626' },    // mid-dorsal-port
+  { pos: [0.2, 0.15, 0], phase: 0.6, color: '#dc2626' },     // mid-dorsal-starboard
+  { pos: [-0.15, 0, -0.8], phase: 0.8, color: '#991b1b' },   // rear-port
+  { pos: [0.15, 0, -0.8], phase: 1.0, color: '#991b1b' },    // rear-starboard
+  { pos: [-0.5, 0, 0.1], phase: 0.0, color: '#dc2626' },     // wing-tip-port
+  { pos: [0.5, 0, 0.1], phase: 0.0, color: '#dc2626' },      // wing-tip-starboard
+];
+
 /**
- * Procedurally generated hostile enemy cruiser with:
- * - Hull (elongated box) + nose cone (cone geometry)
- * - 2 engine pods (cylinders) with red particle exhaust trails
- * - Rotating weapon turrets (spheres/cylinders)
- * - Red emissive pulsing glow + hostile running lights
- * - Lateral weaving approach pattern
- * - Turret tracking toward cursor on hover
- * - Red targeting brackets/reticle on hover
- * - Multi-phase click deflection animation (2.5s total)
- * - Enhanced aggressive evasive movement with multi-axis weaving
- * - Weapon charge glow intensification during hover
- * - Particle trail for engine exhaust
+ * Cinematic enemy cruiser with 7-layer composition:
+ * 1. Outer Threat Aura (VolumetricGlowMaterial)
+ * 2. Multi-part Hull (fuselage + armor plates + wing pylons + bridge)
+ * 3. Weapon Turrets with EnergyFlowMaterial capacitor rings
+ * 4. Engine Section (InstancedParticleSystem + TrailRibbon per engine)
+ * 5. Running Lights (sequential blink sweep)
+ * 6. Shield Effect (HolographicMaterial, hover-only)
+ * 7. Targeting Laser (hover-only)
  */
 export default function EnemyCruiser({
   position,
   size = 1.2,
-  color = '#991b1b', // Crimson red
+  color = '#991b1b',
   onHover,
   onClick,
 }: EnemyCruiserProps) {
   const groupRef = useRef<THREE.Group>(null);
   const hullRef = useRef<THREE.Mesh>(null);
-  const noseRef = useRef<THREE.Mesh>(null);
-  const leftEngineRef = useRef<THREE.Group>(null);
-  const rightEngineRef = useRef<THREE.Group>(null);
   const leftTurretRef = useRef<THREE.Group>(null);
   const rightTurretRef = useRef<THREE.Group>(null);
-  const runningLightsRef = useRef<THREE.Group>(null);
+  const leftCapRingRef = useRef<any>(null);
+  const rightCapRingRef = useRef<any>(null);
+  const leftChargeRef = useRef<THREE.Mesh>(null);
+  const rightChargeRef = useRef<THREE.Mesh>(null);
+  const shieldRef = useRef<any>(null);
+  const shieldMeshRef = useRef<THREE.Mesh>(null);
+  const laserRef = useRef<THREE.Mesh>(null);
+  const auraRef = useRef<any>(null);
+  const lightRefs = useRef<(THREE.Mesh | null)[]>([]);
+  const leftEngineGroupRef = useRef<THREE.Group>(null);
+  const rightEngineGroupRef = useRef<THREE.Group>(null);
   const isHoveredRef = useRef(false);
-
-  // Collapse animation state (for click deflection)
   const isCollapsingRef = useRef(false);
   const collapseStartTimeRef = useRef(0);
-
-  // Hover effects
   const bracketsRef = useRef<THREE.Group>(null);
   const flashSphereRef = useRef<THREE.Mesh>(null);
   const shockwaveRingRef = useRef<THREE.Mesh>(null);
 
-  // Pre-compute targeting bracket geometry (red variant for enemy cruiser)
+  // Targeting bracket geometry
   const bracketGeometry = useMemo(() => {
     const s = size * 1.8;
     const len = s * 0.35;
     const points: number[] = [];
-
     const corners = [
-      [-s, s, 0],
-      [s, s, 0],
-      [s, -s, 0],
-      [-s, -s, 0],
+      [-s, s, 0], [s, s, 0], [s, -s, 0], [-s, -s, 0],
     ];
     const dirs = [
       [[1, 0, 0], [0, -1, 0]],
@@ -70,7 +81,6 @@ export default function EnemyCruiser({
       [[-1, 0, 0], [0, 1, 0]],
       [[1, 0, 0], [0, 1, 0]],
     ];
-
     for (let c = 0; c < 4; c++) {
       const [cx, cy, cz] = corners[c];
       for (const [dx, dy, dz] of dirs[c]) {
@@ -78,197 +88,13 @@ export default function EnemyCruiser({
         points.push(cx + dx * len, cy + dy * len, cz + dz * len);
       }
     }
-
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(points, 3));
     return geo;
   }, [size]);
 
-  // Engine trail component - reuses AsteroidTrail pattern but with red colors
-  const EngineTrail = useMemo(() => {
-    return function EngineTrailComponent({ count = 60, spread = 0.3, size: trailSize = 0.05 }) {
-      const pointsRef = useRef<THREE.Points>(null);
-      const trailPointsRef = useRef<THREE.Points>(null);
-      const lifetimesRef = useRef<Float32Array>(null!);
-      const velocitiesRef = useRef<Float32Array>(null!);
-      const maxLifetimesRef = useRef<Float32Array>(null!);
-      const prevPositionsRef = useRef<Float32Array>(null!);
-
-      const geometry = useMemo(() => {
-        const geo = new THREE.BufferGeometry();
-        const positions = new Float32Array(count * 3);
-        const colors = new Float32Array(count * 3);
-        const sizes = new Float32Array(count);
-        const lifetimes = new Float32Array(count);
-        const velocities = new Float32Array(count * 3);
-        const maxLifetimes = new Float32Array(count);
-        const prevPositions = new Float32Array(count * 3);
-
-        for (let i = 0; i < count; i++) {
-          lifetimes[i] = -Math.random() * 1.5;
-          maxLifetimes[i] = 1.0 + Math.random() * 0.8;
-
-          velocities[i * 3] = (Math.random() - 0.5) * spread;
-          velocities[i * 3 + 1] = (Math.random() - 0.5) * spread;
-          velocities[i * 3 + 2] = 0.4 + Math.random() * 0.6;
-
-          // Red color (#dc2626)
-          colors[i * 3] = 0.86;
-          colors[i * 3 + 1] = 0.15;
-          colors[i * 3 + 2] = 0.15;
-
-          sizes[i] = trailSize * (0.5 + Math.random() * 0.5);
-        }
-
-        geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-        geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-
-        lifetimesRef.current = lifetimes;
-        velocitiesRef.current = velocities;
-        maxLifetimesRef.current = maxLifetimes;
-        prevPositionsRef.current = prevPositions;
-
-        return geo;
-      }, [count, spread, trailSize]);
-
-      // Trail geometry
-      const trailGeometry = useMemo(() => {
-        const geo = new THREE.BufferGeometry();
-        const positions = new Float32Array(count * 3);
-        const colors = new Float32Array(count * 3);
-        const sizes = new Float32Array(count);
-
-        for (let i = 0; i < count; i++) {
-          colors[i * 3] = 0.60;
-          colors[i * 3 + 1] = 0.08;
-          colors[i * 3 + 2] = 0.08;
-          sizes[i] = trailSize * 0.6 * (0.5 + Math.random() * 0.5);
-        }
-
-        geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-        geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-
-        return geo;
-      }, [count, trailSize]);
-
-      useEffect(() => {
-        return () => {
-          geometry.dispose();
-          trailGeometry.dispose();
-        };
-      }, [geometry, trailGeometry]);
-
-      useFrame((_, delta) => {
-        if (!geometry) return;
-
-        const posAttr = geometry.attributes.position;
-        const colorAttr = geometry.attributes.color;
-        const sizeAttr = geometry.attributes.size;
-        const pos = posAttr.array as Float32Array;
-        const col = colorAttr.array as Float32Array;
-        const sz = sizeAttr.array as Float32Array;
-        const lifetimes = lifetimesRef.current;
-        const velocities = velocitiesRef.current;
-        const maxLifetimes = maxLifetimesRef.current;
-
-        for (let i = 0; i < count; i++) {
-          lifetimes[i] += delta;
-
-          if (lifetimes[i] >= maxLifetimes[i]) {
-            lifetimes[i] = 0;
-            pos[i * 3] = (Math.random() - 0.5) * 0.1;
-            pos[i * 3 + 1] = (Math.random() - 0.5) * 0.1;
-            pos[i * 3 + 2] = (Math.random() - 0.5) * 0.1;
-
-            velocities[i * 3] = (Math.random() - 0.5) * spread;
-            velocities[i * 3 + 1] = (Math.random() - 0.5) * spread;
-            velocities[i * 3 + 2] = 0.4 + Math.random() * 0.6;
-
-            maxLifetimes[i] = 1.0 + Math.random() * 0.8;
-          }
-
-          if (lifetimes[i] < 0) continue;
-
-          const t = lifetimes[i] / maxLifetimes[i];
-
-          // Store previous position
-          prevPositionsRef.current[i * 3] = pos[i * 3];
-          prevPositionsRef.current[i * 3 + 1] = pos[i * 3 + 1];
-          prevPositionsRef.current[i * 3 + 2] = pos[i * 3 + 2];
-
-          pos[i * 3] += velocities[i * 3] * delta;
-          pos[i * 3 + 1] += velocities[i * 3 + 1] * delta;
-          pos[i * 3 + 2] += velocities[i * 3 + 2] * delta;
-
-          // Red -> dark red -> near-black
-          if (t < 0.5) {
-            const p = t / 0.5;
-            col[i * 3] = 0.86 - p * 0.36;
-            col[i * 3 + 1] = 0.15 - p * 0.05;
-            col[i * 3 + 2] = 0.15 - p * 0.05;
-          } else {
-            const p = (t - 0.5) / 0.5;
-            col[i * 3] = 0.5 - p * 0.5;
-            col[i * 3 + 1] = 0.1 - p * 0.1;
-            col[i * 3 + 2] = 0.1 - p * 0.1;
-          }
-
-          sz[i] = trailSize * (1.0 - t * 0.6) * (lifetimes[i] > 0 ? 1 : 0);
-        }
-
-        posAttr.needsUpdate = true;
-        colorAttr.needsUpdate = true;
-        sizeAttr.needsUpdate = true;
-
-        // Update trail geometry
-        if (trailPointsRef.current) {
-          const trailPosAttr = trailPointsRef.current.geometry.attributes.position;
-          const trailPos = trailPosAttr.array as Float32Array;
-          for (let i = 0; i < count; i++) {
-            const i3 = i * 3;
-            trailPos[i3] = prevPositionsRef.current[i3];
-            trailPos[i3 + 1] = prevPositionsRef.current[i3 + 1];
-            trailPos[i3 + 2] = prevPositionsRef.current[i3 + 2];
-          }
-          trailPosAttr.needsUpdate = true;
-        }
-      });
-
-      return (
-        <>
-          <points ref={pointsRef} geometry={geometry}>
-            <pointsMaterial
-              vertexColors
-              transparent
-              depthWrite={false}
-              blending={THREE.AdditiveBlending}
-              sizeAttenuation
-              size={trailSize}
-            />
-          </points>
-          <points ref={trailPointsRef} geometry={trailGeometry}>
-            <pointsMaterial
-              vertexColors
-              transparent
-              depthWrite={false}
-              blending={THREE.AdditiveBlending}
-              sizeAttenuation
-              size={trailSize * 0.6}
-              opacity={0.3}
-            />
-          </points>
-        </>
-      );
-    };
-  }, []);
-
-  // Dispose bracket geometry on unmount
   useEffect(() => {
-    return () => {
-      bracketGeometry.dispose();
-    };
+    return () => { bracketGeometry.dispose(); };
   }, [bracketGeometry]);
 
   const handlePointerOver = useCallback(() => {
@@ -292,424 +118,564 @@ export default function EnemyCruiser({
   useFrame(({ clock, mouse }, delta) => {
     if (!groupRef.current) return;
     const time = clock.getElapsedTime();
-    const elapsedTime = time - collapseStartTimeRef.current;
+    const hovered = isHoveredRef.current;
 
-    // Multi-axis enhanced aggressive evasive movement
-    if (groupRef.current.position && !isCollapsingRef.current) {
-      // X: compound sine waves (more erratic)
+    // Set collapse start time
+    if (isCollapsingRef.current && collapseStartTimeRef.current === 0) {
+      collapseStartTimeRef.current = time;
+    }
+
+    let collapseProgress = 0;
+    if (isCollapsingRef.current) {
+      collapseProgress = Math.min((time - collapseStartTimeRef.current) / 2.5, 1);
+    }
+
+    // Evasive movement (compound sine waves)
+    if (!isCollapsingRef.current) {
       groupRef.current.position.x += (Math.sin(time * 1.5) * 0.08 + Math.sin(time * 3.7) * 0.04);
-      // Y: cosine for varied pattern
       groupRef.current.position.y += Math.cos(time * 2.1) * 0.03;
-      // Z: slight forward/backward oscillation
       groupRef.current.position.z += Math.sin(time * 0.8) * 0.02;
 
-      // Banking: rotation.z tilts with lateral movement (proportional to X velocity)
+      // Banking proportional to lateral velocity
       const xVelocity = Math.cos(time * 1.5) * 1.5 * 0.08 + Math.cos(time * 3.7) * 3.7 * 0.04;
       groupRef.current.rotation.z = xVelocity * 0.3;
     }
 
-    // ===== COLLAPSE ANIMATION (2.5s total) =====
-    if (isCollapsingRef.current && elapsedTime < 2.5) {
-      const progress = elapsedTime / 2.5; // 0 to 1
+    // ---- Layer 1: Threat Aura ----
+    if (auraRef.current) {
+      auraRef.current.time = time;
+    }
 
-      // Phase 1 (0-0.8s): Laser Impact
-      if (progress < 0.32) {
-        const phase1Progress = progress / 0.32;
+    // ---- Layer 2: Hull emissive pulse ----
+    if (hullRef.current && !isCollapsingRef.current) {
+      const mat = hullRef.current.material as THREE.MeshStandardMaterial;
+      mat.emissiveIntensity = hovered
+        ? 1.0 + Math.sin(time * 5) * 0.5
+        : 0.3 + Math.sin(time * 2) * 0.15;
+    }
 
-        // Flash sphere appears and scales
+    // ---- Layer 3: Turret tracking + charge glow ----
+    if (hovered && !isCollapsingRef.current) {
+      const cursorX = mouse.x * 2;
+      const cursorY = mouse.y * 2;
+      if (leftTurretRef.current) {
+        leftTurretRef.current.rotation.y = cursorX * 0.5;
+        leftTurretRef.current.rotation.x = cursorY * 0.3;
+      }
+      if (rightTurretRef.current) {
+        rightTurretRef.current.rotation.y = cursorX * 0.5;
+        rightTurretRef.current.rotation.x = cursorY * 0.3;
+      }
+    }
+
+    // Weapon charge glow
+    const chargeIntensity = hovered ? 1.5 : 0.5;
+    if (leftChargeRef.current) {
+      (leftChargeRef.current.material as THREE.MeshBasicMaterial).opacity =
+        chargeIntensity * (0.5 + Math.sin(time * 6) * 0.3);
+    }
+    if (rightChargeRef.current) {
+      (rightChargeRef.current.material as THREE.MeshBasicMaterial).opacity =
+        chargeIntensity * (0.5 + Math.sin(time * 6 + 0.5) * 0.3);
+    }
+
+    // Capacitor ring materials
+    if (leftCapRingRef.current) leftCapRingRef.current.time = time;
+    if (rightCapRingRef.current) rightCapRingRef.current.time = time;
+
+    // ---- Layer 5: Running lights ----
+    const sweepCycle = (time * 2) % (LIGHT_CONFIGS.length * 0.3);
+    for (let i = 0; i < lightRefs.current.length; i++) {
+      const light = lightRefs.current[i];
+      if (!light) continue;
+      const mat = light.material as THREE.MeshBasicMaterial;
+      if (hovered) {
+        // Alert mode: all bright
+        mat.opacity = 0.8;
+      } else {
+        // Sequential sweep blink
+        const lightPhase = LIGHT_CONFIGS[i].phase * LIGHT_CONFIGS.length * 0.3;
+        const dist = Math.abs(sweepCycle - lightPhase);
+        mat.opacity = dist < 0.3 ? 0.8 : 0.15;
+      }
+    }
+
+    // ---- Layer 6: Shield effect ----
+    if (shieldRef.current) {
+      shieldRef.current.time = time;
+      shieldRef.current.opacity = hovered
+        ? 0.08 + Math.sin(time * 12) * 0.06 + 0.06
+        : 0.0;
+    }
+    if (shieldMeshRef.current) {
+      shieldMeshRef.current.visible = hovered;
+    }
+
+    // ---- Layer 7: Targeting laser ----
+    if (laserRef.current) {
+      laserRef.current.visible = hovered && !isCollapsingRef.current;
+      if (hovered) {
+        (laserRef.current.material as THREE.MeshBasicMaterial).opacity =
+          0.3 + Math.sin(time * 8) * 0.1;
+      }
+    }
+
+    // ---- Collapse animation (2.5s) ----
+    if (isCollapsingRef.current && collapseProgress < 1) {
+      // Phase 1 (0–0.32): Laser impact — flash, hull flicker
+      if (collapseProgress < 0.32) {
+        const p1 = collapseProgress / 0.32;
         if (flashSphereRef.current) {
           flashSphereRef.current.visible = true;
-          flashSphereRef.current.scale.setScalar(1 + phase1Progress * 2);
-          const flashMaterial = flashSphereRef.current.material as THREE.MeshBasicMaterial;
-          flashMaterial.opacity = Math.max(0, 1 - phase1Progress * 1.5);
+          flashSphereRef.current.scale.setScalar(1 + p1 * 2);
+          (flashSphereRef.current.material as THREE.MeshBasicMaterial).opacity =
+            Math.max(0, 1 - p1 * 1.5);
         }
-
-        // Hull material flickers emissive white (alternating frames)
-        if (hullRef.current && hullRef.current.material) {
+        if (hullRef.current) {
           const mat = hullRef.current.material as THREE.MeshStandardMaterial;
           mat.emissive.setHex(Math.random() > 0.5 ? 0xffffff : 0xdc2626);
         }
       }
-      // Phase 2 (0.8-1.5s): Hull Explosion
-      else if (progress < 0.6) {
-        const phase2Progress = (progress - 0.32) / 0.28;
-
-        // Explosion particle system (done via shockwave)
+      // Phase 2 (0.32–0.6): Shockwave, emissive flare
+      else if (collapseProgress < 0.6) {
+        const p2 = (collapseProgress - 0.32) / 0.28;
+        if (flashSphereRef.current) flashSphereRef.current.visible = false;
         if (shockwaveRingRef.current) {
           shockwaveRingRef.current.visible = true;
-          shockwaveRingRef.current.scale.setScalar(1 + phase2Progress * 2);
-          const shockMaterial = shockwaveRingRef.current.material as THREE.MeshBasicMaterial;
-          shockMaterial.opacity = Math.max(0, 0.8 * (1 - phase2Progress));
+          shockwaveRingRef.current.scale.setScalar(1 + p2 * 2);
+          (shockwaveRingRef.current.material as THREE.MeshBasicMaterial).opacity =
+            Math.max(0, 0.8 * (1 - p2));
         }
-
-        // Hull sections visually separate (translate outward)
         if (hullRef.current) {
-          const separation = phase2Progress * 0.3;
-          hullRef.current.position.z += separation;
-          hullRef.current.material = new THREE.MeshStandardMaterial({
-            color: '#1f2937',
-            emissive: '#dc2626',
-            emissiveIntensity: 0.5 + phase2Progress * 0.5,
-            metalness: 0.8,
-            roughness: 0.3,
-            toneMapped: false,
-          });
-        }
-
-        // Hide flash sphere
-        if (flashSphereRef.current) {
-          flashSphereRef.current.visible = false;
+          const mat = hullRef.current.material as THREE.MeshStandardMaterial;
+          mat.emissiveIntensity = 0.5 + p2 * 2.0;
         }
       }
-      // Phase 3 (1.5-2.5s): Retreat/Destroy
+      // Phase 3 (0.6–1.0): Retreat — ship tumbles backward, fades
       else {
-        const phase3Progress = (progress - 0.6) / 0.4;
-
-        // Ship tumbles backward
-        if (groupRef.current) {
-          groupRef.current.rotation.x += phase3Progress * 0.1;
-          groupRef.current.position.z -= phase3Progress * 0.1;
-        }
-
-        // Ship fades out (opacity decreases)
-        if (groupRef.current) {
-          const opacity = 1 - phase3Progress;
-          groupRef.current.traverse((node) => {
-            if (node instanceof THREE.Mesh && node.material) {
-              if (Array.isArray(node.material)) {
-                node.material.forEach((mat: any) => {
-                  mat.transparent = true;
-                  mat.opacity = opacity;
-                });
-              } else {
-                (node.material as any).transparent = true;
-                (node.material as any).opacity = opacity;
-              }
-            }
-          });
-        }
-
-        // Hide effects
-        if (flashSphereRef.current) flashSphereRef.current.visible = false;
+        const p3 = (collapseProgress - 0.6) / 0.4;
         if (shockwaveRingRef.current) shockwaveRingRef.current.visible = false;
-      }
-    } else if (!isCollapsingRef.current) {
-      // Normal operation (not collapsing)
-      // Rotate turrets toward cursor position
-      if (isHoveredRef.current && (leftTurretRef.current || rightTurretRef.current)) {
-        const cursorX = mouse.x * 2;
-        const cursorY = mouse.y * 2;
+        groupRef.current.rotation.x += p3 * 0.1;
+        groupRef.current.position.z -= p3 * 0.1;
 
-        if (leftTurretRef.current) {
-          leftTurretRef.current.rotation.y = cursorX * 0.5;
-          leftTurretRef.current.rotation.x = cursorY * 0.3;
-        }
-        if (rightTurretRef.current) {
-          rightTurretRef.current.rotation.y = cursorX * 0.5;
-          rightTurretRef.current.rotation.x = cursorY * 0.3;
-        }
-      }
-
-      // Pulsing red glow on hull and engine materials
-      if (hullRef.current && hullRef.current.material) {
-        const mat = hullRef.current.material as THREE.MeshStandardMaterial;
-        const pulseIntensity = isHoveredRef.current ? 1.0 + Math.sin(time * 5) * 0.5 : 0.5 + Math.sin(time * 2) * 0.3;
-        mat.emissiveIntensity = pulseIntensity;
-      }
-
-      // Red running lights pulsing
-      if (runningLightsRef.current) {
-        runningLightsRef.current.children.forEach((light) => {
-          if ((light as THREE.Mesh).material) {
-            const mat = (light as THREE.Mesh).material as THREE.MeshBasicMaterial;
-            mat.opacity = 0.3 + Math.sin(time * 3 + Math.random()) * 0.3;
-          }
-        });
-      }
-
-      // Weapon turret sphere emissive intensity ramps from 0.5 → 1.5 on hover
-      if (leftTurretRef.current && rightTurretRef.current) {
-        const turretIntensity = isHoveredRef.current ? 1.5 : 0.5;
-        leftTurretRef.current.children.forEach((child) => {
-          const mesh = child as THREE.Mesh;
-          if (mesh.material && 'emissiveIntensity' in mesh.material) {
-            (mesh.material as any).emissiveIntensity = turretIntensity;
-          }
-        });
-        rightTurretRef.current.children.forEach((child) => {
-          const mesh = child as THREE.Mesh;
-          if (mesh.material && 'emissiveIntensity' in mesh.material) {
-            (mesh.material as any).emissiveIntensity = turretIntensity;
-          }
-        });
-      }
-
-      // Engine pod glow intensifies on hover
-      if (leftEngineRef.current && rightEngineRef.current) {
-        const engineGlowIntensity = isHoveredRef.current ? 1.0 : 0.6;
-        leftEngineRef.current.children.forEach((child) => {
-          const mesh = child as THREE.Mesh;
-          if (mesh.material && 'emissiveIntensity' in mesh.material) {
-            (mesh.material as any).emissiveIntensity = engineGlowIntensity;
-          }
-        });
-        rightEngineRef.current.children.forEach((child) => {
-          const mesh = child as THREE.Mesh;
-          if (mesh.material && 'emissiveIntensity' in mesh.material) {
-            (mesh.material as any).emissiveIntensity = engineGlowIntensity;
+        // Fade all meshes
+        const opacity = 1 - p3;
+        groupRef.current.traverse((node) => {
+          if (node instanceof THREE.Mesh && node.material) {
+            const mat = node.material as any;
+            if (mat.transparent !== undefined) {
+              mat.transparent = true;
+              mat.opacity = Math.min(mat.opacity ?? 1, opacity);
+            }
           }
         });
       }
     }
 
-    // Targeting brackets on hover with rotating reticle
+    // Reset after collapse
+    if (isCollapsingRef.current && collapseProgress >= 1) {
+      isCollapsingRef.current = false;
+      if (flashSphereRef.current) flashSphereRef.current.visible = false;
+      if (shockwaveRingRef.current) shockwaveRingRef.current.visible = false;
+    }
+
+    // Targeting brackets
     if (bracketsRef.current) {
-      bracketsRef.current.visible = isHoveredRef.current && !isCollapsingRef.current;
-      if (isHoveredRef.current && !isCollapsingRef.current) {
+      bracketsRef.current.visible = hovered && !isCollapsingRef.current;
+      if (hovered) {
         bracketsRef.current.rotation.z = time * 0.3;
       }
-    }
-
-    // When collapse finishes
-    if (isCollapsingRef.current && elapsedTime >= 2.5) {
-      isCollapsingRef.current = false;
     }
   });
 
   return (
     <group ref={groupRef} position={position}>
-      {/* Main ship hull - dark gray with red accents */}
+      {/* ===== Layer 1: Outer Threat Aura ===== */}
+      <mesh>
+        <sphereGeometry args={[size * 1.8, 16, 16]} />
+        <volumetricGlowMaterial
+          ref={auraRef}
+          color={color}
+          glowStrength={0.15}
+          noiseScale={2.0}
+          noiseSpeed={0.6}
+          rimPower={3.0}
+          opacity={1.0}
+          transparent
+          side={THREE.BackSide}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+          toneMapped={false}
+        />
+      </mesh>
+
+      {/* ===== Layer 2: Multi-part Hull ===== */}
       <group
         onPointerOver={handlePointerOver}
         onPointerOut={handlePointerOut}
         onClick={handleClick}
       >
-        {/* Hull body - elongated box */}
-        <mesh ref={hullRef} position={[0, 0, 0]}>
-          <boxGeometry args={[size * 0.4, size * 0.3, size * 1.8]} />
+        {/* Main Fuselage — elongated octahedron (two cones base-to-base) */}
+        {/* Front cone (aggressive nose) */}
+        <mesh ref={hullRef} position={[0, 0, size * 0.5]} rotation={[Math.PI / 2, 0, 0]}>
+          <coneGeometry args={[size * 0.22, size * 1.0, 8]} />
           <meshStandardMaterial
             color="#1f2937"
+            metalness={0.85}
+            roughness={0.25}
             emissive={color}
+            emissiveIntensity={0.3}
+            toneMapped={false}
+          />
+        </mesh>
+
+        {/* Rear cone (engine block) */}
+        <mesh position={[0, 0, -size * 0.3]} rotation={[-Math.PI / 2, 0, 0]}>
+          <coneGeometry args={[size * 0.22, size * 0.6, 8]} />
+          <meshStandardMaterial
+            color="#1f2937"
+            metalness={0.85}
+            roughness={0.25}
+            emissive={color}
+            emissiveIntensity={0.3}
+            toneMapped={false}
+          />
+        </mesh>
+
+        {/* Armor Plates — 4 panels with gap from hull */}
+        {/* Port */}
+        <mesh position={[-size * 0.24, 0, 0.1]}>
+          <boxGeometry args={[size * 0.04, size * 0.18, size * 1.0]} />
+          <meshStandardMaterial color="#111827" metalness={0.9} roughness={0.2} toneMapped={false} />
+        </mesh>
+        {/* Starboard */}
+        <mesh position={[size * 0.24, 0, 0.1]}>
+          <boxGeometry args={[size * 0.04, size * 0.18, size * 1.0]} />
+          <meshStandardMaterial color="#111827" metalness={0.9} roughness={0.2} toneMapped={false} />
+        </mesh>
+        {/* Dorsal */}
+        <mesh position={[0, size * 0.18, 0.1]}>
+          <boxGeometry args={[size * 0.3, size * 0.03, size * 0.9]} />
+          <meshStandardMaterial color="#111827" metalness={0.9} roughness={0.2} toneMapped={false} />
+        </mesh>
+        {/* Ventral */}
+        <mesh position={[0, -size * 0.18, 0.1]}>
+          <boxGeometry args={[size * 0.3, size * 0.03, size * 0.9]} />
+          <meshStandardMaterial color="#111827" metalness={0.9} roughness={0.2} toneMapped={false} />
+        </mesh>
+
+        {/* Wing Pylons — swept-back 15° */}
+        <mesh position={[-size * 0.35, 0, size * 0.1]} rotation={[0, 0.26, 0]}>
+          <boxGeometry args={[size * 0.25, size * 0.05, size * 0.08]} />
+          <meshStandardMaterial
+            color="#1f2937"
+            metalness={0.8}
+            roughness={0.3}
+            emissive="#991b1b"
+            emissiveIntensity={0.2}
+            toneMapped={false}
+          />
+        </mesh>
+        <mesh position={[size * 0.35, 0, size * 0.1]} rotation={[0, -0.26, 0]}>
+          <boxGeometry args={[size * 0.25, size * 0.05, size * 0.08]} />
+          <meshStandardMaterial
+            color="#1f2937"
+            metalness={0.8}
+            roughness={0.3}
+            emissive="#991b1b"
+            emissiveIntensity={0.2}
+            toneMapped={false}
+          />
+        </mesh>
+
+        {/* Bridge / Command Section — raised dorsal box */}
+        <mesh position={[0, size * 0.22, size * 0.15]}>
+          <boxGeometry args={[size * 0.12, size * 0.06, size * 0.15]} />
+          <meshStandardMaterial
+            color="#374151"
+            metalness={0.7}
+            roughness={0.35}
+            toneMapped={false}
+          />
+        </mesh>
+        {/* Bridge window lights */}
+        <mesh position={[-size * 0.03, size * 0.25, size * 0.22]}>
+          <sphereGeometry args={[size * 0.012, 6, 6]} />
+          <meshBasicMaterial
+            color="#93c5fd"
+            toneMapped={false}
+          />
+        </mesh>
+        <mesh position={[size * 0.03, size * 0.25, size * 0.22]}>
+          <sphereGeometry args={[size * 0.012, 6, 6]} />
+          <meshBasicMaterial
+            color="#93c5fd"
+            toneMapped={false}
+          />
+        </mesh>
+      </group>
+
+      {/* ===== Layer 3: Weapon Turrets ===== */}
+      {/* Left turret */}
+      <group ref={leftTurretRef} position={[size * -0.35, size * 0.08, size * 0.35]}>
+        {/* Gimbal base */}
+        <mesh>
+          <sphereGeometry args={[size * 0.07, 10, 10]} />
+          <meshStandardMaterial
+            color="#991b1b"
+            emissive="#dc2626"
             emissiveIntensity={0.5}
+            metalness={0.7}
+            roughness={0.3}
+            toneMapped={false}
+          />
+        </mesh>
+        {/* Barrel */}
+        <mesh position={[0, 0, size * 0.12]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[size * 0.025, size * 0.035, size * 0.15, 8]} />
+          <meshStandardMaterial
+            color="#1f2937"
+            emissive="#dc2626"
+            emissiveIntensity={0.4}
+            toneMapped={false}
+          />
+        </mesh>
+        {/* Charge glow sphere at barrel tip */}
+        <mesh ref={leftChargeRef} position={[0, 0, size * 0.2]}>
+          <sphereGeometry args={[size * 0.03, 8, 8]} />
+          <meshBasicMaterial
+            color="#ff4400"
+            transparent
+            opacity={0.5}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+            toneMapped={false}
+          />
+        </mesh>
+        {/* Capacitor ring (hover charge effect) */}
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[size * 0.09, 0.008, 6, 24]} />
+          <energyFlowMaterial
+            ref={leftCapRingRef}
+            color1="#dc2626"
+            color2="#ff6600"
+            flowSpeed={3.0}
+            stripeCount={4.0}
+            opacity={0.6}
+            transparent
+            depthWrite={false}
+            blending={THREE.AdditiveBlending}
+            toneMapped={false}
+          />
+        </mesh>
+      </group>
+
+      {/* Right turret */}
+      <group ref={rightTurretRef} position={[size * 0.35, size * 0.08, size * 0.35]}>
+        <mesh>
+          <sphereGeometry args={[size * 0.07, 10, 10]} />
+          <meshStandardMaterial
+            color="#991b1b"
+            emissive="#dc2626"
+            emissiveIntensity={0.5}
+            metalness={0.7}
+            roughness={0.3}
+            toneMapped={false}
+          />
+        </mesh>
+        <mesh position={[0, 0, size * 0.12]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[size * 0.025, size * 0.035, size * 0.15, 8]} />
+          <meshStandardMaterial
+            color="#1f2937"
+            emissive="#dc2626"
+            emissiveIntensity={0.4}
+            toneMapped={false}
+          />
+        </mesh>
+        <mesh ref={rightChargeRef} position={[0, 0, size * 0.2]}>
+          <sphereGeometry args={[size * 0.03, 8, 8]} />
+          <meshBasicMaterial
+            color="#ff4400"
+            transparent
+            opacity={0.5}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+            toneMapped={false}
+          />
+        </mesh>
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[size * 0.09, 0.008, 6, 24]} />
+          <energyFlowMaterial
+            ref={rightCapRingRef}
+            color1="#dc2626"
+            color2="#ff6600"
+            flowSpeed={3.0}
+            stripeCount={4.0}
+            opacity={0.6}
+            transparent
+            depthWrite={false}
+            blending={THREE.AdditiveBlending}
+            toneMapped={false}
+          />
+        </mesh>
+      </group>
+
+      {/* ===== Layer 4: Engine Section ===== */}
+      {/* Left engine nacelle */}
+      <group ref={leftEngineGroupRef} position={[size * -0.35, size * -0.1, size * -0.4]}>
+        {/* Engine body */}
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[size * 0.1, size * 0.12, size * 0.35, 10]} />
+          <meshStandardMaterial
+            color="#1f2937"
+            emissive="#991b1b"
+            emissiveIntensity={0.4}
             metalness={0.8}
             roughness={0.3}
             toneMapped={false}
           />
         </mesh>
-
-        {/* Nose cone - cone geometry pointing forward */}
-        <mesh ref={noseRef} position={[0, 0, size * 1.0]}>
-          <coneGeometry args={[size * 0.25, size * 0.6, 16]} />
-          <meshStandardMaterial
-            color="#991b1b"
-            emissive="#dc2626"
-            emissiveIntensity={0.6}
-            metalness={0.7}
-            roughness={0.4}
-            toneMapped={false}
-          />
-        </mesh>
-
-        {/* Left engine pod */}
-        <group ref={leftEngineRef} position={[size * -0.35, size * -0.15, size * -0.3]}>
-          <mesh>
-            <cylinderGeometry args={[size * 0.12, size * 0.12, size * 0.4, 12]} />
-            <meshStandardMaterial
-              color="#1f2937"
-              emissive="#991b1b"
-              emissiveIntensity={0.6}
-              metalness={0.8}
-              roughness={0.3}
-              toneMapped={false}
-            />
-          </mesh>
-          {/* Engine glow */}
-          <mesh position={[0, 0, size * 0.25]}>
-            <sphereGeometry args={[size * 0.15, 12, 12]} />
-            <meshBasicMaterial
-              color="#dc2626"
-              transparent
-              opacity={0.4}
-              blending={THREE.AdditiveBlending}
-            />
-          </mesh>
-          {/* Engine trail */}
-          <EngineTrail count={50} spread={0.25} size={0.04} />
-        </group>
-
-        {/* Right engine pod */}
-        <group ref={rightEngineRef} position={[size * 0.35, size * -0.15, size * -0.3]}>
-          <mesh>
-            <cylinderGeometry args={[size * 0.12, size * 0.12, size * 0.4, 12]} />
-            <meshStandardMaterial
-              color="#1f2937"
-              emissive="#991b1b"
-              emissiveIntensity={0.6}
-              metalness={0.8}
-              roughness={0.3}
-              toneMapped={false}
-            />
-          </mesh>
-          {/* Engine glow */}
-          <mesh position={[0, 0, size * 0.25]}>
-            <sphereGeometry args={[size * 0.15, 12, 12]} />
-            <meshBasicMaterial
-              color="#dc2626"
-              transparent
-              opacity={0.4}
-              blending={THREE.AdditiveBlending}
-            />
-          </mesh>
-          {/* Engine trail */}
-          <EngineTrail count={50} spread={0.25} size={0.04} />
-        </group>
-
-        {/* Left weapon turret */}
-        <group ref={leftTurretRef} position={[size * -0.35, size * 0.2, size * 0.3]}>
-          <mesh>
-            <sphereGeometry args={[size * 0.08, 12, 12]} />
-            <meshStandardMaterial
-              color="#991b1b"
-              emissive="#dc2626"
-              emissiveIntensity={0.5}
-              metalness={0.7}
-              roughness={0.3}
-              toneMapped={false}
-            />
-          </mesh>
-          {/* Barrel */}
-          <mesh position={[0, 0, size * 0.1]}>
-            <cylinderGeometry args={[size * 0.04, size * 0.04, size * 0.15, 8]} />
-            <meshStandardMaterial
-              color="#1f2937"
-              emissive="#dc2626"
-              emissiveIntensity={0.4}
-              toneMapped={false}
-            />
-          </mesh>
-        </group>
-
-        {/* Right weapon turret */}
-        <group ref={rightTurretRef} position={[size * 0.35, size * 0.2, size * 0.3]}>
-          <mesh>
-            <sphereGeometry args={[size * 0.08, 12, 12]} />
-            <meshStandardMaterial
-              color="#991b1b"
-              emissive="#dc2626"
-              emissiveIntensity={0.5}
-              metalness={0.7}
-              roughness={0.3}
-              toneMapped={false}
-            />
-          </mesh>
-          {/* Barrel */}
-          <mesh position={[0, 0, size * 0.1]}>
-            <cylinderGeometry args={[size * 0.04, size * 0.04, size * 0.15, 8]} />
-            <meshStandardMaterial
-              color="#1f2937"
-              emissive="#dc2626"
-              emissiveIntensity={0.4}
-              toneMapped={false}
-            />
-          </mesh>
-        </group>
-
-        {/* Red running lights (pulsing spheres) */}
-        <group ref={runningLightsRef}>
-          {/* Front lights */}
-          <mesh position={[size * -0.15, 0, size * 0.8]}>
-            <sphereGeometry args={[size * 0.05, 8, 8]} />
-            <meshBasicMaterial
-              color="#dc2626"
-              transparent
-              opacity={0.3}
-              blending={THREE.AdditiveBlending}
-            />
-          </mesh>
-          <mesh position={[size * 0.15, 0, size * 0.8]}>
-            <sphereGeometry args={[size * 0.05, 8, 8]} />
-            <meshBasicMaterial
-              color="#dc2626"
-              transparent
-              opacity={0.3}
-              blending={THREE.AdditiveBlending}
-            />
-          </mesh>
-
-          {/* Mid lights */}
-          <mesh position={[size * -0.2, size * 0.15, 0]}>
-            <sphereGeometry args={[size * 0.04, 8, 8]} />
-            <meshBasicMaterial
-              color="#dc2626"
-              transparent
-              opacity={0.3}
-              blending={THREE.AdditiveBlending}
-            />
-          </mesh>
-          <mesh position={[size * 0.2, size * 0.15, 0]}>
-            <sphereGeometry args={[size * 0.04, 8, 8]} />
-            <meshBasicMaterial
-              color="#dc2626"
-              transparent
-              opacity={0.3}
-              blending={THREE.AdditiveBlending}
-            />
-          </mesh>
-
-          {/* Rear lights */}
-          <mesh position={[size * -0.15, 0, size * -0.8]}>
-            <sphereGeometry args={[size * 0.05, 8, 8]} />
-            <meshBasicMaterial
-              color="#991b1b"
-              transparent
-              opacity={0.25}
-              blending={THREE.AdditiveBlending}
-            />
-          </mesh>
-          <mesh position={[size * 0.15, 0, size * -0.8]}>
-            <sphereGeometry args={[size * 0.05, 8, 8]} />
-            <meshBasicMaterial
-              color="#991b1b"
-              transparent
-              opacity={0.25}
-              blending={THREE.AdditiveBlending}
-            />
-          </mesh>
-        </group>
-      </group>
-
-      {/* Outer hostile glow sphere */}
-      <mesh>
-        <sphereGeometry args={[size * 1.5, 16, 16]} />
-        <meshBasicMaterial
-          color={color}
-          transparent
-          opacity={0.08}
-          side={THREE.BackSide}
-          depthWrite={false}
-          blending={THREE.AdditiveBlending}
-        />
-      </mesh>
-
-      {/* Red targeting brackets/reticle on hover */}
-      <group ref={bracketsRef} visible={false}>
-        <lineSegments geometry={bracketGeometry}>
-          <lineBasicMaterial color="#dc2626" opacity={0.8} transparent />
-        </lineSegments>
-        {/* Rotating torus scan ring */}
-        <mesh rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[size * 1.8, 0.02, 8, 32]} />
+        {/* Thruster bell glow */}
+        <mesh position={[0, 0, -size * 0.2]}>
+          <sphereGeometry args={[size * 0.11, 10, 10]} />
           <meshBasicMaterial
             color="#dc2626"
             transparent
-            opacity={0.6}
+            opacity={0.4}
             blending={THREE.AdditiveBlending}
             depthWrite={false}
+            toneMapped={false}
           />
         </mesh>
+        {/* Exhaust particles */}
+        <group position={[0, 0, -size * 0.2]}>
+          <InstancedParticleSystem
+            count={150}
+            color="#dc2626"
+            colorEnd="#1a1a1a"
+            velocityMin={[-0.15, -0.15, -0.8]}
+            velocityMax={[0.15, 0.15, -1.5]}
+            lifespan={[0.5, 1.5]}
+            emitRate={100}
+            size={size * 0.04}
+            spawnRadius={size * 0.08}
+            loop
+          />
+        </group>
+        {/* Exhaust trail ribbon */}
+        <TrailRibbon
+          targetRef={leftEngineGroupRef}
+          color="#dc2626"
+          colorEnd="#330000"
+          width={size * 0.08}
+          lifetime={0.8}
+          maxPoints={30}
+          opacity={0.5}
+        />
       </group>
 
-      {/* Flash sphere - white flash during laser impact at phase 1 */}
+      {/* Right engine nacelle */}
+      <group ref={rightEngineGroupRef} position={[size * 0.35, size * -0.1, size * -0.4]}>
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[size * 0.1, size * 0.12, size * 0.35, 10]} />
+          <meshStandardMaterial
+            color="#1f2937"
+            emissive="#991b1b"
+            emissiveIntensity={0.4}
+            metalness={0.8}
+            roughness={0.3}
+            toneMapped={false}
+          />
+        </mesh>
+        <mesh position={[0, 0, -size * 0.2]}>
+          <sphereGeometry args={[size * 0.11, 10, 10]} />
+          <meshBasicMaterial
+            color="#dc2626"
+            transparent
+            opacity={0.4}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+            toneMapped={false}
+          />
+        </mesh>
+        <group position={[0, 0, -size * 0.2]}>
+          <InstancedParticleSystem
+            count={150}
+            color="#dc2626"
+            colorEnd="#1a1a1a"
+            velocityMin={[-0.15, -0.15, -0.8]}
+            velocityMax={[0.15, 0.15, -1.5]}
+            lifespan={[0.5, 1.5]}
+            emitRate={100}
+            size={size * 0.04}
+            spawnRadius={size * 0.08}
+            loop
+          />
+        </group>
+        <TrailRibbon
+          targetRef={rightEngineGroupRef}
+          color="#dc2626"
+          colorEnd="#330000"
+          width={size * 0.08}
+          lifetime={0.8}
+          maxPoints={30}
+          opacity={0.5}
+        />
+      </group>
+
+      {/* ===== Layer 5: Running Lights ===== */}
+      {LIGHT_CONFIGS.map((cfg, i) => (
+        <mesh
+          key={`light-${i}`}
+          ref={(ref) => { lightRefs.current[i] = ref; }}
+          position={[cfg.pos[0] * size, cfg.pos[1] * size, cfg.pos[2] * size]}
+        >
+          <sphereGeometry args={[size * 0.025, 6, 6]} />
+          <meshBasicMaterial
+            color={cfg.color}
+            transparent
+            opacity={0.15}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+            toneMapped={false}
+          />
+        </mesh>
+      ))}
+
+      {/* ===== Layer 6: Shield Effect (hover-only) ===== */}
+      <mesh ref={shieldMeshRef} visible={false} scale={1.15}>
+        <icosahedronGeometry args={[size * 0.6, 1]} />
+        <holographicMaterial
+          ref={shieldRef}
+          color="#dc2626"
+          scanlineCount={50.0}
+          flickerSpeed={8.0}
+          opacity={0.0}
+          transparent
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+          side={THREE.DoubleSide}
+          toneMapped={false}
+          wireframe
+        />
+      </mesh>
+
+      {/* ===== Layer 7: Targeting Laser (hover-only) ===== */}
+      <mesh ref={laserRef} visible={false} position={[0, 0, size * 1.5]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[size * 0.005, size * 0.005, size * 3.0, 6]} />
+        <meshBasicMaterial
+          color="#ff0000"
+          transparent
+          opacity={0.3}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+          toneMapped={false}
+        />
+      </mesh>
+
+      {/* ===== Interaction Overlays ===== */}
+
+      {/* Flash sphere — collapse phase 1 */}
       <mesh ref={flashSphereRef} visible={false}>
         <sphereGeometry args={[size * 0.5, 16, 16]} />
         <meshBasicMaterial
@@ -718,10 +684,11 @@ export default function EnemyCruiser({
           opacity={1}
           blending={THREE.AdditiveBlending}
           depthWrite={false}
+          toneMapped={false}
         />
       </mesh>
 
-      {/* Shockwave ring - torus that expands and fades during phase 2 */}
+      {/* Shockwave ring — collapse phase 2 */}
       <mesh ref={shockwaveRingRef} visible={false} rotation={[Math.PI / 2, 0, 0]}>
         <torusGeometry args={[size * 0.8, 0.15, 16, 64]} />
         <meshBasicMaterial
@@ -730,8 +697,27 @@ export default function EnemyCruiser({
           opacity={0.8}
           blending={THREE.AdditiveBlending}
           depthWrite={false}
+          toneMapped={false}
         />
       </mesh>
+
+      {/* Targeting brackets + scan ring */}
+      <group ref={bracketsRef} visible={false}>
+        <lineSegments geometry={bracketGeometry}>
+          <lineBasicMaterial color="#dc2626" opacity={0.8} transparent />
+        </lineSegments>
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[size * 1.8, 0.02, 8, 32]} />
+          <meshBasicMaterial
+            color="#dc2626"
+            transparent
+            opacity={0.6}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+            toneMapped={false}
+          />
+        </mesh>
+      </group>
     </group>
   );
 }

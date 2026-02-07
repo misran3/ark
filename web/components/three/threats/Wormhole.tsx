@@ -1,9 +1,85 @@
 'use client';
 
-import { useRef, useMemo, useCallback, useEffect } from 'react';
+import { useRef, useMemo, useCallback, useEffect, useState } from 'react';
 import { useFrame, extend } from '@react-three/fiber';
 import { shaderMaterial, Text, Billboard } from '@react-three/drei';
 import * as THREE from 'three';
+import '@/lib/materials/VolumetricGlowMaterial';
+import '@/lib/materials/EnergyFlowMaterial';
+import { InstancedParticleSystem, type ParticleState } from '@/lib/particles';
+import { generateLightningPath, tubeFromPoints } from '@/lib/utils/geometry';
+
+// ── Portal Swirl Shader (kept + enhanced with depth tinting) ──
+const PortalSwirlMaterial = shaderMaterial(
+  {
+    time: 0,
+    timeMultiplier: 1.0,
+    depthLayer: 0.0, // 0=front, 1=deepest
+    color1: new THREE.Color(0.376, 0.651, 0.98),
+    color2: new THREE.Color(0.231, 0.51, 0.961),
+    color3: new THREE.Color(0.812, 0.871, 1.0),
+  },
+  /* glsl */ `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  /* glsl */ `
+    uniform float time;
+    uniform float timeMultiplier;
+    uniform float depthLayer;
+    uniform vec3 color1;
+    uniform vec3 color2;
+    uniform vec3 color3;
+    varying vec2 vUv;
+
+    void main() {
+      vec2 center = vec2(0.5);
+      vec2 toCenter = vUv - center;
+      float dist = length(toCenter);
+      float angle = atan(toCenter.y, toCenter.x);
+
+      // Spiral with depth-dependent speed (deeper layers rotate faster)
+      float speedBoost = 1.0 + depthLayer * 0.5;
+      float spiral = angle + dist * 10.0 - time * timeMultiplier * 0.5 * speedBoost;
+      float pattern = sin(spiral * 5.0) * 0.5 + 0.5;
+
+      float wave = sin(angle * 3.0 + time * timeMultiplier * 0.3)
+                  * cos(dist * 6.28 - time * timeMultiplier * 0.2);
+      pattern = mix(pattern, wave * 0.5 + 0.5, 0.3);
+
+      vec3 color = mix(color1, color2, pattern);
+
+      // Iridescent sheen
+      float iridFactor = sin(dist * 3.14159) * 0.5 + 0.5;
+      color = mix(color, color3, iridFactor * 0.2 * (sin(time * timeMultiplier * 0.5) * 0.5 + 0.5));
+
+      // Depth darkening — deeper layers are dimmer (tunnel vanishing point)
+      float depthDarken = 1.0 - depthLayer * 0.35;
+      color *= depthDarken;
+
+      // Edge fade
+      float depthFalloff = smoothstep(0.0, 0.3, dist);
+      color *= (0.5 + depthFalloff * 0.5);
+
+      float alpha = smoothstep(0.5, 0.3, dist);
+      float pulse = sin(time * timeMultiplier * 1.5) * 0.1 + 0.9;
+      alpha *= pulse;
+
+      gl_FragColor = vec4(color, alpha * 0.7);
+    }
+  `,
+);
+
+extend({ PortalSwirlMaterial });
+
+declare module '@react-three/fiber' {
+  interface ThreeElements {
+    portalSwirlMaterial: any;
+  }
+}
 
 interface WormholeProps {
   position: [number, number, number];
@@ -14,108 +90,14 @@ interface WormholeProps {
 }
 
 /**
- * Portal Swirl Shader Material
- * Creates a hypnotic spiral pattern on the portal surface using:
- * - atan2 for spiral angle calculation
- * - length for distance-based gradients
- * - sine waves for animated swirling effect
- * - iridescent color mixing for soap-bubble-like appearance
- * - Depth illusion: darkening toward center for tunnel effect
- */
-const PortalSwirlMaterial = shaderMaterial(
-  {
-    time: 0,
-    timeMultiplier: 1.0, // Hover state acceleration
-    color1: new THREE.Color(0.376, 0.651, 0.980), // #60a5fa (light blue)
-    color2: new THREE.Color(0.231, 0.510, 0.961), // #3b82f6 (darker blue)
-    color3: new THREE.Color(0.812, 0.871, 1.0),   // iridescent white
-  },
-  // Vertex shader
-  /* glsl */ `
-    varying vec2 vUv;
-
-    void main() {
-      vUv = uv;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    }
-  `,
-  // Fragment shader
-  /* glsl */ `
-    uniform float time;
-    uniform float timeMultiplier;
-    uniform vec3 color1;
-    uniform vec3 color2;
-    uniform vec3 color3;
-    varying vec2 vUv;
-
-    void main() {
-      // Convert UV to normalized coordinates around center
-      vec2 center = vec2(0.5, 0.5);
-      vec2 toCenter = vUv - center;
-
-      // Distance from center (0 = center, 1 = edge)
-      float dist = length(toCenter);
-
-      // Angle in radians using atan2 (spiral reference angle)
-      float angle = atan(toCenter.y, toCenter.x);
-
-      // Spiral pattern: combines angle, distance, and time
-      // Creates hypnotic swirling effect, accelerated on hover
-      float spiral = angle + dist * 10.0 - time * timeMultiplier * 0.5;
-      float pattern = sin(spiral * 5.0) * 0.5 + 0.5;
-
-      // Additional wave layer for complexity
-      float wave = sin(angle * 3.0 + time * timeMultiplier * 0.3) * cos(dist * 6.28 - time * timeMultiplier * 0.2);
-      pattern = mix(pattern, wave * 0.5 + 0.5, 0.3);
-
-      // Gradient mixing: blue to darker blue with iridescent hints
-      vec3 color = mix(color1, color2, pattern);
-
-      // Iridescent sheen: appears strongest at medium distances
-      float iridFactor = sin(dist * 3.14159) * 0.5 + 0.5; // bell curve
-      color = mix(color, color3, iridFactor * 0.2 * (sin(time * timeMultiplier * 0.5) * 0.5 + 0.5));
-
-      // Depth illusion: darken toward center to create tunnel effect
-      float depthFalloff = smoothstep(0.0, 0.3, dist);
-      color *= (0.5 + depthFalloff * 0.5); // Darkens toward center
-
-      // Fade at edges (circular mask from center)
-      // Smooth falloff from full opacity to fully transparent
-      float alpha = smoothstep(0.5, 0.3, dist);
-
-      // Add subtle brightness pulse
-      float pulse = sin(time * timeMultiplier * 1.5) * 0.1 + 0.9;
-      alpha *= pulse;
-
-      gl_FragColor = vec4(color, alpha * 0.7);
-    }
-  `
-);
-
-// Register the custom shader material for JSX
-extend({ PortalSwirlMaterial });
-
-declare module '@react-three/fiber' {
-  interface ThreeElements {
-    portalSwirlMaterial: any;
-  }
-}
-
-/**
- * Wormhole Threat Component
- * Visualizes missed financial opportunities as ethereal portals.
- *
- * Features:
- * - Shimmering torus ring (portal rim) with targeting brackets on hover
- * - Animated portal surface with spiral shader (accelerates on hover)
- * - Through-portal vision: ghostly lost reward text floating inside portal
- * - Orbiting edge ripple particles with faint trails
- * - Particle trail effect for visual richness
- * - Slow tumble rotation on 2 axes
- * - Enhanced hover state: 20% scale expansion, faster particle orbit, shader acceleration
- * - Multi-phase collapse animation (1.8s total): swirl → scatter → fade
- * - Outer glow with dynamic pulsation
- * - Depth illusion shader (darkening toward center)
+ * Cinematic wormhole with 7-layer composition:
+ * 1. Outer Glow Sphere (VolumetricGlowMaterial)
+ * 2. Portal Rim (torus with EnergyFlowMaterial)
+ * 3. Portal Surface (4 depth-layered swirl discs — parallax tunnel)
+ * 4. Electrical Rim Arcs (generateLightningPath TubeGeometry)
+ * 5. Edge Ripple Particles (InstancedParticleSystem orbiting rim)
+ * 6. Through-Portal Vision (ghostly icon + Billboard text)
+ * 7. Inflow Particle Streams (spiral toward center)
  */
 export default function Wormhole({
   position,
@@ -125,74 +107,71 @@ export default function Wormhole({
   onClick,
 }: WormholeProps) {
   const groupRef = useRef<THREE.Group>(null);
-  const torusRef = useRef<THREE.Mesh>(null);
-  const portalRef = useRef<THREE.Mesh>(null);
-  const flashRef = useRef<THREE.Mesh>(null);
-  const particlesRef = useRef<THREE.Points>(null);
-  const glowRef = useRef<THREE.Mesh>(null);
-  const materialRef = useRef<any>(null);
-  const trailParticlesRef = useRef<THREE.Points>(null);
-  const bracketsRef = useRef<THREE.Group>(null);
+  const outerGlowRef = useRef<any>(null);
+  const rimRef = useRef<any>(null);
+  const torusMeshRef = useRef<THREE.Mesh>(null);
+  const portalRefs = useRef<(any | null)[]>([null, null, null, null]);
   const throughPortalRef = useRef<THREE.Group>(null);
+  const ghostIconRef = useRef<THREE.Mesh>(null);
+  const bracketsRef = useRef<THREE.Group>(null);
+  const flashRef = useRef<THREE.Mesh>(null);
   const isHoveredRef = useRef(false);
   const isCollapsingRef = useRef(false);
   const collapseStartRef = useRef(0);
-  const particleTrailRef = useRef<Float32Array | null>(null);
-  const particlePrevPosRef = useRef<Float32Array | null>(null);
 
-  // Create edge ripple particles that orbit around the portal rim
-  const particleSystem = useMemo(() => {
-    const count = 50; // 40-60 particles for shimmer effect
-    const positions = new Float32Array(count * 3);
-    const angles = new Float32Array(count);
-    const trailPositions = new Float32Array(count * 3); // For trail effect
+  // Electrical rim arc geometries (regenerate periodically)
+  const frameCountRef = useRef(0);
+  const [arcGeometries, setArcGeometries] = useState<THREE.TubeGeometry[]>([]);
 
-    const outerRadius = 2.5 * size; // Match torus outer radius
-    const rimHeight = 0.3 * size;
+  const outerRadius = 2.5 * size;
 
-    for (let i = 0; i < count; i++) {
-      const angle = (i / count) * Math.PI * 2;
-      angles[i] = angle;
+  // Generate rim arc geometries
+  const generateArcs = useCallback(() => {
+    const arcs: THREE.TubeGeometry[] = [];
+    const arcCount = 5;
+    for (let a = 0; a < arcCount; a++) {
+      const startAngle = Math.random() * Math.PI * 2;
+      const arcLength = 0.3 + Math.random() * 0.5; // 30–80% of pi
+      const endAngle = startAngle + arcLength;
 
-      // Position particles around the torus rim at random heights
-      const x = Math.cos(angle) * outerRadius;
-      const z = Math.sin(angle) * outerRadius;
-      const y = (Math.random() - 0.5) * rimHeight;
+      const start = new THREE.Vector3(
+        Math.cos(startAngle) * outerRadius,
+        (Math.random() - 0.5) * 0.4 * size,
+        Math.sin(startAngle) * outerRadius,
+      );
+      const end = new THREE.Vector3(
+        Math.cos(endAngle) * outerRadius,
+        (Math.random() - 0.5) * 0.4 * size,
+        Math.sin(endAngle) * outerRadius,
+      );
 
-      positions[i * 3] = x;
-      positions[i * 3 + 1] = y;
-      positions[i * 3 + 2] = z;
-
-      // Initialize trail positions same as main positions
-      trailPositions[i * 3] = x;
-      trailPositions[i * 3 + 1] = y;
-      trailPositions[i * 3 + 2] = z;
+      const path = generateLightningPath(start, end, 6, 0.3 * size);
+      arcs.push(tubeFromPoints(path, 0.01, 16, 4));
     }
+    return arcs;
+  }, [outerRadius, size]);
 
-    // Store trail positions for particle trail effect
-    particleTrailRef.current = trailPositions;
-    particlePrevPosRef.current = new Float32Array(positions);
+  // Dispose old arcs when new ones are generated
+  useEffect(() => {
+    return () => {
+      arcGeometries.forEach((g) => g.dispose());
+    };
+  }, [arcGeometries]);
 
-    return { positions, angles, count, outerRadius, rimHeight };
-  }, [size]);
-
-  // Pre-compute targeting bracket geometry (blue variant for wormhole)
+  // Targeting bracket geometry
   const bracketGeometry = useMemo(() => {
-    const s = size * 2.2; // bracket extent around portal
-    const len = s * 0.3; // bracket arm length
+    const s = size * 2.2;
+    const len = s * 0.3;
     const points: number[] = [];
-
-    // Four corners, each with 2 lines (forming an L-bracket)
     const corners = [
       [-s, s, 0], [s, s, 0], [s, -s, 0], [-s, -s, 0],
     ];
     const dirs = [
-      [[1, 0, 0], [0, -1, 0]], // top-left: right + down
-      [[-1, 0, 0], [0, -1, 0]], // top-right: left + down
-      [[-1, 0, 0], [0, 1, 0]], // bottom-right: left + up
-      [[1, 0, 0], [0, 1, 0]], // bottom-left: right + up
+      [[1, 0, 0], [0, -1, 0]],
+      [[-1, 0, 0], [0, -1, 0]],
+      [[-1, 0, 0], [0, 1, 0]],
+      [[1, 0, 0], [0, 1, 0]],
     ];
-
     for (let c = 0; c < 4; c++) {
       const [cx, cy, cz] = corners[c];
       for (const [dx, dy, dz] of dirs[c]) {
@@ -200,17 +179,13 @@ export default function Wormhole({
         points.push(cx + dx * len, cy + dy * len, cz + dz * len);
       }
     }
-
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(points, 3));
     return geo;
   }, [size]);
 
-  // Dispose of geometry on unmount
   useEffect(() => {
-    return () => {
-      bracketGeometry.dispose();
-    };
+    return () => { bracketGeometry.dispose(); };
   }, [bracketGeometry]);
 
   const handlePointerOver = useCallback(() => {
@@ -227,249 +202,327 @@ export default function Wormhole({
   const handleClick = useCallback(() => {
     if (isCollapsingRef.current) return;
     isCollapsingRef.current = true;
-    collapseStartRef.current = performance.now();
+    collapseStartRef.current = 0;
     onClick?.();
   }, [onClick]);
 
+  // Edge ripple particles — orbit around torus rim
+  const edgeRippleTick = useCallback(
+    (data: ParticleState, delta: number, elapsed: number) => {
+      const { positions, velocities, count } = data;
+      const speed = isHoveredRef.current ? 1.5 : 0.8;
+
+      for (let i = 0; i < count; i++) {
+        const i3 = i * 3;
+        const baseAngle = (i / count) * Math.PI * 2;
+        const currentAngle = baseAngle + elapsed * speed * 0.5;
+
+        positions[i3] = Math.cos(currentAngle) * outerRadius;
+        positions[i3 + 1] = Math.sin(elapsed * 2 + i) * 0.3 * size;
+        positions[i3 + 2] = Math.sin(currentAngle) * outerRadius;
+
+        velocities[i3] = 0;
+        velocities[i3 + 1] = 0;
+        velocities[i3 + 2] = 0;
+      }
+    },
+    [outerRadius, size],
+  );
+
+  // Inflow particles — spiral inward toward center
+  const inflowOrbits = useMemo(() => {
+    const angles = new Float32Array(40);
+    const radii = new Float32Array(40);
+    for (let i = 0; i < 40; i++) {
+      angles[i] = Math.random() * Math.PI * 2;
+      radii[i] = outerRadius * (0.4 + Math.random() * 0.6);
+    }
+    return { angles, radii };
+  }, [outerRadius]);
+
+  const inflowTick = useCallback(
+    (data: ParticleState, delta: number) => {
+      const { positions, velocities, count } = data;
+
+      for (let i = 0; i < count; i++) {
+        const i3 = i * 3;
+        let angle = inflowOrbits.angles[i];
+        let radius = inflowOrbits.radii[i];
+
+        angle += (1.2 / Math.sqrt(Math.max(radius, 0.1))) * delta;
+        radius -= 0.4 * delta;
+
+        if (radius < 0.1) {
+          radius = outerRadius * (0.6 + Math.random() * 0.4);
+          angle = Math.random() * Math.PI * 2;
+        }
+
+        inflowOrbits.angles[i] = angle;
+        inflowOrbits.radii[i] = radius;
+
+        positions[i3] = Math.cos(angle) * radius;
+        positions[i3 + 1] = (Math.random() - 0.5) * 0.2 * size;
+        positions[i3 + 2] = Math.sin(angle) * radius;
+
+        velocities[i3] = 0;
+        velocities[i3 + 1] = 0;
+        velocities[i3 + 2] = 0;
+      }
+    },
+    [inflowOrbits, outerRadius, size],
+  );
+
   useFrame(({ clock }, delta) => {
-    if (!groupRef.current || !portalRef.current) return;
-
+    if (!groupRef.current) return;
     const time = clock.getElapsedTime();
-    const collapseDuration = 1.8; // Multi-phase collapse over 1800ms
+    const hovered = isHoveredRef.current;
 
-    // Calculate collapse progress (0 to 1 over 1800ms)
+    // Set collapse start time
+    if (isCollapsingRef.current && collapseStartRef.current === 0) {
+      collapseStartRef.current = time;
+    }
+
     let collapseProgress = 0;
     if (isCollapsingRef.current) {
-      const elapsed = (performance.now() - collapseStartRef.current) / 1000;
-      collapseProgress = Math.min(elapsed / collapseDuration, 1);
-
-      // Reset after collapse completes (could trigger removal)
-      if (collapseProgress >= 1) {
-        // Component should be removed by parent
-      }
+      collapseProgress = Math.min((time - collapseStartRef.current) / 1.8, 1);
     }
 
-    // ===== PORTAL SURFACE SHADER =====
-    // Update portal shader time uniform with acceleration on hover
-    if (materialRef.current) {
-      materialRef.current.time = time;
-      // Accelerate on hover OR during collapse
-      const collapseShaderBoost = isCollapsingRef.current ? 3.0 : 1.0;
-      materialRef.current.timeMultiplier = (isHoveredRef.current ? 2.0 : 1.0) * collapseShaderBoost;
-    }
-
-    // ===== TORUS RING ANIMATION =====
-    if (torusRef.current) {
-      // Slow tumble rotation: ~0.1 rad/s on X and Y axes
+    // Slow tumble
+    if (!isCollapsingRef.current) {
       groupRef.current.rotation.x = time * 0.1;
       groupRef.current.rotation.y = time * 0.15;
+    }
 
-      // On hover: torus scales up 20%
-      const targetScale = isHoveredRef.current ? 1.2 : 1.0;
-      torusRef.current.scale.lerp(
+    // ---- Layer 1: Outer Glow ----
+    if (outerGlowRef.current) {
+      outerGlowRef.current.time = time;
+    }
+
+    // ---- Layer 2: Portal Rim EnergyFlow ----
+    if (rimRef.current) {
+      rimRef.current.time = time;
+    }
+
+    // Torus hover scale
+    if (torusMeshRef.current && !isCollapsingRef.current) {
+      const targetScale = hovered ? 1.2 : 1.0;
+      torusMeshRef.current.scale.lerp(
         new THREE.Vector3(targetScale, targetScale, targetScale),
-        delta * 5 // Smooth lerp over 200ms
+        delta * 5,
       );
+    }
 
-      // Multi-phase collapse animation:
-      // Phase 1 (0-0.28): Swirl accelerates, ring starts shrinking
-      // Phase 2 (0.28-0.67): Ring contracts, particles change color/scatter
-      // Phase 3 (0.67-1.0): Final flash, particles fade completely
-      if (collapseProgress > 0) {
-        let collapseScale = 1.0;
-
-        if (collapseProgress < 0.28) {
-          // Phase 1: gentle shrink (0-20%)
-          collapseScale = 1 - collapseProgress * 0.72;
-        } else if (collapseProgress < 0.67) {
-          // Phase 2: accelerated shrink + squeeze (20%-80%)
-          const phase2Progress = (collapseProgress - 0.28) / 0.39;
-          collapseScale = (1 - 0.72) - phase2Progress * 0.2; // Shrink to 8% by end
-        } else {
-          // Phase 3: final fade (80%-100%)
-          collapseScale = 0.08 - (collapseProgress - 0.67) * 0.08;
-        }
-
-        torusRef.current.scale.setScalar(Math.max(collapseScale, 0.001));
+    // ---- Layer 3: Portal Surface Shaders ----
+    for (let layer = 0; layer < 4; layer++) {
+      const mat = portalRefs.current[layer];
+      if (mat) {
+        mat.time = time;
+        const collapseBoost = isCollapsingRef.current ? 3.0 : 1.0;
+        mat.timeMultiplier = (hovered ? 2.0 : 1.0) * collapseBoost;
       }
     }
 
-    // ===== EDGE RIPPLE PARTICLES =====
-    if (particlesRef.current) {
-      const posAttr = particlesRef.current.geometry.attributes.position;
-      const posArray = posAttr.array as Float32Array;
-      const material = particlesRef.current.material as THREE.PointsMaterial;
-
-      for (let i = 0; i < particleSystem.count; i++) {
-        const i3 = i * 3;
-        const baseAngle = particleSystem.angles[i];
-
-        // Store previous position for trail
-        if (particlePrevPosRef.current) {
-          particlePrevPosRef.current[i3] = posArray[i3];
-          particlePrevPosRef.current[i3 + 1] = posArray[i3 + 1];
-          particlePrevPosRef.current[i3 + 2] = posArray[i3 + 2];
-        }
-
-        let orbitSpeed = isHoveredRef.current ? 1.5 : 0.8;
-        let currentAngle = baseAngle + time * orbitSpeed * 0.5;
-        let orbitRadius = particleSystem.outerRadius;
-        let rimHeight = particleSystem.rimHeight;
-
-        // Multi-phase collapse particle behavior
-        if (collapseProgress > 0) {
-          if (collapseProgress < 0.28) {
-            // Phase 1: normal orbit continues
-            orbitSpeed *= (1 + collapseProgress * 5); // Swirl accelerates
-          } else if (collapseProgress < 0.67) {
-            // Phase 2: particles change color intensity (gold shimmer) and scatter
-            const phase2Progress = (collapseProgress - 0.28) / 0.39;
-            orbitSpeed *= (1 + 5); // Maximum speed
-            orbitRadius *= (1 + phase2Progress * 1.5); // Radiate outward
-
-            // Vertical scatter
-            rimHeight *= (1 + phase2Progress * 2);
-          } else {
-            // Phase 3: final scatter and fade
-            orbitRadius *= (1 + 1.5 + (collapseProgress - 0.67) * 2);
-            rimHeight *= (1 + 2 + (collapseProgress - 0.67) * 3);
-          }
-        }
-
-        // Calculate current particle position
-        currentAngle = baseAngle + time * orbitSpeed * 0.5;
-        posArray[i3] = Math.cos(currentAngle) * orbitRadius;
-        posArray[i3 + 2] = Math.sin(currentAngle) * orbitRadius;
-
-        // Vertical wobble with escape velocity on collapse
-        let wobble = Math.sin(time * 2 + i) * rimHeight;
-        posArray[i3 + 1] = wobble;
-
-        // Particle opacity and color during collapse
-        if (collapseProgress > 0) {
-          if (collapseProgress < 0.28) {
-            material.opacity = 0.7;
-            material.color.setHex(0xffffff);
-          } else if (collapseProgress < 0.67) {
-            // Phase 2: shift to gold
-            const phase2Progress = (collapseProgress - 0.28) / 0.39;
-            material.opacity = 0.7;
-            material.color.lerpColors(
-              new THREE.Color(0xffffff),
-              new THREE.Color(0xfbbf24), // Gold
-              phase2Progress
-            );
-          } else {
-            // Phase 3: fade to transparent
-            const phase3Progress = (collapseProgress - 0.67) / 0.33;
-            material.opacity = 0.7 * (1 - phase3Progress);
-            material.color.setHex(0xfbbf24); // Stay gold
-          }
-        } else {
-          material.opacity = 0.7;
-          material.color.setHex(0xffffff);
-        }
-      }
-
-      posAttr.needsUpdate = true;
+    // ---- Layer 4: Regenerate rim arcs ----
+    frameCountRef.current++;
+    if (frameCountRef.current % 8 === 0) {
+      const oldArcs = arcGeometries;
+      setArcGeometries(generateArcs());
+      oldArcs.forEach((g) => g.dispose());
     }
 
-    // ===== PARTICLE TRAIL EFFECT =====
-    if (trailParticlesRef.current && particlePrevPosRef.current) {
-      const trailAttr = trailParticlesRef.current.geometry.attributes.position;
-      const trailArray = trailAttr.array as Float32Array;
-
-      // Copy trail positions from previous frame
-      for (let i = 0; i < particleSystem.count; i++) {
-        const i3 = i * 3;
-        trailArray[i3] = particlePrevPosRef.current[i3];
-        trailArray[i3 + 1] = particlePrevPosRef.current[i3 + 1];
-        trailArray[i3 + 2] = particlePrevPosRef.current[i3 + 2];
-      }
-
-      trailAttr.needsUpdate = true;
+    // ---- Layer 6: Through-portal icon ----
+    if (ghostIconRef.current) {
+      ghostIconRef.current.rotation.y = time * 0.5;
+      ghostIconRef.current.rotation.x = Math.sin(time * 0.3) * 0.2;
     }
-
-    // ===== THROUGH-PORTAL VISION (LOST REWARD) =====
     if (throughPortalRef.current) {
-      // Float upward gently and pulse
-      const floatAmount = Math.sin(time * 0.8) * 0.3;
-      throughPortalRef.current.position.y = floatAmount;
+      throughPortalRef.current.position.y = Math.sin(time * 0.8) * 0.3;
+      // Pulse opacity
+      throughPortalRef.current.traverse((node) => {
+        if (node instanceof THREE.Mesh && node.material) {
+          const mat = node.material as THREE.MeshBasicMaterial;
+          if (mat.opacity !== undefined) {
+            mat.opacity = (hovered ? 0.5 : 0.25) + Math.sin(time * 2) * 0.1;
+          }
+        }
+      });
+    }
 
-      // Pulse opacity on hover, dim when not hovering
-      const targetOpacity = isHoveredRef.current ? 0.6 : 0.3;
-      const pulse = Math.sin(time * 2) * 0.1;
-      const opacity = targetOpacity + pulse;
-
-      // Update background halo opacity (first child is mesh)
-      if (throughPortalRef.current.children.length > 0) {
-        const bgMesh = throughPortalRef.current.children[0] as any;
-        if (bgMesh.material) {
-          bgMesh.material.opacity = opacity;
+    // ---- Collapse animation (1.8s) ----
+    if (isCollapsingRef.current && collapseProgress < 1) {
+      // Phase 1 (0–0.28): Swirl accelerates, rim starts shrinking
+      if (collapseProgress < 0.28) {
+        const p1 = collapseProgress / 0.28;
+        if (torusMeshRef.current) {
+          torusMeshRef.current.scale.setScalar(1 - p1 * 0.3);
+        }
+      }
+      // Phase 2 (0.28–0.67): Rim contracts, particles scatter
+      else if (collapseProgress < 0.67) {
+        const p2 = (collapseProgress - 0.28) / 0.39;
+        if (torusMeshRef.current) {
+          torusMeshRef.current.scale.setScalar(0.7 - p2 * 0.5);
+        }
+      }
+      // Phase 3 (0.67–1.0): Flash, everything fades
+      else {
+        const p3 = (collapseProgress - 0.67) / 0.33;
+        if (torusMeshRef.current) {
+          torusMeshRef.current.scale.setScalar(Math.max(0.01, 0.2 - p3 * 0.2));
+        }
+        if (flashRef.current) {
+          flashRef.current.visible = true;
+          flashRef.current.scale.setScalar(1 + p3 * 3);
+          (flashRef.current.material as THREE.MeshBasicMaterial).opacity =
+            (1 - p3) * 0.8;
+        }
+        if (outerGlowRef.current) {
+          outerGlowRef.current.opacity = (1 - p3) * 0.5;
         }
       }
     }
 
-    // ===== OUTER GLOW =====
-    if (glowRef.current) {
-      // Glow pulse more intense and dramatic on hover
-      const baseScale = isHoveredRef.current ? 1.5 : 1.2;
-      const pulseFreq = isHoveredRef.current ? 1.0 : 0.5; // 1s cycle on hover
-      const pulse = isHoveredRef.current
-        ? Math.sin(time * pulseFreq * Math.PI) * 0.2
-        : Math.sin(time * 0.5) * 0.05;
-      glowRef.current.scale.setScalar(baseScale + pulse);
-
-      // Glow opacity
-      const mat = glowRef.current.material as THREE.MeshBasicMaterial;
-      mat.opacity = isHoveredRef.current ? 0.3 : 0.12;
+    // Reset after collapse
+    if (isCollapsingRef.current && collapseProgress >= 1) {
+      isCollapsingRef.current = false;
+      if (torusMeshRef.current) torusMeshRef.current.scale.setScalar(1);
+      if (flashRef.current) flashRef.current.visible = false;
+      if (outerGlowRef.current) outerGlowRef.current.opacity = 1.0;
     }
 
-    // ===== COLLAPSE FLASH =====
-    if (flashRef.current) {
-      if (collapseProgress > 0.6 && collapseProgress < 0.85) {
-        flashRef.current.visible = true;
-        const flashProgress = (collapseProgress - 0.6) / 0.25;
-        flashRef.current.scale.setScalar(1 + flashProgress * 3);
-        const mat = flashRef.current.material as THREE.MeshBasicMaterial;
-        mat.opacity = (1 - flashProgress) * 0.8;
-      } else {
-        flashRef.current.visible = false;
-      }
-    }
-
-    // ===== TARGETING BRACKETS =====
+    // Targeting brackets
     if (bracketsRef.current) {
-      bracketsRef.current.visible = isHoveredRef.current;
-      if (isHoveredRef.current) {
-        // Subtle rotation of brackets for dynamic feel
+      bracketsRef.current.visible = hovered && !isCollapsingRef.current;
+      if (hovered) {
         bracketsRef.current.rotation.z = time * 0.2;
       }
     }
   });
 
+  // Depth layer configs: z-offset, radius scale, rotation speed multiplier
+  const depthLayers = useMemo(
+    () => [
+      { z: 0, radiusScale: 1.0, depth: 0.0 },
+      { z: -0.1 * size, radiusScale: 0.8, depth: 0.33 },
+      { z: -0.2 * size, radiusScale: 0.6, depth: 0.66 },
+      { z: -0.3 * size, radiusScale: 0.4, depth: 1.0 },
+    ],
+    [size],
+  );
+
   return (
     <group ref={groupRef} position={position}>
-      {/* Portal surface with swirling shader */}
-      <mesh ref={portalRef} rotation={[Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[1.5 * size, 64]} />
-        <portalSwirlMaterial
-          ref={materialRef}
-          key="portal-swirl"
+      {/* ===== Layer 1: Outer Glow Sphere ===== */}
+      <mesh>
+        <sphereGeometry args={[3.2 * size, 16, 16]} />
+        <volumetricGlowMaterial
+          ref={outerGlowRef}
+          color={color}
+          glowStrength={0.2}
+          noiseScale={1.0}
+          noiseSpeed={0.3}
+          rimPower={2.0}
+          opacity={1.0}
           transparent
+          side={THREE.BackSide}
           depthWrite={false}
-          side={THREE.DoubleSide}
           blending={THREE.AdditiveBlending}
+          toneMapped={false}
         />
       </mesh>
 
-      {/* Through-portal vision: ghostly lost reward visualization */}
+      {/* ===== Layer 2: Portal Rim (torus with EnergyFlow) ===== */}
+      <mesh
+        ref={torusMeshRef}
+        onPointerOver={handlePointerOver}
+        onPointerOut={handlePointerOut}
+        onClick={handleClick}
+      >
+        <torusGeometry args={[outerRadius, 0.3 * size, 16, 64]} />
+        <energyFlowMaterial
+          ref={rimRef}
+          color1={color}
+          color2="#c4b5fd"
+          flowSpeed={1.5}
+          stripeCount={8.0}
+          opacity={0.85}
+          transparent
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+          toneMapped={false}
+        />
+      </mesh>
+
+      {/* ===== Layer 3: Portal Surface (4 depth-layered swirl discs) ===== */}
+      {depthLayers.map((layer, idx) => (
+        <mesh
+          key={`portal-layer-${idx}`}
+          rotation={[Math.PI / 2, 0, 0]}
+          position={[0, layer.z, 0]}
+        >
+          <circleGeometry args={[1.5 * size * layer.radiusScale, 64]} />
+          <portalSwirlMaterial
+            ref={(ref: any) => {
+              portalRefs.current[idx] = ref;
+            }}
+            depthLayer={layer.depth}
+            transparent
+            depthWrite={false}
+            side={THREE.DoubleSide}
+            blending={THREE.AdditiveBlending}
+          />
+        </mesh>
+      ))}
+
+      {/* ===== Layer 4: Electrical Rim Arcs ===== */}
+      {arcGeometries.map((geo, i) => (
+        <mesh key={`arc-${i}-${frameCountRef.current}`} geometry={geo}>
+          <meshBasicMaterial
+            color="#ffffff"
+            transparent
+            opacity={0.7}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+            toneMapped={false}
+          />
+        </mesh>
+      ))}
+
+      {/* ===== Layer 5: Edge Ripple Particles ===== */}
+      <InstancedParticleSystem
+        count={80}
+        color="#ffffff"
+        size={0.08 * size}
+        velocityMin={[0, 0, 0]}
+        velocityMax={[0, 0, 0]}
+        gravity={[0, 0, 0]}
+        lifespan={[5.0, 10.0]}
+        emitRate={20}
+        spawnRadius={outerRadius}
+        loop
+        onTick={edgeRippleTick}
+      />
+
+      {/* ===== Layer 6: Through-Portal Vision ===== */}
       <group ref={throughPortalRef} position={[0, 0, 0.1]}>
-        {/* Background halo for text */}
+        {/* Ghostly octahedron icon floating inside portal */}
+        <mesh ref={ghostIconRef}>
+          <octahedronGeometry args={[0.3 * size, 0]} />
+          <meshBasicMaterial
+            color="#60a5fa"
+            transparent
+            opacity={0.3}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+            toneMapped={false}
+          />
+        </mesh>
+
+        {/* Background halo */}
         <mesh rotation={[Math.PI / 2, 0, 0]}>
           <circleGeometry args={[1.2 * size, 32]} />
           <meshBasicMaterial
-            color={0x60a5fa}
+            color="#60a5fa"
             transparent
             opacity={0.15}
             depthWrite={false}
@@ -477,11 +530,11 @@ export default function Wormhole({
           />
         </mesh>
 
-        {/* Lost reward text (example: "+450 pts" / "$13.50") */}
+        {/* Lost reward text */}
         <Billboard>
           <Text
-            position={[0, 0, 0.05]}
-            fontSize={0.4 * size}
+            position={[0, -0.5 * size, 0.05]}
+            fontSize={0.35 * size}
             color={0x60a5fa}
             anchorX="center"
             anchorY="middle"
@@ -497,94 +550,25 @@ export default function Wormhole({
         </Billboard>
       </group>
 
-      {/* Torus ring (portal rim) */}
-      <mesh
-        ref={torusRef}
-        onPointerOver={handlePointerOver}
-        onPointerOut={handlePointerOut}
-        onClick={handleClick}
-      >
-        <torusGeometry
-          args={[
-            2.5 * size,      // outerRadius
-            0.3 * size,      // tubeRadius
-            16,              // radialSegments
-            64,              // tubularSegments
-          ]}
-        />
-        <meshStandardMaterial
-          color={color}
-          emissive={color}
-          emissiveIntensity={0.6}
-          transparent
-          opacity={0.85}
-          metalness={0.6}
-          roughness={0.3}
-          depthWrite={false}
-          blending={THREE.AdditiveBlending}
-          toneMapped={false}
-        />
-      </mesh>
+      {/* ===== Layer 7: Inflow Particle Streams ===== */}
+      <InstancedParticleSystem
+        count={40}
+        color="#a5c5e8"
+        colorEnd="#60a5fa"
+        size={0.04 * size}
+        velocityMin={[0, 0, 0]}
+        velocityMax={[0, 0, 0]}
+        gravity={[0, 0, 0]}
+        lifespan={[3.0, 6.0]}
+        emitRate={10}
+        spawnRadius={outerRadius}
+        loop
+        onTick={inflowTick}
+      />
 
-      {/* Sci-fi corner targeting brackets (blue variant for wormhole) */}
-      <group ref={bracketsRef} visible={false}>
-        <lineSegments geometry={bracketGeometry}>
-          <lineBasicMaterial color={color} opacity={0.8} transparent />
-        </lineSegments>
-      </group>
+      {/* ===== Interaction Overlays ===== */}
 
-      {/* Edge ripple particles */}
-      <points ref={particlesRef}>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            args={[particleSystem.positions, 3]}
-          />
-        </bufferGeometry>
-        <pointsMaterial
-          size={0.12 * size}
-          color="#ffffff"
-          transparent
-          opacity={0.7}
-          sizeAttenuation
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
-        />
-      </points>
-
-      {/* Particle trail effect - faint blue-white trails */}
-      <points ref={trailParticlesRef}>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            args={[particleTrailRef.current || new Float32Array(particleSystem.count * 3), 3]}
-          />
-        </bufferGeometry>
-        <pointsMaterial
-          size={0.06 * size}
-          color="#a5c5e8"
-          transparent
-          opacity={0.3}
-          sizeAttenuation
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
-        />
-      </points>
-
-      {/* Outer glow sphere */}
-      <mesh ref={glowRef}>
-        <sphereGeometry args={[3.2 * size, 16, 16]} />
-        <meshBasicMaterial
-          color={color}
-          transparent
-          opacity={0.12}
-          side={THREE.BackSide}
-          depthWrite={false}
-          blending={THREE.AdditiveBlending}
-        />
-      </mesh>
-
-      {/* Blue flash on collapse */}
+      {/* Collapse flash */}
       <mesh ref={flashRef} visible={false}>
         <sphereGeometry args={[1.5 * size, 16, 16]} />
         <meshBasicMaterial
@@ -593,16 +577,16 @@ export default function Wormhole({
           opacity={0}
           blending={THREE.AdditiveBlending}
           depthWrite={false}
+          toneMapped={false}
         />
       </mesh>
 
-      {/* Point light for ambient illumination */}
-      <pointLight
-        color={color}
-        intensity={1.2}
-        distance={12 * size}
-        decay={2}
-      />
+      {/* Targeting brackets */}
+      <group ref={bracketsRef} visible={false}>
+        <lineSegments geometry={bracketGeometry}>
+          <lineBasicMaterial color={color} opacity={0.8} transparent />
+        </lineSegments>
+      </group>
     </group>
   );
 }

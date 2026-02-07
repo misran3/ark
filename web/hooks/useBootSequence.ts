@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useBootStore } from '@/lib/stores/boot-store';
+import { useEffect, useRef, useCallback } from 'react';
+import { useBootStore, type BootPhase } from '@/lib/stores/boot-store';
 
-const PHASE_DURATIONS = {
+const PHASE_DURATIONS: Record<string, number> = {
   loading: 3000,
   eyelid: 1000,
   blur: 500,
@@ -12,7 +12,7 @@ const PHASE_DURATIONS = {
   'hud-rise': 1000,
 };
 
-const PHASES = [
+const PHASES: BootPhase[] = [
   'loading',
   'eyelid',
   'blur',
@@ -20,10 +20,17 @@ const PHASES = [
   'console-boot',
   'hud-rise',
   'complete',
-] as const;
+];
 
 export function useBootSequence() {
-  const { phase, progress, setPhase, setProgress } = useBootStore();
+  // Use individual selectors to avoid unnecessary re-renders
+  const phase = useBootStore((s) => s.phase);
+  const progress = useBootStore((s) => s.progress);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Stable references to store actions (zustand actions are stable by default)
+  const setPhase = useBootStore.getState().setPhase;
+  const setProgress = useBootStore.getState().setProgress;
 
   useEffect(() => {
     // Check localStorage for skip flag
@@ -35,18 +42,28 @@ export function useBootSequence() {
 
     if (phase === 'complete') return;
 
-    const duration = PHASE_DURATIONS[phase as keyof typeof PHASE_DURATIONS];
+    const duration = PHASE_DURATIONS[phase];
+    if (!duration) return;
+
     const startTime = Date.now();
 
-    const interval = setInterval(() => {
+    // Clear any existing interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+
+    intervalRef.current = setInterval(() => {
       const elapsed = Date.now() - startTime;
       const phaseProgress = Math.min((elapsed / duration) * 100, 100);
       setProgress(phaseProgress);
 
       if (phaseProgress >= 100) {
-        clearInterval(interval);
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
         // Advance to next phase
-        const currentIndex = PHASES.indexOf(phase as (typeof PHASES)[number]);
+        const currentIndex = PHASES.indexOf(phase);
         const nextPhase = PHASES[currentIndex + 1];
         if (nextPhase) {
           setPhase(nextPhase);
@@ -54,8 +71,13 @@ export function useBootSequence() {
       }
     }, 16); // ~60fps
 
-    return () => clearInterval(interval);
-  }, [phase, setPhase, setProgress]);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [phase]); // Only re-run when phase changes, not on progress updates
 
   useEffect(() => {
     // Save skip preference when complete

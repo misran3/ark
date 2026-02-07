@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import gsap from 'gsap';
 import * as THREE from 'three';
 
@@ -18,17 +18,17 @@ export function usePoint(
   config: PointConfig = {}
 ) {
   const { duration = 0.8, target = new THREE.Vector3(5, 0, 0) } = config;
-  const isPlaying = useRef(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   const timeline = useRef<gsap.core.Timeline | null>(null);
 
   const play = () => {
-    if (isPlaying.current || !characterRef.current) return;
+    if (isPlaying || !characterRef.current) return;
 
     const rightArm = characterRef.current.getObjectByName('rightArm');
     const torso = characterRef.current.getObjectByName('torso');
     if (!rightArm || !torso) return;
 
-    isPlaying.current = true;
+    setIsPlaying(true);
 
     // Calculate pointing direction
     const characterPos = characterRef.current.position;
@@ -38,7 +38,7 @@ export function usePoint(
 
     timeline.current = gsap.timeline({
       onComplete: () => {
-        isPlaying.current = false;
+        setIsPlaying(false);
       },
     });
 
@@ -72,9 +72,9 @@ export function usePoint(
   const stop = () => {
     if (timeline.current) {
       timeline.current.kill();
-      isPlaying.current = false;
+      setIsPlaying(false);
     }
   };
 
-  return { play, stop, isPlaying: isPlaying.current };
+  return { play, stop, isPlaying };
 }
