@@ -120,15 +120,11 @@ export class ApiStack extends cdk.Stack {
             handler: 'handler.lambda_handler',
             description: 'Captain Nova AI agent for financial guidance',
             additionalDeps: ['./shared', './agent'],
-            additionalEnv: {
-                BEDROCK_MODEL_ID: 'us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-            },
              additionalEnv: {
                  BEDROCK_MODEL_ID: 'us.anthropic.claude-sonnet-4-5-20250929-v1:0',
              },
              timeout: cdk.Duration.seconds(60),
          });
-        });
 
         // Grant Bedrock access
         captainLambdaFn.addToRolePolicy(new iam.PolicyStatement({
