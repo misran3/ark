@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { useAlertStore, type AlertLevel } from '@/lib/stores/alert-store';
+import { VIEWPORT_BOUNDS } from '@/lib/constants/cockpit-layout';
 
 /**
  * Layer C — Parallax Reflection (z-6)
@@ -37,13 +38,6 @@ export function ParallaxReflection() {
   const currentY = useRef(0);
   const rafId = useRef(0);
   const isHovering = useRef(false);
-
-  const bounds = {
-    top: '24px',
-    left: '50px',
-    right: '180px',
-    bottom: '220px',
-  };
 
   const animate = useCallback(() => {
     // Lerp towards target
@@ -109,7 +103,7 @@ export function ParallaxReflection() {
     <div
       className="fixed pointer-events-none overflow-hidden"
       style={{
-        ...bounds,
+        ...VIEWPORT_BOUNDS,
         zIndex: 6,
       }}
       aria-hidden="true"

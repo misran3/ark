@@ -2,6 +2,7 @@
 'use client';
 
 import { useAlertStore, ALERT_COLORS, type CascadeStage } from '@/lib/stores/alert-store';
+import { VIEWPORT_BOUNDS } from '@/lib/constants/cockpit-layout';
 
 export function CockpitFrame() {
   const alertLevel = useAlertStore((state) => state.level);
@@ -129,10 +130,7 @@ export function CockpitFrame() {
       <div
         className="absolute pointer-events-none"
         style={{
-          top: '24px',
-          left: '50px',
-          right: '180px',
-          bottom: '220px',
+          ...VIEWPORT_BOUNDS,
           boxShadow: `inset 0 0 12px ${colors.glow}, inset 0 0 2px rgba(0,0,0,0.8)`,
           border: '2px solid rgba(30, 30, 40, 0.9)',
           borderRadius: '2px',

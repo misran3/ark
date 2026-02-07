@@ -3,6 +3,7 @@
 
 import { useShieldStore } from '@/lib/stores/shield-store';
 import { useAlertStore, ALERT_COLORS } from '@/lib/stores/alert-store';
+import { VIEWPORT_BOUNDS } from '@/lib/constants/cockpit-layout';
 
 export function HUDAmbient() {
   const overallPercent = useShieldStore((state) => state.overallPercent);
@@ -58,10 +59,7 @@ export function HUDAmbient() {
       <div
         className="absolute"
         style={{
-          top: '24px',
-          left: '50px',
-          right: '180px',
-          bottom: '220px',
+          ...VIEWPORT_BOUNDS,
           overflow: 'hidden',
         }}
       >

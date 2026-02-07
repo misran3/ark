@@ -1,5 +1,7 @@
 'use client';
 
+import { VIEWPORT_BOUNDS } from '@/lib/constants/cockpit-layout';
+
 /**
  * Layer A — Glass Bevel (z-8)
  *
@@ -11,19 +13,12 @@
  * Corner reinforcement: more pronounced bevel with visible corner bracket hardware.
  */
 export function GlassBevel() {
-  // Viewport bounds match CockpitFrame viewscreen area
-  const bounds = {
-    top: '24px',
-    left: '50px',
-    right: '180px',
-    bottom: '220px',
-  };
 
   return (
     <div
       className="fixed pointer-events-none"
       style={{
-        ...bounds,
+        ...VIEWPORT_BOUNDS,
         zIndex: 8,
       }}
       aria-hidden="true"

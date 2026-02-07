@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { VIEWPORT_BOUNDS } from '@/lib/constants/cockpit-layout';
 
 /**
  * Layer D — Near-field Particles (z-5)
@@ -43,18 +44,11 @@ function generateParticles(): Particle[] {
 export function NearFieldParticles() {
   const particles = useMemo(generateParticles, []);
 
-  const bounds = {
-    top: '24px',
-    left: '50px',
-    right: '180px',
-    bottom: '220px',
-  };
-
   return (
     <div
       className="fixed pointer-events-none overflow-hidden"
       style={{
-        ...bounds,
+        ...VIEWPORT_BOUNDS,
         zIndex: 5,
       }}
       aria-hidden="true"

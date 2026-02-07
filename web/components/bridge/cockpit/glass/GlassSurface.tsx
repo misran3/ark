@@ -1,5 +1,7 @@
 'use client';
 
+import { VIEWPORT_BOUNDS } from '@/lib/constants/cockpit-layout';
+
 /**
  * Layer B — Glass Surface (z-7)
  *
@@ -11,18 +13,12 @@
  * - Thermal gradient zone: warm spot near bottom center (opacity 0.01)
  */
 export function GlassSurface() {
-  const bounds = {
-    top: '24px',
-    left: '50px',
-    right: '180px',
-    bottom: '220px',
-  };
 
   return (
     <div
       className="fixed pointer-events-none"
       style={{
-        ...bounds,
+        ...VIEWPORT_BOUNDS,
         zIndex: 7,
       }}
       aria-hidden="true"
@@ -66,6 +62,7 @@ export function GlassSurface() {
             clipPath: 'polygon(8% 0%, 92% 0%, 100% 100%, 0% 100%)',
             filter: 'blur(8px)',
             animation: 'glass-specular-drift 25s ease-in-out infinite',
+            willChange: 'transform',
           }}
         />
       </div>
