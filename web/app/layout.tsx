@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import "./globals.css";
 import ThreeScene from "@/components/three/ThreeScene";
 import CaptainNovaUI from "@/components/ui/CaptainNovaUI";
 import ColdBootSequence from "@/components/ui/ColdBootSequence";
+import TransactionDetailModal from "@/components/ui/TransactionDetailModal";
+import { DevDashboardLoader } from "@/components/dev/DevDashboardLoader";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
@@ -28,8 +31,16 @@ export default function RootLayout({
           {/* Cold boot sequence overlay */}
           <ColdBootSequence />
 
+          {/* Transaction Detail Modal persists across all routes */}
+          <TransactionDetailModal />
+
           {/* Scanline overlay */}
           <div className="scanlines" />
+
+          {/* Dev Dashboard (development mode only) */}
+          <Suspense fallback={null}>
+            <DevDashboardLoader />
+          </Suspense>
 
           {/* Page content */}
           {children}

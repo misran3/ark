@@ -21,6 +21,7 @@ interface ThreatState {
   addThreat: (threat: Threat) => void;
   removeThreat: (id: string) => void;
   deflectThreat: (id: string) => void;
+  updateThreat: (id: string, updates: Partial<Threat>) => void;
   setHoveredThreat: (id: string | null) => void;
 }
 
@@ -131,6 +132,13 @@ export const useThreatStore = create<ThreatState>((set) => ({
     set((state) => ({
       threats: state.threats.map((t) =>
         t.id === id ? { ...t, deflected: true } : t
+      ),
+    })),
+
+  updateThreat: (id, updates) =>
+    set((state) => ({
+      threats: state.threats.map((t) =>
+        t.id === id ? { ...t, ...updates } : t
       ),
     })),
 

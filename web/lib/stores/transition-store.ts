@@ -9,6 +9,7 @@ interface TransitionState {
   completeTransition: () => void;
   setCameraZ: (z: number) => void;
   setStarfieldOpacity: (opacity: number) => void;
+  setIsTransitioning: (isTransitioning: boolean) => void;
 }
 
 export const useTransitionStore = create<TransitionState>((set) => ({
@@ -32,4 +33,6 @@ export const useTransitionStore = create<TransitionState>((set) => ({
   setCameraZ: (z) => set({ cameraZ: z }),
 
   setStarfieldOpacity: (opacity) => set({ starfieldOpacity: opacity }),
+
+  setIsTransitioning: (isTransitioning) => set({ isTransitioning }),
 }));

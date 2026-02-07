@@ -60,6 +60,28 @@ Use `uv` package manager:
 - Claude Sonnet 4.5 via AWS Bedrock
 - Type-safe RunContext with dependencies
 
+## 3D / Three.js Skill Usage
+
+When working on Three.js threat visuals, 3D components, or the R3F scene, always invoke these skills:
+
+**React Three Fiber (built-in):**
+- `r3f-shaders` — Custom GLSL, shaderMaterial, uniforms
+- `r3f-geometry` — BufferGeometry, instancing, procedural meshes
+- `r3f-materials` — PBR materials, shader materials, material properties
+- `r3f-postprocessing` — Bloom, DOF, screen effects
+- `r3f-animation` — useFrame, spring physics, keyframes
+- `r3f-fundamentals` — Canvas, hooks, JSX elements, events
+- `r3f-lighting` — Light types, shadows, environment lighting
+- `r3f-textures` — Texture loading, environment maps, PBR sets
+- `r3f-interaction` — Pointer events, controls, gestures
+- `threejs-scene-builder` — Procedural generation, scene composition
+
+**Installed specializations:**
+- `particles-gpu` — GPU-instanced particle systems
+- `shader-effects` — Advanced shader techniques (volumetric, lensing, energy)
+- `three-best-practices` — Three.js performance, memory management, disposal
+- `vfx-realtime` — Real-time VFX patterns for cinematic effects
+
 ## Environment Variables
 
 Frontend (via SSM → Amplify):

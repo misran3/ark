@@ -43,6 +43,7 @@
   --animate-float: float 6s ease-in-out infinite;
   --animate-scan: scan 2s linear infinite;
   --animate-glow: glow 2s ease-in-out infinite;
+  --animate-pulse-shield: pulse-shield 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 @keyframes pulse-slow {
@@ -81,6 +82,20 @@
     opacity: 0.8;
     filter: brightness(1.2);
   }
+}
+
+@keyframes pulse-shield {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
 * {
