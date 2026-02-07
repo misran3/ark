@@ -204,7 +204,7 @@ export function ConsolePanel({
           {/* CRT Screen area (clickable) */}
           <button
             onClick={() => expandPanel(type)}
-            className="relative w-full h-full crt-screen cursor-pointer group"
+            className="relative w-full h-full crt-screen cursor-pointer group flex flex-col"
             style={{
               opacity: isPowered ? 1 : 0,
               animation: isPowered && isPoweringOn ? `crt-warmup 1.2s ease-out ${powerOnDelay}ms both` : undefined,

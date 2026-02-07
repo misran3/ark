@@ -57,7 +57,7 @@ export function NetWorthManifestFace() {
       <div
         className="tracking-wider mb-1"
         style={{
-          fontSize: '16px',
+          fontSize: '14px',
           color: 'rgba(255, 200, 60, 0.95)',
           textShadow: '0 0 10px rgba(255, 180, 40, 0.4), 0 0 20px rgba(255, 160, 30, 0.15)',
         }}
