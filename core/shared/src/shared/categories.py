@@ -64,7 +64,7 @@ INCOME: list[str] = [
 BucketType = Literal["needs", "wants", "savings", "income"]
 
 
-def categorize_transaction(category: str) -> BucketType | None:
+def categorize_transaction(category: str) -> BucketType:
     """Map a transaction category to a 50/30/20 bucket."""
     category_lower = category.lower()
 
