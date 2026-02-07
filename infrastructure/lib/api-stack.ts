@@ -29,6 +29,7 @@ interface LambdaFunctionConfig {
 
 export class ApiStack extends cdk.Stack {
     public readonly api: apigateway.RestApi;
+    private readonly apiResource: apigateway.Resource;
     private readonly coreRoot: string = path.join(__dirname, '../../core');
     private readonly commonEnv: Record<string, string>;
 
@@ -106,6 +107,9 @@ export class ApiStack extends cdk.Stack {
             tableGrants: [props.usersTable],
             timeout: cdk.Duration.seconds(30),
         });
+
+        // Shared /api resource for data and captain lambdas
+        this.apiResource = this.api.root.addResource('api');
 
         // =============================================================
         // Data API Resources and Methods
@@ -208,7 +212,7 @@ export class ApiStack extends cdk.Stack {
      * Health check is unauthenticated; all other endpoints require Cognito auth.
      */
     private createDataAPIResources(dataLambdaFn: lambda.Function, authorizer: apigateway.CognitoUserPoolsAuthorizer) {
-        const apiResource = this.api.root.addResource('api');
+        const apiResource = this.apiResource;
         const lambdaIntegration = new apigateway.LambdaIntegration(dataLambdaFn);
 
         // All data endpoints are public for now (no Cognito auth)
@@ -233,16 +237,32 @@ export class ApiStack extends cdk.Stack {
         captainLambdaFn: lambda.Function,
         authorizer: apigateway.CognitoUserPoolsAuthorizer
     ) {
-        const captainResource = this.api.root.addResource('captain');
+        const captainResource = this.apiResource.addResource('captain');
         const lambdaIntegration = new apigateway.LambdaIntegration(captainLambdaFn);
 
-        // Health check endpoint (no auth for testing)
-        const healthResource = captainResource.addResource('health');
-        healthResource.addMethod('GET', lambdaIntegration);
+        // Health check (no auth)
+        captainResource.addResource('health').addMethod('GET', lambdaIntegration);
 
-        // POST /captain/query (requires auth)
-        const queryResource = captainResource.addResource('query');
-        queryResource.addMethod('POST', lambdaIntegration);
+        // Legacy conversational query (no auth)
+        captainResource.addResource('query').addMethod('POST', lambdaIntegration);
+
+        // Complete multi-agent analysis (no auth)
+        captainResource.addResource('complete-analysis').addMethod('POST', lambdaIntegration);
+
+        // Individual specialist endpoints (no auth)
+        const specialistsResource = captainResource.addResource('specialists');
+        const specialistNames = [
+            'financial-meaning',
+            'subscriptions',
+            'budget-overruns',
+            'upcoming-bills',
+            'debt-spirals',
+            'missed-rewards',
+            'fraud-detection',
+        ];
+        for (const name of specialistNames) {
+            specialistsResource.addResource(name).addMethod('POST', lambdaIntegration);
+        }
     }
 
     /**
