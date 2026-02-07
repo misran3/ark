@@ -1,57 +1,109 @@
 'use client';
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState, useImperativeHandle, forwardRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useAuroraColors } from '@/hooks/useAuroraColors';
-import { Character } from './Character';
-import { ProjectionBase } from './ProjectionBase';
-import { useNovaAnimations, NovaAnimationConfig } from './hooks/useNovaAnimations';
-import { updateHologramUniforms } from './materials';
-import { NovaGeometryConfig } from './geometry';
+import { createNovaGeometry } from './geometry';
+import { createHologramMaterial, updateHologramUniforms } from './materials';
+import { useNovaAnimations } from './hooks/useNovaAnimations';
+import type { NovaGeometryConfig, AnimationConfig, NovaBodyParts } from './types';
+
+export interface CaptainNovaHandle {
+  playGesture: (gesture: 'point' | 'salute' | 'at-ease') => void;
+}
 
 export interface CaptainNovaProps {
   position?: [number, number, number];
   geometryConfig?: NovaGeometryConfig;
-  animationConfig?: NovaAnimationConfig;
+  animationConfig?: AnimationConfig;
 }
 
-export default function CaptainNova({
-  position = [-4, -2, 0],
-  geometryConfig,
-  animationConfig,
-}: CaptainNovaProps) {
-  const groupRef = useRef<THREE.Group>(null);
-  const characterRef = useRef<THREE.Group>(null!);
-  const materialRef = useRef<THREE.ShaderMaterial>(null!);
-  const colors = useAuroraColors();
+const defaultAnimConfig: AnimationConfig = {
+  breathing: { enabled: true, cycleDuration: 4, scaleAmount: 0.015 },
+  headTracking: {
+    enabled: true,
+    maxRotationY: 0.15,
+    maxRotationX: 0.1,
+    lerpSpeed: 0.05,
+  },
+  idleSway: { enabled: true, speed: 0.3, amount: 0.02 },
+};
 
-  useNovaAnimations(characterRef, materialRef, animationConfig);
+const CaptainNova = forwardRef<CaptainNovaHandle, CaptainNovaProps>(
+  function CaptainNova(
+    {
+      position = [-4, -2, 0],
+      geometryConfig,
+      animationConfig = defaultAnimConfig,
+    },
+    ref
+  ) {
+    const groupRef = useRef<THREE.Group>(null);
+    const [bodyParts, setBodyParts] = useState<NovaBodyParts | null>(null);
+    const materialRef = useRef<THREE.ShaderMaterial | null>(null);
+    const colors = useAuroraColors();
 
-  useFrame(({ clock }) => {
-    if (!materialRef.current) return;
+    // Create geometry on mount
+    useEffect(() => {
+      const parts = createNovaGeometry(geometryConfig);
+      const material = createHologramMaterial(colors[0], colors[1]);
+      materialRef.current = material;
 
-    updateHologramUniforms(materialRef.current, {
-      time: clock.getElapsedTime(),
-      auroraColor1: colors[0],
-      auroraColor2: colors[1],
+      // Apply material to all meshes
+      parts.root.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          child.material = material;
+          child.castShadow = false;
+          child.receiveShadow = false;
+        }
+      });
+
+      if (groupRef.current) {
+        groupRef.current.add(parts.root);
+      }
+
+      setBodyParts(parts);
+
+      return () => {
+        parts.root.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            child.geometry.dispose();
+          }
+        });
+        material.dispose();
+        if (groupRef.current) {
+          groupRef.current.remove(parts.root);
+        }
+      };
+    }, [geometryConfig]);
+
+    // Animation system
+    const gestureSystem = useNovaAnimations(
+      bodyParts,
+      materialRef.current,
+      animationConfig
+    );
+
+    // Expose gesture triggers via ref
+    useImperativeHandle(ref, () => ({
+      playGesture: (gesture: 'point' | 'salute' | 'at-ease') => {
+        gestureSystem?.playGesture({ name: gesture, duration: 2 });
+      },
+    }));
+
+    // Update aurora colors
+    useFrame(() => {
+      if (!materialRef.current) return;
+      updateHologramUniforms(materialRef.current, {
+        auroraColor1: colors[0],
+        auroraColor2: colors[1],
+      });
     });
-  });
 
-  const handleCharacterReady = (character: THREE.Group) => {
-    characterRef.current = character;
-  };
+    return <group ref={groupRef} position={position} name="captain-nova-v3" />;
+  }
+);
 
-  return (
-    <group ref={groupRef} position={position} name="captain-nova">
-      <ProjectionBase auroraColor1={colors[0]} auroraColor2={colors[1]} />
-      {/* Colors updated via useFrame + updateHologramUniforms above */}
-      <Character
-        geometryConfig={geometryConfig}
-        materialRef={materialRef}
-        onCharacterReady={handleCharacterReady}
-      />
-    </group>
-  );
-}
-
-export type { NovaGeometryConfig, NovaAnimationConfig };
+export default CaptainNova;
+export type { NovaGeometryConfig, AnimationConfig };
+export { createNovaGeometry, createHologramMaterial };

@@ -1,79 +1,63 @@
-import { useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useRef, useEffect } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { useBreathing, BreathingConfig } from './useBreathing';
-import { useWeightShift, WeightShiftConfig } from './useWeightShift';
-import { useHeadTracking, HeadTrackingConfig } from './useHeadTracking';
-import { useGlitchEffect, GlitchConfig } from './useGlitchEffect';
+import { NovaIdleAnimations } from '../animations';
+import { GestureSystem } from '../gestures';
+import type { NovaBodyParts, AnimationConfig } from '../types';
 
-export interface NovaAnimationConfig {
-  breathing?: BreathingConfig;
-  weightShift?: WeightShiftConfig;
-  headTracking?: HeadTrackingConfig;
-  glitch?: GlitchConfig;
-  idleSway?: {
-    enabled?: boolean;
-    speed?: number; // multiplier
-    amount?: number; // radians
-  };
-}
-
-/**
- * Composite hook for all Captain Nova animations
- *
- * @param characterRef - Reference to character group
- * @param materialRef - Reference to hologram material
- * @param config - Animation configurations
- */
 export function useNovaAnimations(
-  characterRef: React.RefObject<THREE.Group>,
-  materialRef: React.RefObject<THREE.ShaderMaterial>,
-  config: NovaAnimationConfig = {}
+  parts: NovaBodyParts | null,
+  material: THREE.ShaderMaterial | null,
+  config: AnimationConfig
 ) {
-  const torsoRef = useRef<THREE.Mesh>(null);
-  const hipsRef = useRef<THREE.Mesh>(null);
-  const headRef = useRef<THREE.Mesh>(null);
+  const idleAnimationsRef = useRef<NovaIdleAnimations | null>(null);
+  const gestureSystemRef = useRef<GestureSystem | null>(null);
+  const glitchTimerRef = useRef(0);
+  const { mouse } = useThree();
 
-  // Setup refs from character group
-  useFrame(() => {
-    if (!characterRef.current) return;
+  useEffect(() => {
+    if (!parts) return;
 
-    if (!torsoRef.current) {
-      torsoRef.current = characterRef.current.getObjectByName('torso') as THREE.Mesh;
+    idleAnimationsRef.current = new NovaIdleAnimations(parts, config);
+    gestureSystemRef.current = new GestureSystem(parts);
+
+    return () => {
+      idleAnimationsRef.current = null;
+      gestureSystemRef.current = null;
+    };
+  }, [parts, config]);
+
+  useFrame(({ clock }, delta) => {
+    if (!material) return;
+
+    const elapsedTime = clock.getElapsedTime();
+
+    // Update shader time
+    material.uniforms.uTime.value = elapsedTime;
+
+    // Update idle animations
+    if (idleAnimationsRef.current) {
+      idleAnimationsRef.current.update(delta, elapsedTime, {
+        x: mouse.x,
+        y: mouse.y,
+      });
     }
-    if (!hipsRef.current) {
-      hipsRef.current = characterRef.current.getObjectByName('hips') as THREE.Mesh;
+
+    // Update gestures
+    if (gestureSystemRef.current) {
+      gestureSystemRef.current.update(delta);
     }
-    if (!headRef.current) {
-      headRef.current = characterRef.current.getObjectByName('head') as THREE.Mesh;
+
+    // Random glitch effect (1-2 times per 10 seconds)
+    glitchTimerRef.current += delta;
+    if (glitchTimerRef.current > 5 + Math.random() * 5) {
+      material.uniforms.uGlitchIntensity.value = 0.8;
+      setTimeout(() => {
+        if (material) material.uniforms.uGlitchIntensity.value = 0;
+      }, 50 + Math.random() * 50);
+      glitchTimerRef.current = 0;
     }
   });
 
-  // Individual animations
-  useBreathing(torsoRef, config.breathing);
-  useWeightShift(hipsRef, config.weightShift);
-  useHeadTracking(headRef, config.headTracking);
-  useGlitchEffect(materialRef, config.glitch);
-
-  // Idle sway
-  const idleSwayConfig = {
-    enabled: true,
-    speed: 0.3,
-    amount: 0.03,
-    ...config.idleSway,
-  };
-
-  useFrame(({ clock }) => {
-    if (!idleSwayConfig.enabled || !characterRef.current) return;
-
-    const time = clock.getElapsedTime();
-    characterRef.current.rotation.y =
-      Math.sin(time * idleSwayConfig.speed) * idleSwayConfig.amount;
-  });
-
-  return {
-    torsoRef,
-    hipsRef,
-    headRef,
-  };
+  return gestureSystemRef.current;
 }
