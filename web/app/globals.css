@@ -960,3 +960,34 @@ body {
     opacity: 0;
   }
 }
+
+/* Cockpit interior dust drift paths */
+@keyframes cockpit-dust-drift-0 {
+  0%   { transform: translate3d(0, 0, 0); }
+  25%  { transform: translate3d(40px, -20px, 0); }
+  50%  { transform: translate3d(70px, 15px, 0); }
+  75%  { transform: translate3d(25px, -10px, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+@keyframes cockpit-dust-drift-1 {
+  0%   { transform: translate3d(0, 0, 0); }
+  25%  { transform: translate3d(-30px, 25px, 0); }
+  50%  { transform: translate3d(-55px, -10px, 0); }
+  75%  { transform: translate3d(-15px, 20px, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+@keyframes cockpit-dust-drift-2 {
+  0%   { transform: translate3d(0, 0, 0); }
+  25%  { transform: translate3d(20px, 35px, 0); }
+  50%  { transform: translate3d(-15px, 55px, 0); }
+  75%  { transform: translate3d(10px, 25px, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+@keyframes cockpit-dust-pulse {
+  0%, 85%, 100% { opacity: 1; }
+  90%           { opacity: 2; filter: brightness(1.8); }
+  95%           { opacity: 1; }
+}

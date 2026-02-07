@@ -12,6 +12,7 @@ import { LeftDataStrip } from './cockpit/LeftDataStrip';
 import { Viewport3D } from '../viewport/Viewport3D';
 import { ViewportGlass } from './cockpit/ViewportGlass';
 import { EnvironmentalCohesion } from './cockpit/EnvironmentalCohesion';
+import { CockpitDust } from './cockpit/CockpitDust';
 import { DashboardProjection } from './cockpit/DashboardProjection';
 import { PerfMonitor } from './cockpit/PerfMonitor';
 import { useCaptainScans } from '@/hooks/useCaptainScans';
@@ -115,6 +116,9 @@ export function BridgeLayout() {
 
         {/* Environmental cohesion: AO, dust, specular (z-11, above frame) */}
         <EnvironmentalCohesion />
+
+        {/* Cockpit dust — always-visible floating motes (z-12, above frame) */}
+        <CockpitDust />
 
         {/* Layer 5: Console dashboard (bottom, integrated into frame) */}
         <div className="absolute bottom-0 left-0 right-0 h-[220px] z-20">
