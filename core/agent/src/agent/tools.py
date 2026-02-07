@@ -7,6 +7,7 @@ Currently backed by mock data; will be swapped to real HTTP calls at integration
 
 import uuid
 from datetime import datetime, timedelta
+from typing import Literal
 
 from pydantic_ai import RunContext
 
@@ -19,6 +20,21 @@ from shared.mocks import (
 from shared.models import Asteroid, BudgetReport, FinancialSnapshot, VisaControlRule
 
 from .models import CaptainDeps
+
+# Type alias matching VisaControlRule.control_type
+VisaControlType = Literal[
+    "spending_limit",
+    "merchant_category_block",
+    "transaction_type_block",
+    "location_block",
+]
+
+VALID_CONTROL_TYPES: set[str] = {
+    "spending_limit",
+    "merchant_category_block",
+    "transaction_type_block",
+    "location_block",
+}
 
 
 # =============================================================================
@@ -139,7 +155,7 @@ async def get_active_visa_controls(
 async def recommend_visa_control(
     ctx: RunContext[CaptainDeps],
     card_id: str,
-    control_type: str,
+    control_type: VisaControlType,
     threshold: float | None = None,
     merchant_categories: list[str] | None = None,
     reason: str = "",
@@ -151,18 +167,29 @@ async def recommend_visa_control(
 
     Args:
         card_id: The card to apply the control to
-        control_type: Type of control (spending_limit, merchant_category_block, etc.)
+        control_type: Type of control (spending_limit, merchant_category_block,
+            transaction_type_block, or location_block)
         threshold: Spending limit amount (for spending_limit type)
         merchant_categories: Categories to block (for merchant_category_block type)
         reason: Explanation for why this control is recommended
 
     Returns:
         The staged VisaControlRule (not yet active)
+
+    Raises:
+        ValueError: If control_type is not a valid VISA control type
     """
+    # Runtime validation for control_type
+    if control_type not in VALID_CONTROL_TYPES:
+        raise ValueError(
+            f"Invalid control_type '{control_type}'. "
+            f"Must be one of: {', '.join(sorted(VALID_CONTROL_TYPES))}"
+        )
+
     rule = VisaControlRule(
         rule_id=f"staged_{uuid.uuid4().hex[:8]}",
         card_id=card_id,
-        control_type=control_type,  # type: ignore
+        control_type=control_type,
         threshold=threshold,
         merchant_categories=merchant_categories,
         is_active=False,  # Not active until commander approves
