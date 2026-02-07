@@ -170,7 +170,11 @@ function NovaInlineRenderer() {
   const { activeVariant } = useNovaVariant();
 
   if (activeVariant.type === 'skeletal') {
-    return <CaptainNova position={[0, -1, 0]} />;
+    return (
+      <group scale={0.85}>
+        <CaptainNova position={[0, -1, 0]} />
+      </group>
+    );
   }
 
   if (activeVariant.type === 'community' && activeVariant.path) {

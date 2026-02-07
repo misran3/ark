@@ -118,7 +118,7 @@ export function Planet({ brightness = 1 }: PlanetProps) {
   });
 
   return (
-    <mesh ref={meshRef} position={[600, 300, -2400]}>
+    <mesh ref={meshRef} position={[850, 500, -2400]}>
       <sphereGeometry args={[297, 64, 64]} />
       <shaderMaterial
         ref={shaderRef}
