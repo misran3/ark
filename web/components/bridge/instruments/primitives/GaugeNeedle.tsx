@@ -62,7 +62,7 @@ export function GaugeNeedle({
     return { positions, indices };
   }, [length]);
 
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     if (!groupRef.current) return;
 
     // Clamp delta to avoid physics explosion on tab-switch
@@ -84,6 +84,11 @@ export function GaugeNeedle({
       Math.sin(tremorPhaseRef.current * 5.3) * tremorMagnitude * 0.6;
 
     groupRef.current.rotation.z = currentAngleRef.current + tremor - Math.PI / 2;
+
+    // Request next frame if needle is still moving or tremor is active
+    if (Math.abs(velocityRef.current) > 0.001 || Math.abs(displacement) > 0.001 || tremorMagnitude > 0) {
+      state.invalidate();
+    }
   });
 
   return (

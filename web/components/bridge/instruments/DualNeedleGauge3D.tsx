@@ -57,7 +57,7 @@ export function DualNeedleGauge3D({ incomeNormalized, spendingNormalized }: Dual
       camera={{ position: [0, 0, 2], fov: 40 }}
       dpr={[1, 2]}
       style={{ background: 'transparent' }}
-      frameloop="always"
+      frameloop="demand"
       resize={{ offsetSize: true }}
     >
       <DualNeedleScene incomeNormalized={incomeNormalized} spendingNormalized={spendingNormalized} />

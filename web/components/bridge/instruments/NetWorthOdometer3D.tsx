@@ -59,7 +59,7 @@ export function NetWorthOdometer3D({ value }: NetWorthOdometer3DProps) {
       camera={{ position: [0, 0, 2], fov: 40 }}
       dpr={[1, 2]}
       style={{ background: 'transparent' }}
-      frameloop="always"
+      frameloop="demand"
       resize={{ offsetSize: true }}
     >
       <OdometerScene value={value} />

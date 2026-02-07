@@ -34,7 +34,7 @@ export function CardCounter3D({ value }: CardCounter3DProps) {
       camera={{ position: [0, 0, 1.5], fov: 35 }}
       dpr={[1, 2]}
       style={{ background: 'transparent' }}
-      frameloop="always"
+      frameloop="demand"
       resize={{ offsetSize: true }}
     >
       <CounterScene value={value} />

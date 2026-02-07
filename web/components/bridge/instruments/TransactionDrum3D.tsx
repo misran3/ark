@@ -117,7 +117,7 @@ function DrumScene({ transactions }: TransactionDrum3DProps) {
     };
   }, [drumTexture]);
 
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     if (!drumRef.current) return;
     const dt = Math.min(delta, 0.05);
 
@@ -129,6 +129,10 @@ function DrumScene({ transactions }: TransactionDrum3DProps) {
     currentRotRef.current += velocityRef.current * dt;
 
     drumRef.current.rotation.x = currentRotRef.current;
+
+    if (Math.abs(velocityRef.current) > 0.001 || Math.abs(displacement) > 0.001) {
+      state.invalidate();
+    }
   });
 
   return (
@@ -167,7 +171,7 @@ export function TransactionDrum3D({ transactions }: TransactionDrum3DProps) {
       camera={{ position: [0, 0, 1.8], fov: 35 }}
       dpr={[1, 2]}
       style={{ background: 'transparent' }}
-      frameloop="always"
+      frameloop="demand"
       resize={{ offsetSize: true }}
     >
       <DrumScene transactions={transactions} />

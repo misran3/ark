@@ -104,7 +104,7 @@ export function DigitDrum({
   // Target rotation for current value
   const targetRotation = -(value / 10) * Math.PI * 2;
 
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     if (!drumRef.current) return;
     const dt = Math.min(delta, 0.05);
 
@@ -116,6 +116,11 @@ export function DigitDrum({
     currentRotRef.current += velocityRef.current * dt;
 
     drumRef.current.rotation.x = currentRotRef.current;
+
+    // Request next frame if drum is still rotating
+    if (Math.abs(velocityRef.current) > 0.001 || Math.abs(displacement) > 0.001) {
+      state.invalidate();
+    }
   });
 
   return (

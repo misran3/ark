@@ -46,7 +46,7 @@ export function ShieldGauge3D({ value }: ShieldGauge3DProps) {
       camera={{ position: [0, 0, 2], fov: 45 }}
       dpr={[1, 2]}
       style={{ background: 'transparent' }}
-      frameloop="always"
+      frameloop="demand"
       resize={{ offsetSize: true }}
     >
       <ShieldGaugeScene value={value} />
