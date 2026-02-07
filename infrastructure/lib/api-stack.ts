@@ -5,6 +5,7 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
 import * as path from 'path';
@@ -95,17 +96,27 @@ export class ApiStack extends cdk.Stack {
         const dataLambdaFn = this.createLambdaFunction({
             name: 'data-lambda',
             handler: 'handler.lambda_handler',
-            description: 'Financial data: Nessie integration, budget engine, asteroid detection',
+            description: 'Financial data: Nessie integration, budget engine, asteroid detection, VISA controls',
             additionalDeps: ['./shared', './database'],
             copySourceFiles: true,
             additionalEnv: {
                 USERS_TABLE_NAME: props.usersTable.tableName,
                 NESSIE_API_KEY: process.env.NESSIE_API_KEY || '',
                 DATA_SOURCE: process.env.DATA_SOURCE || 'mock',
+                VISA_USER_ID: process.env.VISA_USER_ID || '',
+                VISA_PASSWORD: process.env.VISA_PASSWORD || '',
             },
             tableGrants: [props.usersTable],
             timeout: cdk.Duration.seconds(30),
         });
+
+        // Grant S3 read access for VISA certificates
+        const visaCertsBucket = s3.Bucket.fromBucketName(
+            this,
+            'VisaCertsBucket',
+            'synesthesia-pay-artifacts'
+        );
+        visaCertsBucket.grantRead(dataLambdaFn, 'visa/*');
 
         // =============================================================
         // Data API Resources and Methods
@@ -222,6 +233,14 @@ export class ApiStack extends cdk.Stack {
         asteroidIdResource.addResource('action').addMethod('POST', lambdaIntegration);
 
         apiResource.addResource('transactions').addMethod('GET', lambdaIntegration);
+
+        // VISA Transaction Controls endpoints
+        const visaResource = apiResource.addResource('visa');
+        const visaControlsResource = visaResource.addResource('controls');
+        visaControlsResource.addMethod('POST', lambdaIntegration);
+        const visaControlIdResource = visaControlsResource.addResource('{document_id}');
+        visaControlIdResource.addMethod('GET', lambdaIntegration);
+        visaControlIdResource.addMethod('DELETE', lambdaIntegration);
     }
 
     /**

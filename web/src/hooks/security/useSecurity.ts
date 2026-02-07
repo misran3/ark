@@ -65,8 +65,13 @@ export function useAsteroids() {
 /**
  * Hook to fetch and manage VISA Transaction Controls.
  *
- * Note: VISA endpoints are not yet deployed. This hook is prepared for future integration.
- * Currently falls back to local mocks.
+ * Endpoints:
+ * - POST /api/visa/controls - Create a control
+ * - GET /api/visa/controls/{document_id} - Get control details
+ * - DELETE /api/visa/controls/{document_id} - Remove control
+ *
+ * Note: Currently using local mocks for listing controls since we don't have
+ * a "list all" endpoint. Individual control operations use the real API.
  */
 export function useVisaControls() {
   const [controls, setControls] = useState<VisaControlRule[]>([]);
@@ -77,7 +82,7 @@ export function useVisaControls() {
     const fetchControls = async () => {
       try {
         setLoading(true);
-        // VISA endpoints not yet deployed - using local mocks for now
+        // Using local mocks for listing - in production, implement GET /api/visa/controls
         const response = await fetch("/mocks/visa_controls.json");
         const data = await response.json();
         setControls(data);
@@ -92,5 +97,44 @@ export function useVisaControls() {
     fetchControls();
   }, []);
 
-  return { controls, loading, error };
+  /**
+   * Create a new VISA transaction control.
+   *
+   * POST /api/visa/controls
+   */
+  const createControl = useCallback(async (rule: VisaControlRule) => {
+    try {
+      const response = await api.post<{ status: string; rule_id: string }>(
+        "/api/visa/controls",
+        rule,
+      );
+      // Add to local state
+      if (response.data.status === "success") {
+        setControls((prev) => [...prev, { ...rule, rule_id: response.data.rule_id }]);
+      }
+      return response.data;
+    } catch (err) {
+      console.error("createControl error:", err);
+      throw err;
+    }
+  }, []);
+
+  /**
+   * Delete a VISA transaction control.
+   *
+   * DELETE /api/visa/controls/{document_id}
+   */
+  const deleteControl = useCallback(async (documentId: string) => {
+    try {
+      const response = await api.delete(`/api/visa/controls/${documentId}`);
+      // Optimistically remove from local state
+      setControls((prev) => prev.filter((c) => c.rule_id !== documentId));
+      return response.data;
+    } catch (err) {
+      console.error("deleteControl error:", err);
+      throw err;
+    }
+  }, []);
+
+  return { controls, loading, error, createControl, deleteControl };
 }
