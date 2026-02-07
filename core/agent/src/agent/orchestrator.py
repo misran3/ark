@@ -165,14 +165,14 @@ _FM_FALLBACK = FinancialMeaningOutput(
     verdict="Unable to complete financial analysis at this time.",
     status="warning",
 )
-_WS_FALLBACK = AsteroidAnalysis(subscriptions=[], total_annual_waste=0.0)
-_BO_FALLBACK = IonStormAnalysis(overruns=[], overall_budget_status="on_track")
-_UB_FALLBACK = SolarFlareAnalysis(bills=[], total_upcoming_30_days=0.0)
+_WS_FALLBACK = AsteroidAnalysis(subscriptions=[], total_annual_waste=0.0, verdict="Subscription analysis unavailable.")
+_BO_FALLBACK = IonStormAnalysis(overruns=[], overall_budget_status="on_track", verdict="Budget analysis unavailable.")
+_UB_FALLBACK = SolarFlareAnalysis(bills=[], total_upcoming_30_days=0.0, verdict="Upcoming bills analysis unavailable.")
 _DS_FALLBACK = BlackHoleAnalysis(
-    debts=[], total_debt=0.0, total_monthly_interest=0.0, urgency="stable"
+    debts=[], total_debt=0.0, total_monthly_interest=0.0, urgency="stable", verdict="Debt analysis unavailable."
 )
-_MR_FALLBACK = WormholeAnalysis(missed_rewards=[], annual_opportunity_cost=0.0)
-_FD_FALLBACK = EnemyCruiserAnalysis(alerts=[], overall_risk="normal")
+_MR_FALLBACK = WormholeAnalysis(missed_rewards=[], annual_opportunity_cost=0.0, verdict="Rewards analysis unavailable.")
+_FD_FALLBACK = EnemyCruiserAnalysis(alerts=[], overall_risk="normal", verdict="Fraud analysis unavailable.")
 
 
 async def analyze_finances(user_id: str = "demo_user") -> CaptainAnalysis:
