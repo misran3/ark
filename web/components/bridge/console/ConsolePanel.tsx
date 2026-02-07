@@ -3,10 +3,7 @@
 import { useConsoleStore, type PanelType } from '@/lib/stores/console-store';
 import { useAlertStore, ALERT_COLORS } from '@/lib/stores/alert-store';
 import { useState, useEffect } from 'react';
-import { ShieldGaugeFace } from './faces/ShieldGaugeFace';
-import { NetWorthManifestFace } from './faces/NetWorthManifestFace';
-import { TransactionLogFace } from './faces/TransactionLogFace';
-import { CardStatusFace } from './faces/CardStatusFace';
+import { ShieldGaugeFace, NetWorthManifestFace, TransactionLogFace, CardStatusFace } from './faces';
 
 interface ConsolePanelProps {
   type: PanelType;
