@@ -9,6 +9,7 @@ export function PowerSurge() {
   const [cyanIntensity, setCyanIntensity] = useState(0);
   const [redIntensity, setRedIntensity] = useState(1);
   const [redGradientCenter, setRedGradientCenter] = useState(50); // 50% = centered
+  const [breathPulse, setBreathPulse] = useState(0.25); // Subtle breathing during steady state
 
   useEffect(() => {
     // Phase 1: Overshoot (0-150ms) - too bright
@@ -28,6 +29,19 @@ export function PowerSurge() {
       setTimeout(() => {
         clearInterval(settleInterval);
         setSurgePhase('breath');
+
+        // Phase 3: Breath (300-1000ms) - subtle breathing pulse shows system is alive
+        // Slow, gentle oscillation of cyan intensity (not static)
+        const breathStartTime = Date.now();
+        const breathInterval = setInterval(() => {
+          const elapsed = Date.now() - breathStartTime;
+          // Very slow sine wave: 2-second period, ±0.02 intensity
+          const pulse = 0.25 + Math.sin(elapsed / 1000 * Math.PI) * 0.02;
+          setBreathPulse(pulse);
+        }, 50);
+
+        // Clean up after 700ms (when phase ends)
+        setTimeout(() => clearInterval(breathInterval), 700);
       }, 150);
     }, 150);
 
@@ -57,14 +71,17 @@ export function PowerSurge() {
     };
   }, []);
 
+  // Use breathPulse during breath phase, cyanIntensity during overshoot/settle
+  const displayIntensity = surgePhase === 'breath' ? breathPulse : cyanIntensity;
+
   return (
     <>
       {/* Cyan primary power (frame lighting) */}
       <div
         className="fixed inset-0 pointer-events-none z-[9997]"
         style={{
-          backgroundColor: `rgba(0, 240, 255, ${cyanIntensity})`,
-          transition: 'background-color 0.05s ease-out',
+          backgroundColor: `rgba(0, 240, 255, ${displayIntensity})`,
+          transition: surgePhase === 'breath' ? 'background-color 0.3s ease-in-out' : 'background-color 0.05s ease-out',
         }}
       />
 
@@ -72,8 +89,8 @@ export function PowerSurge() {
       <div
         className="fixed inset-0 pointer-events-none z-[9997]"
         style={{
-          boxShadow: `inset 0 0 30px rgba(0, 240, 255, ${cyanIntensity * 0.8})`,
-          transition: 'box-shadow 0.05s ease-out',
+          boxShadow: `inset 0 0 30px rgba(0, 240, 255, ${displayIntensity * 0.8})`,
+          transition: surgePhase === 'breath' ? 'box-shadow 0.3s ease-in-out' : 'box-shadow 0.05s ease-out',
         }}
       />
 
