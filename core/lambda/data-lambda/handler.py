@@ -31,6 +31,7 @@ DATA_SOURCE = os.getenv("DATA_SOURCE", "mock")
 # Lazy-initialized clients
 _data_table_client = None
 _nessie_service = None
+_visa_service = None
 
 
 def _get_data_table_client():
@@ -48,6 +49,14 @@ def _get_nessie_service():
         api_key = os.getenv("NESSIE_API_KEY", "")
         _nessie_service = NessieService(api_key=api_key)
     return _nessie_service
+
+
+def _get_visa_service():
+    global _visa_service
+    if _visa_service is None:
+        from services.visa_service import VisaService
+        _visa_service = VisaService()
+    return _visa_service
 
 
 def _get_user_id() -> str:
@@ -226,6 +235,63 @@ def get_transactions() -> dict[str, Any]:
         transactions = [t for t in transactions if t.get("date", "") >= cutoff_str]
 
     return {"transactions": transactions, "count": len(transactions)}
+
+
+# =============================================================================
+# VISA Transaction Controls Routes
+# =============================================================================
+
+
+@app.post("/api/visa/controls")
+@tracer.capture_method
+def create_visa_control() -> dict[str, Any]:
+    """Create a new VISA transaction control."""
+    user_id = _get_user_id()
+    logger.info("Create VISA control endpoint called", user_id=user_id)
+
+    from shared.models import VisaControlRule
+
+    body = app.current_event.json_body or {}
+    try:
+        rule = VisaControlRule(**body)
+        visa = _get_visa_service()
+        result = visa.create_control(rule)
+        return result
+    except Exception as e:
+        logger.error(f"Failed to create VISA control: {e}")
+        return {"status": "error", "error": str(e)}, 400
+
+
+@app.get("/api/visa/controls/<document_id>")
+@tracer.capture_method
+def get_visa_control(document_id: str) -> dict[str, Any]:
+    """Get a VISA transaction control by document ID."""
+    user_id = _get_user_id()
+    logger.info("Get VISA control endpoint called", user_id=user_id, document_id=document_id)
+
+    try:
+        visa = _get_visa_service()
+        result = visa.get_controls(document_id)
+        return result
+    except Exception as e:
+        logger.error(f"Failed to get VISA control: {e}")
+        return {"status": "error", "error": str(e)}, 400
+
+
+@app.delete("/api/visa/controls/<document_id>")
+@tracer.capture_method
+def delete_visa_control(document_id: str) -> dict[str, Any]:
+    """Delete a VISA transaction control."""
+    user_id = _get_user_id()
+    logger.info("Delete VISA control endpoint called", user_id=user_id, document_id=document_id)
+
+    try:
+        visa = _get_visa_service()
+        result = visa.delete_control(document_id)
+        return result
+    except Exception as e:
+        logger.error(f"Failed to delete VISA control: {e}")
+        return {"status": "error", "error": str(e)}, 400
 
 
 # =============================================================================
