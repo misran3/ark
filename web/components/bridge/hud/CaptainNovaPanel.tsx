@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAlertStore, ALERT_COLORS } from '@/lib/stores/alert-store';
+import { NovaVariantSelector } from './NovaVariantSelector';
 
 type NovaState = 'idle' | 'analyzing' | 'ready' | 'alert';
 
@@ -176,6 +177,11 @@ export function CaptainNovaStation() {
               <span className="font-mono text-[7px] text-cyan-400/50 uppercase">Comm</span>
               <span className="font-mono text-[5px] text-cyan-400/20">CH-01</span>
             </button>
+
+            {/* Variant Selector */}
+            <div className="w-full px-1 mb-2">
+              <NovaVariantSelector />
+            </div>
           </div>
         )}
 
