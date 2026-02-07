@@ -20,6 +20,7 @@ const planetVertexShader = /* glsl */ `
 
 const planetFragmentShader = /* glsl */ `
   uniform float uTime;
+  uniform float uBrightness;
 
   varying vec2 vUv;
   varying vec3 vNormal;
@@ -89,17 +90,22 @@ const planetFragmentShader = /* glsl */ `
     float rimGlow = pow(fresnel, 5.0) * 1.5;
     surfaceColor += atmosphereColor * rimGlow;
 
-    gl_FragColor = vec4(surfaceColor, 1.0);
+    gl_FragColor = vec4(surfaceColor * uBrightness, 1.0);
   }
 `;
 
-export function Planet() {
+interface PlanetProps {
+  brightness?: number;
+}
+
+export function Planet({ brightness = 1 }: PlanetProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const shaderRef = useRef<THREE.ShaderMaterial>(null);
 
   const uniforms = useMemo(
     () => ({
       uTime: { value: 0 },
+      uBrightness: { value: brightness },
     }),
     [],
   );
@@ -107,6 +113,7 @@ export function Planet() {
   useFrame(({ clock }) => {
     if (shaderRef.current) {
       shaderRef.current.uniforms.uTime.value = clock.getElapsedTime();
+      shaderRef.current.uniforms.uBrightness.value = brightness;
     }
   });
 

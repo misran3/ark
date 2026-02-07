@@ -3,6 +3,9 @@
 import { useEffect, useState, useRef, memo } from 'react';
 import { useNovaDialogueStore } from '@/lib/stores/nova-dialogue-store';
 import { useAlertStore, ALERT_COLORS } from '@/lib/stores/alert-store';
+import { useVoiceSynthesis } from '@/hooks/useVoiceSynthesis';
+import { useNovaVariant } from '@/contexts/NovaVariantContext';
+import { getVoiceProfileForVariant } from '@/lib/voice-profiles';
 
 const TYPEWRITER_SPEED = 30; // ms per character
 const AUTO_DISMISS_DELAY = 5000; // ms after typewriter completes
@@ -52,8 +55,20 @@ export function NovaDialogueOverlay() {
   const alertLevel = useAlertStore((s) => s.level);
   const colors = ALERT_COLORS[alertLevel];
 
+  const { speak, cancel: cancelSpeech } = useVoiceSynthesis();
+  const { activeVariant } = useNovaVariant();
+
   const [typewriterDone, setTypewriterDone] = useState(false);
   const autoDismissRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Speak the message using the active variant's voice profile
+  useEffect(() => {
+    if (currentMessage?.text) {
+      const profile = getVoiceProfileForVariant(activeVariant);
+      speak(currentMessage.text, profile);
+    }
+    return () => cancelSpeech();
+  }, [currentMessage?.id, activeVariant, speak, cancelSpeech]);
 
   // Auto-dismiss for greeting and nudge messages after typewriter completes
   useEffect(() => {
@@ -139,7 +154,7 @@ export function NovaDialogueOverlay() {
         {/* Acknowledge button (shown after typewriter completes) */}
         {typewriterDone && currentMessage.category !== 'detail' && (
           <button
-            onClick={dismiss}
+            onClick={() => { cancelSpeech(); dismiss(); }}
             className="mt-2 w-full text-[7px] tracking-[2px] uppercase py-1 rounded border transition-colors"
             style={{
               borderColor: `${colors.hud}40`,

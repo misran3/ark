@@ -72,7 +72,7 @@ export function useAuroraColors() {
     };
 
     // Update every 100ms for smooth transitions
-    const interval = setInterval(updateColors, 1000);
+    const interval = setInterval(updateColors, 100);
 
     // Initial update
     updateColors();

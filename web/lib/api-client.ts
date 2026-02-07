@@ -1,4 +1,5 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+// TODO: Wire up to deployed API when snapshot/budget endpoints exist
+// For now, these functions return mock data directly (no localhost calls)
 
 export interface FinancialSnapshot {
   accounts: Array<{
@@ -78,70 +79,32 @@ const MOCK_BUDGET: BudgetReport = {
   overall_health: 72,
 };
 
-// API Functions
+// API Functions — mock data until deployed endpoints exist
 export async function fetchFinancialSnapshot(): Promise<FinancialSnapshot> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/snapshot`);
-    if (!response.ok) throw new Error('Failed to fetch snapshot');
-    return response.json();
-  } catch (error) {
-    console.warn('Using mock data for snapshot:', error);
-    return MOCK_SNAPSHOT;
-  }
+  return MOCK_SNAPSHOT;
 }
 
 export async function fetchBudgetReport(): Promise<BudgetReport> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/budget`);
-    if (!response.ok) throw new Error('Failed to fetch budget');
-    return response.json();
-  } catch (error) {
-    console.warn('Using mock data for budget:', error);
-    return MOCK_BUDGET;
-  }
+  return MOCK_BUDGET;
 }
 
 export async function queryCaptainNova(query: {
   type: string;
   message?: string;
 }): Promise<CaptainNovaResponse> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/captain/query`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(query),
-    });
-    if (!response.ok) throw new Error('Captain Nova query failed');
-    return response.json();
-  } catch (error) {
-    console.warn('Captain Nova offline, using local responses:', error);
+  const responses: Record<string, string> = {
+    status: 'Systems nominal, Commander. All financial sectors operational. Life Support at optimal efficiency.',
+    threats: 'Threat matrix analyzed. Multiple incoming objects detected. Recommend immediate defensive protocols.',
+    shields: 'Shield systems ready for activation. VISA Transaction Controls standing by for your command.',
+  };
 
-    // Fallback responses
-    const responses: Record<string, string> = {
-      status: 'Systems nominal, Commander. All financial sectors operational. Life Support at optimal efficiency.',
-      threats: 'Threat matrix analyzed. Multiple incoming objects detected. Recommend immediate defensive protocols.',
-      shields: 'Shield systems ready for activation. VISA Transaction Controls standing by for your command.',
-    };
-
-    return {
-      message: responses[query.type] || 'Systems online, Commander. Standing by.',
-      tools_used: ['financial_snapshot', 'threat_scanner'],
-      confidence: 0.85,
-    };
-  }
+  return {
+    message: responses[query.type] || 'Systems online, Commander. Standing by.',
+    tools_used: ['financial_snapshot', 'threat_scanner'],
+    confidence: 0.85,
+  };
 }
 
 export async function deflectAsteroid(asteroidId: string): Promise<{ success: boolean }> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/asteroids/${asteroidId}/action`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'deflect' }),
-    });
-    if (!response.ok) throw new Error('Failed to deflect asteroid');
-    return response.json();
-  } catch (error) {
-    console.warn('Asteroid deflection simulated locally:', error);
-    return { success: true };
-  }
+  return { success: true };
 }

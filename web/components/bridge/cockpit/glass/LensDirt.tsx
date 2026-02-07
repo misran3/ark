@@ -40,7 +40,7 @@ export function LensDirt() {
 
         // Create sparse smudge-like blobs
         const combined = noise1 * 0.6 + noise2 * 0.4;
-        const smudge = Math.pow(Math.max(combined - 0.55, 0) * 4, 2);
+        const smudge = Math.pow(Math.max(combined - 0.85, 0) * 4, 2);
 
         // Warm white tint
         const brightness = smudge * 255;
@@ -61,7 +61,7 @@ export function LensDirt() {
       style={{
         zIndex: 5,
         mixBlendMode: 'screen',
-        opacity: 0.06,
+        opacity: 0.015,
       }}
     />
   );

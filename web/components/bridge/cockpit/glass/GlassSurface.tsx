@@ -40,32 +40,6 @@ export function GlassSurface() {
         }}
       />
 
-      {/* Specular highlight — overhead bridge strip lighting reflection */}
-      <div
-        className="absolute inset-0 overflow-hidden"
-      >
-        <div
-          className="viewport-glass-specular"
-          style={{
-            position: 'absolute',
-            top: '8%',
-            left: '12%',
-            width: '35%',
-            height: '18%',
-            background:
-              'linear-gradient(165deg, ' +
-              'transparent 15%, ' +
-              'rgba(200, 220, 255, 0.03) 30%, ' +
-              'rgba(220, 235, 255, 0.045) 45%, ' +
-              'rgba(200, 220, 255, 0.03) 60%, ' +
-              'transparent 80%)',
-            clipPath: 'polygon(8% 0%, 92% 0%, 100% 100%, 0% 100%)',
-            animation: 'glass-specular-drift 25s ease-in-out infinite',
-            willChange: 'transform',
-          }}
-        />
-      </div>
-
       {/* Micro-scratch texture — micrometeorite encounters */}
       <div
         className="absolute inset-0"

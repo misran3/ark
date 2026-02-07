@@ -36,5 +36,15 @@ export const storage = {
     } catch {
       return false;
     }
-  }
+  },
+
+  removeItem: (key: string): boolean => {
+    if (!isStorageAvailable) return false;
+    try {
+      localStorage.removeItem(key);
+      return true;
+    } catch {
+      return false;
+    }
+  },
 };

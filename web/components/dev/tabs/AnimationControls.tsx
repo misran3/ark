@@ -3,6 +3,8 @@
 import { useEffect } from 'react';
 import gsap from 'gsap';
 import { useDevStore } from '@/lib/stores/dev-store';
+import { useBootStore } from '@/lib/stores/boot-store';
+import { storage } from '@/lib/utils/storage';
 
 export function AnimationControls() {
   const {
@@ -230,6 +232,48 @@ export function AnimationControls() {
         <div style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 0.4)' }}>
           Status: {isPaused ? 'PAUSED' : 'RUNNING'}
         </div>
+      </div>
+
+      {/* Boot Sequence */}
+      <div style={sectionStyle}>
+        <div style={sectionTitleStyle}>Boot Sequence</div>
+        <button
+          onClick={() => {
+            storage.removeItem('synesthesiapay:hasSeenBoot');
+            // Set phase and flags without zeroing consoleIntensity —
+            // StartScreen's opaque bg covers everything, and the boot
+            // sequence will animate intensity naturally when it replays.
+            useBootStore.setState({
+              phase: 'start-screen',
+              hasSeenBoot: false,
+              isBooting: true,
+            });
+          }}
+          style={{
+            padding: '6px 10px',
+            fontSize: '10px',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: '3px',
+            background: 'rgba(239, 68, 68, 0.1)',
+            color: '#fca5a5',
+            cursor: 'pointer',
+            transition: 'all 150ms ease',
+            fontFamily: 'monospace',
+            fontWeight: 500,
+          }}
+          onMouseEnter={(e) => {
+            if (e.currentTarget instanceof HTMLElement) {
+              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (e.currentTarget instanceof HTMLElement) {
+              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+            }
+          }}
+        >
+          RESET BOOT (replay first-time sequence)
+        </button>
       </div>
 
       {/* Per-System Toggles */}

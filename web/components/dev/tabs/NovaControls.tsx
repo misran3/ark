@@ -1,12 +1,36 @@
 'use client';
 
 import { useState } from 'react';
+import { useVoiceSynthesis } from '@/hooks/useVoiceSynthesis';
+import { useNovaVariant } from '@/contexts/NovaVariantContext';
+import { getVoiceProfileForVariant, type VoiceProfile } from '@/lib/voice-profiles';
 
 export function NovaControls() {
   const [text, setText] = useState('');
-  const [rate, setRate] = useState(0.95);
-  const [pitch, setPitch] = useState(0.90);
+  const [rateOverride, setRateOverride] = useState<number | null>(null);
+  const [pitchOverride, setPitchOverride] = useState<number | null>(null);
   const [isVisible, setIsVisible] = useState(true);
+
+  const { speak, cancel: cancelSpeech, isSpeaking } = useVoiceSynthesis();
+  const { activeVariant } = useNovaVariant();
+  const baseProfile = getVoiceProfileForVariant(activeVariant);
+
+  // Build effective profile: base from variant, with optional slider overrides
+  const effectiveProfile: VoiceProfile = {
+    ...baseProfile,
+    ...(rateOverride !== null && { rate: rateOverride }),
+    ...(pitchOverride !== null && { pitch: pitchOverride }),
+  };
+
+  const handleSpeak = (textToSpeak: string) => {
+    if (!textToSpeak.trim()) return;
+    speak(textToSpeak, effectiveProfile);
+  };
+
+  const handleQuickMessage = (message: string) => {
+    setText(message);
+    setTimeout(() => handleSpeak(message), 0);
+  };
 
   // Shared inline styles
   const containerStyle: React.CSSProperties = {
@@ -66,7 +90,7 @@ export function NovaControls() {
   const speakButtonStyle: React.CSSProperties = {
     ...buttonStyle,
     flex: 2,
-    background: 'rgba(34, 197, 94, 0.1)',
+    background: isSpeaking ? 'rgba(34, 197, 94, 0.3)' : 'rgba(34, 197, 94, 0.1)',
     borderColor: 'rgba(34, 197, 94, 0.3)',
     color: '#86efac',
   };
@@ -129,6 +153,17 @@ export function NovaControls() {
     textAlign: 'right',
   };
 
+  const resetButtonStyle: React.CSSProperties = {
+    padding: '2px 6px',
+    fontSize: '9px',
+    background: 'rgba(255, 255, 255, 0.05)',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    borderRadius: '3px',
+    color: 'rgba(255, 255, 255, 0.4)',
+    cursor: 'pointer',
+    transition: 'all 150ms ease',
+  };
+
   const toggleStyle: React.CSSProperties = {
     padding: '4px 8px',
     fontSize: '10px',
@@ -141,22 +176,16 @@ export function NovaControls() {
     transition: 'all 150ms ease',
   };
 
-  // Speech synthesis function
-  const speak = (textToSpeak: string) => {
-    if (!textToSpeak.trim()) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(textToSpeak);
-    utterance.rate = rate;
-    utterance.pitch = pitch;
-    window.speechSynthesis.speak(utterance);
-  };
-
-  // Quick message handler
-  const handleQuickMessage = (message: string) => {
-    setText(message);
-    setTimeout(() => {
-      speak(message);
-    }, 0);
+  const variantBadgeStyle: React.CSSProperties = {
+    display: 'inline-block',
+    padding: '2px 8px',
+    fontSize: '10px',
+    fontWeight: 600,
+    background: 'rgba(56, 189, 248, 0.1)',
+    border: '1px solid rgba(56, 189, 248, 0.3)',
+    borderRadius: '3px',
+    color: '#7dd3fc',
+    letterSpacing: '0.5px',
   };
 
   // Quick messages
@@ -181,6 +210,17 @@ export function NovaControls() {
 
   return (
     <div style={containerStyle}>
+      {/* Active Variant */}
+      <div style={sectionStyle}>
+        <div style={sectionTitleStyle}>Active Voice</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={variantBadgeStyle}>{activeVariant.label}</span>
+          <span style={{ fontSize: '9px', color: 'rgba(255, 255, 255, 0.35)' }}>
+            pitch {effectiveProfile.pitch.toFixed(2)} / rate {effectiveProfile.rate.toFixed(2)}
+          </span>
+        </div>
+      </div>
+
       {/* Speech Input */}
       <div style={sectionStyle}>
         <div style={sectionTitleStyle}>Speech Input</div>
@@ -193,7 +233,7 @@ export function NovaControls() {
         />
         <div style={buttonGroupStyle}>
           <button
-            onClick={() => speak(text)}
+            onClick={() => handleSpeak(text)}
             style={speakButtonStyle}
             onMouseEnter={(e) => {
               if (e.currentTarget instanceof HTMLElement) {
@@ -202,14 +242,14 @@ export function NovaControls() {
             }}
             onMouseLeave={(e) => {
               if (e.currentTarget instanceof HTMLElement) {
-                e.currentTarget.style.background = 'rgba(34, 197, 94, 0.1)';
+                e.currentTarget.style.background = isSpeaking ? 'rgba(34, 197, 94, 0.3)' : 'rgba(34, 197, 94, 0.1)';
               }
             }}
           >
-            SPEAK
+            {isSpeaking ? 'SPEAKING...' : 'SPEAK'}
           </button>
           <button
-            onClick={() => window.speechSynthesis.cancel()}
+            onClick={cancelSpeech}
             style={cancelButtonStyle}
             onMouseEnter={(e) => {
               if (e.currentTarget instanceof HTMLElement) {
@@ -253,41 +293,59 @@ export function NovaControls() {
         ))}
       </div>
 
-      {/* Voice Controls */}
+      {/* Voice Controls (overrides) */}
       <div style={sectionStyle}>
-        <div style={sectionTitleStyle}>Voice Controls</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+          <div style={sectionTitleStyle}>Voice Overrides</div>
+          <button
+            onClick={() => { setRateOverride(null); setPitchOverride(null); }}
+            style={resetButtonStyle}
+          >
+            RESET TO PROFILE
+          </button>
+        </div>
 
         {/* Rate Slider */}
         <div style={controlGroupStyle}>
-          <label style={labelStyle}>Rate</label>
+          <label style={{
+            ...labelStyle,
+            color: rateOverride !== null ? '#fbbf24' : labelStyle.color,
+          }}>
+            Rate{rateOverride !== null ? '*' : ''}
+          </label>
           <div style={sliderContainerStyle}>
             <input
               type="range"
               min="0.5"
               max="2.0"
               step="0.05"
-              value={rate}
-              onChange={(e) => setRate(parseFloat(e.target.value))}
+              value={rateOverride ?? baseProfile.rate}
+              onChange={(e) => setRateOverride(parseFloat(e.target.value))}
               style={sliderStyle}
             />
-            <span style={valueDisplayStyle}>{rate.toFixed(2)}</span>
+            <span style={valueDisplayStyle}>{(rateOverride ?? baseProfile.rate).toFixed(2)}</span>
           </div>
         </div>
 
         {/* Pitch Slider */}
         <div style={controlGroupStyle}>
-          <label style={labelStyle}>Pitch</label>
+          <label style={{
+            ...labelStyle,
+            color: pitchOverride !== null ? '#fbbf24' : labelStyle.color,
+          }}>
+            Pitch{pitchOverride !== null ? '*' : ''}
+          </label>
           <div style={sliderContainerStyle}>
             <input
               type="range"
               min="0.5"
               max="2.0"
               step="0.05"
-              value={pitch}
-              onChange={(e) => setPitch(parseFloat(e.target.value))}
+              value={pitchOverride ?? baseProfile.pitch}
+              onChange={(e) => setPitchOverride(parseFloat(e.target.value))}
               style={sliderStyle}
             />
-            <span style={valueDisplayStyle}>{pitch.toFixed(2)}</span>
+            <span style={valueDisplayStyle}>{(pitchOverride ?? baseProfile.pitch).toFixed(2)}</span>
           </div>
         </div>
       </div>

@@ -3,7 +3,7 @@
 import { useRef, useMemo, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Group, Color } from 'three';
-import { Html } from '@react-three/drei';
+import { Text } from '@react-three/drei';
 import { createRingArc } from '@/lib/hologram/ring-geometry';
 import '@/lib/hologram/ring-segment-material';
 
@@ -92,30 +92,30 @@ export function ShieldRing({
               side={2} // DoubleSide
             />
             {isHovered && (
-              <Html
-                center
-                position={[0, 0, 0.1]}
-                style={{
-                  pointerEvents: 'none',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                <div
-                  className="px-3 py-2 rounded font-mono text-xs"
-                  style={{
-                    background: 'rgba(0,0,0,0.85)',
-                    border: `1px solid rgb(${Math.round(color.r * 255)}, ${Math.round(color.g * 255)}, ${Math.round(color.b * 255)})`,
-                    color: `rgb(${Math.round(color.r * 255)}, ${Math.round(color.g * 255)}, ${Math.round(color.b * 255)})`,
-                    textShadow: `0 0 8px rgb(${Math.round(color.r * 255)}, ${Math.round(color.g * 255)}, ${Math.round(color.b * 255)})`,
-                  }}
+              <group position={[0, 0, 0.1]}>
+                <Text
+                  fontSize={0.14}
+                  color={color}
+                  anchorX="center"
+                  anchorY="middle"
+                  outlineWidth="5%"
+                  outlineColor={color}
+                  outlineOpacity={0.4}
+                  position={[0, 0.15, 0]}
                 >
-                  <div className="font-bold text-sm mb-1">{arc.label}</div>
-                  <div>
-                    {arc.value}% / {arc.max}%
-                  </div>
-                  <div>{(fillLevel * 100).toFixed(0)}% allocated</div>
-                </div>
-              </Html>
+                  {arc.label}
+                </Text>
+                <Text
+                  fontSize={0.1}
+                  color={color}
+                  anchorX="center"
+                  anchorY="middle"
+                  fillOpacity={0.8}
+                  position={[0, -0.05, 0]}
+                >
+                  {`${arc.value}% / ${arc.max}%  ·  ${(fillLevel * 100).toFixed(0)}% allocated`}
+                </Text>
+              </group>
             )}
           </mesh>
         );

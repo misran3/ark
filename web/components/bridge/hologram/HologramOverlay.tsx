@@ -40,6 +40,7 @@ export function HologramOverlay({ children }: HologramOverlayProps) {
   const dimPlaneRef = useRef<Mesh>(null);
   const glowLightRef = useRef<PointLight>(null);
   const phaseTimerRef = useRef(0);
+  const lastProgressRef = useRef(-1);
 
   const { expandedPanel, activationPhase, setActivationPhase, panelHealth, setRevealProgress } =
     useConsoleStore();
@@ -108,14 +109,23 @@ export function HologramOverlay({ children }: HologramOverlayProps) {
     }
 
     // --- Reveal progress (iris animation) ---
-    if (activationPhase === 'beat1' || activationPhase === 'active') {
+    // Only update Zustand when value actually changes (avoids 120 reconciliations/sec)
+    if (activationPhase === 'beat1') {
       const rawProgress = Math.min(1, t / REVEAL_DURATION);
-      setRevealProgress(easeOutCubic(rawProgress));
+      const progress = easeOutCubic(rawProgress);
+      if (Math.abs(progress - lastProgressRef.current) > 0.001) {
+        lastProgressRef.current = progress;
+        setRevealProgress(progress);
+      }
     } else if (activationPhase === 'dismissing') {
-      // Reverse reveal on dismiss (ease-in quadratic)
       const rawProgress = Math.max(0, 1 - t / DISMISS_DURATION);
-      setRevealProgress(rawProgress * rawProgress);
+      const progress = rawProgress * rawProgress;
+      if (Math.abs(progress - lastProgressRef.current) > 0.001) {
+        lastProgressRef.current = progress;
+        setRevealProgress(progress);
+      }
     }
+    // 'active' phase: progress is already 1.0 — no update needed
 
     // --- Glow cast light ---
     if (glowLightRef.current) {

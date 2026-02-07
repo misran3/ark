@@ -37,11 +37,15 @@ const flareFragmentShader = /* glsl */ `
   }
 `;
 
+interface LensFlareProps {
+  brightness?: number;
+}
+
 /**
  * LensFlare — subtle anamorphic horizontal streaks from the planet.
  * Tracks the planet's screen-space position. Fades at viewport edges.
  */
-export function LensFlare() {
+export function LensFlare({ brightness = 1 }: LensFlareProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const shaderRef = useRef<THREE.ShaderMaterial>(null);
   const { camera } = useThree();
@@ -67,7 +71,7 @@ export function LensFlare() {
     const edgeFade = Math.max(0, Math.min(edgeX, edgeY));
     const opacity = Math.pow(Math.min(edgeFade * 2, 1), 2);
 
-    shaderRef.current.uniforms.uOpacity.value = opacity;
+    shaderRef.current.uniforms.uOpacity.value = opacity * brightness;
 
     // Position the flare mesh at the planet's projected world position
     // Use a Z slightly in front of canopy struts so it layers correctly

@@ -8,8 +8,9 @@ import { SpaceDust } from './SpaceDust';
 import { LensFlare } from './LensFlare';
 import { ThreatsLayer } from './ThreatsLayer';
 import SceneEffects from '@/components/three/SceneEffects';
-import { CanopyStruts } from './CanopyStruts';
+
 import { useThreatStore } from '@/lib/stores/threat-store';
+import { useBootStore } from '@/lib/stores/boot-store';
 import { HologramOverlay } from '@/components/bridge/hologram/HologramOverlay';
 import { DefenseGrid } from '@/components/bridge/hologram/panels/DefenseGrid';
 import { AssetNavigation } from '@/components/bridge/hologram/panels/AssetNavigation';
@@ -20,7 +21,11 @@ import { useConsoleStore } from '@/lib/stores/console-store';
 export function Viewport3D() {
   const allThreats = useThreatStore((state) => state.threats);
   const expandedPanel = useConsoleStore((s) => s.expandedPanel);
+  const consoleIntensity = useBootStore((s) => s.consoleIntensity);
   const threats = allThreats.filter((t) => !t.deflected);
+
+  // Scene brightness ramps with boot — planet/stars dark until console lights the room
+  const sceneReveal = Math.min(consoleIntensity / 0.96, 1);
 
   return (
     <div className="w-full h-full">
@@ -39,24 +44,21 @@ export function Viewport3D() {
         {/* Deep space nebula clouds */}
         <NebulaBackground />
 
-        {/* Ambient lighting */}
-        <ambientLight intensity={0.2} />
+        {/* Ambient lighting — dims during boot so console panels appear as light source */}
+        <ambientLight intensity={0.2 * sceneReveal} />
 
         {/* Starfield */}
         <StarfieldBackground />
 
-        {/* Blue planet backdrop */}
-        <Planet />
-        <LensFlare />
+        {/* Blue planet backdrop — fades in with boot */}
+        <Planet brightness={sceneReveal} />
+        <LensFlare brightness={sceneReveal} />
 
         {/* Sparse drifting dust particles */}
         <SpaceDust />
 
         {/* Threat objects */}
         <ThreatsLayer threats={threats} />
-
-        {/* Canopy struts — converging structural beams */}
-        <CanopyStruts />
 
         {/* Hologram expansion overlay */}
         <HologramOverlay>

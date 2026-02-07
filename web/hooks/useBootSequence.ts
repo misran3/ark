@@ -28,6 +28,7 @@ export function useBootSequence() {
   const startBoot = useBootStore.getState().startBoot;
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Check localStorage on mount
   useEffect(() => {
@@ -62,8 +63,14 @@ export function useBootSequence() {
       clearTimeout(timeoutRef.current);
     }
 
+    // Clear any previous intensity animation
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+
     // Animate console intensity based on phase
-    animateConsoleIntensity(phase, duration, setConsoleIntensity);
+    intervalRef.current = animateConsoleIntensity(phase, duration, setConsoleIntensity);
 
     // Schedule next phase
     timeoutRef.current = setTimeout(() => {
@@ -77,6 +84,10 @@ export function useBootSequence() {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
+      }
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
     };
   }, [phase]);
@@ -113,7 +124,7 @@ function animateConsoleIntensity(
   phase: string,
   duration: number,
   setIntensity: (val: number) => void
-) {
+): ReturnType<typeof setInterval> | null {
   const startTime = Date.now();
 
   // Define intensity curves for each phase
@@ -121,28 +132,20 @@ function animateConsoleIntensity(
     'name-exit': () => 0, // Stay dark
     'darkness': () => 0, // Stay dark
     'console-glow': (p) => p * 0.3, // 0 → 0.3
-    'power-surge': (p) => {
-      // 0.3 → 0.8 with flicker at 30%
-      if (p < 0.3) {
-        return 0.3 + (p / 0.3) * 0.2; // Rise to 0.5
-      } else if (p < 0.35) {
-        return 0.5 - 0.2; // Flicker down to 0.3
-      } else {
-        return 0.3 + ((p - 0.35) / 0.65) * 0.5; // Rise to 0.8
-      }
-    },
+    'power-surge': (p) => 0.3 + p * 0.5, // Smooth rise from 0.3 → 0.8
     'full-power': (p) => {
-      // 0.8 → 1.0 → 0.96 (overshoot and settle)
+      // 0.8 → 0.98 → 0.96 (gentle overshoot and settle)
+      // Capped below 1.0 to avoid browser compositing layer churn
       if (p < 0.6) {
-        return 0.8 + (p / 0.6) * 0.2; // Rise to 1.0
+        return 0.8 + (p / 0.6) * 0.18; // Rise to 0.98
       } else {
-        return 1.0 - ((p - 0.6) / 0.4) * 0.04; // Settle to 0.96
+        return 0.98 - ((p - 0.6) / 0.4) * 0.02; // Settle to 0.96
       }
     },
   };
 
   const curve = curves[phase];
-  if (!curve) return;
+  if (!curve) return null;
 
   const intervalId = setInterval(() => {
     const elapsed = Date.now() - startTime;
@@ -154,4 +157,6 @@ function animateConsoleIntensity(
       clearInterval(intervalId);
     }
   }, 16); // ~60fps
+
+  return intervalId;
 }

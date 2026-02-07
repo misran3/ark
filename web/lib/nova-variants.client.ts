@@ -8,7 +8,7 @@ export const HARDCODED_VARIANTS: NovaVariant[] = [
   { type: 'skeletal', label: 'A: Skeletal-less Hierarchical' },
   { type: 'community', label: 'CAUCASIAN MAN', path: '/models/caucasian-man.glb' },
   { type: 'community', label: 'Vinayagar', path: '/models/vinayagar.glb' },
-  { type: 'community', label: 'https storage googleapis', path: '/models/googleapis-model.glb' },
+  { type: 'community', label: 'THE POPE', path: '/models/googleapis-model.glb' },
 ];
 
 /**

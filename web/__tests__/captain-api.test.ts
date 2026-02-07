@@ -35,7 +35,7 @@ describe('fetchAllScans', () => {
     expect(result.budgetOverruns).toBeNull();
   });
 
-  test('uses correct API base URL', async () => {
+  test('calls deployed API Gateway directly (no localhost proxy)', async () => {
     mockFetch.mockImplementation(() =>
       Promise.resolve(new Response('{}', { status: 200 }))
     );
@@ -44,7 +44,9 @@ describe('fetchAllScans', () => {
 
     const calls = mockFetch.mock.calls;
     for (const call of calls) {
-      expect((call[0] as string).startsWith(CAPTAIN_API_BASE)).toBe(true);
+      const url = call[0] as string;
+      expect(url.startsWith(CAPTAIN_API_BASE)).toBe(true);
+      expect(url).not.toContain('localhost');
     }
   });
 });

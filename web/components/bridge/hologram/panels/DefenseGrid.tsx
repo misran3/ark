@@ -2,15 +2,14 @@
 
 import { useMemo } from 'react';
 import { Color } from 'three';
-import { Html } from '@react-three/drei';
+import { Text } from '@react-three/drei';
 import { useConsoleStore } from '@/lib/stores/console-store';
 import { useShieldStore } from '@/lib/stores/shield-store';
-import { getSystemColor, getSystemCSSColor, getSystemCSSGlow } from '@/lib/hologram/colors';
+import { getSystemColor } from '@/lib/hologram/colors';
 import { RadarSweep } from '@/components/bridge/hologram/RadarSweep';
 import { ShieldRing } from '@/components/bridge/hologram/panels/shields/ShieldRing';
 import { ShieldEmblem } from '@/components/bridge/hologram/panels/shields/ShieldEmblem';
 import { HologramParticles } from '@/components/bridge/hologram/HologramParticles';
-import { SlotNumber } from '@/components/bridge/hologram/SlotNumber';
 import { ScanPulse } from '@/components/bridge/hologram/ScanPulse';
 
 /** Returns 0-1 for a layer that starts appearing at `start` and is fully visible at `start + span` */
@@ -27,8 +26,6 @@ export function DefenseGrid() {
   const overallPercent = useShieldStore((s) => s.overallPercent);
 
   const systemColor = useMemo(() => getSystemColor('shields', health).clone(), [health]);
-  const cssColor = getSystemCSSColor('shields', health);
-  const cssGlow = getSystemCSSGlow('shields', health, 0.3);
 
   // Map shield store data to ring segments
   const budgetSegments = useMemo(
@@ -129,71 +126,104 @@ export function DefenseGrid() {
         <ScanPulse color={systemColor} interval={4} maxRadius={2.8} />
       )}
 
-      {/* HTML Data Readouts — appear with emblem (15% - 45%) */}
+      {/* Text readouts — appear with emblem (15% - 45%) */}
       {revealProgress > 0.15 && (
-        <>
-          <Html center position={[0, 3.8, 0]} style={{ pointerEvents: 'none' }}>
-            <div
-              className="text-center font-mono transition-opacity duration-300"
-              style={{
-                color: cssColor,
-                textShadow: `0 0 12px ${cssGlow}`,
-                opacity: layerAlpha(revealProgress, 0.15, 0.3),
-              }}
-            >
-              <div className="text-[10px] tracking-[0.3em] opacity-70 mb-1">DEFENSE GRID</div>
-              <div className="text-3xl font-bold">
-                <SlotNumber value={integrityPercent} format={(n) => `${n}%`} />
-              </div>
-              <div className="text-xs tracking-widest mt-1">{statusLabel}</div>
-            </div>
-          </Html>
-
-          {/* Ring labels — appear with their respective rings */}
-          <Html center position={[0, 3.2, 0.1]} style={{ pointerEvents: 'none' }}>
-            <div
-              className="text-[8px] font-mono tracking-[0.2em]"
-              style={{ color: cssColor, opacity: layerAlpha(revealProgress, 0.4, 0.3) * 0.5 }}
-            >
-              EMERGENCY RESERVES
-            </div>
-          </Html>
-
-          <Html center position={[0, 2.2, 0.1]} style={{ pointerEvents: 'none' }}>
-            <div
-              className="text-[8px] font-mono tracking-[0.2em]"
-              style={{ color: cssColor, opacity: layerAlpha(revealProgress, 0.25, 0.3) * 0.5 }}
-            >
-              BUDGET ALLOCATION
-            </div>
-          </Html>
-
-          <Html center position={[0, 1.2, 0.1]} style={{ pointerEvents: 'none' }}>
-            <div
-              className="text-[8px] font-mono tracking-[0.2em]"
-              style={{ color: cssColor, opacity: layerAlpha(revealProgress, 0.1, 0.3) * 0.5 }}
-            >
-              DEBT STATUS
-            </div>
-          </Html>
-        </>
+        <group position={[0, 3.8, 0]}>
+          <Text
+            fontSize={0.12}
+            letterSpacing={0.3}
+            color={systemColor}
+            anchorX="center"
+            anchorY="middle"
+            fillOpacity={layerAlpha(revealProgress, 0.15, 0.3) * 0.7}
+            outlineWidth="5%"
+            outlineColor={systemColor}
+            outlineOpacity={0.3}
+            position={[0, 0.35, 0]}
+          >
+            DEFENSE GRID
+          </Text>
+          <Text
+            fontSize={0.45}
+            color={systemColor}
+            anchorX="center"
+            anchorY="middle"
+            fillOpacity={layerAlpha(revealProgress, 0.15, 0.3)}
+            outlineWidth="5%"
+            outlineColor={systemColor}
+            outlineOpacity={0.3}
+            position={[0, 0, 0]}
+          >
+            {`${integrityPercent}%`}
+          </Text>
+          <Text
+            fontSize={0.1}
+            letterSpacing={0.1}
+            color={systemColor}
+            anchorX="center"
+            anchorY="middle"
+            fillOpacity={layerAlpha(revealProgress, 0.15, 0.3)}
+            outlineWidth="5%"
+            outlineColor={systemColor}
+            outlineOpacity={0.3}
+            position={[0, -0.3, 0]}
+          >
+            {statusLabel}
+          </Text>
+        </group>
       )}
+
+      {/* Ring labels — appear with their respective rings */}
+      <Text
+        fontSize={0.1}
+        letterSpacing={0.2}
+        color={systemColor}
+        anchorX="center"
+        anchorY="middle"
+        fillOpacity={layerAlpha(revealProgress, 0.4, 0.3) * 0.5}
+        position={[0, 3.2, 0.1]}
+      >
+        EMERGENCY RESERVES
+      </Text>
+      <Text
+        fontSize={0.1}
+        letterSpacing={0.2}
+        color={systemColor}
+        anchorX="center"
+        anchorY="middle"
+        fillOpacity={layerAlpha(revealProgress, 0.25, 0.3) * 0.5}
+        position={[0, 2.2, 0.1]}
+      >
+        BUDGET ALLOCATION
+      </Text>
+      <Text
+        fontSize={0.1}
+        letterSpacing={0.2}
+        color={systemColor}
+        anchorX="center"
+        anchorY="middle"
+        fillOpacity={layerAlpha(revealProgress, 0.1, 0.3) * 0.5}
+        position={[0, 1.2, 0.1]}
+      >
+        DEBT STATUS
+      </Text>
 
       {/* Alert banner (only when critical + fully revealed) */}
       {integrityPercent < 40 && revealProgress > 0.9 && (
-        <Html center position={[0, -3.5, 0.1]} style={{ pointerEvents: 'none' }}>
-          <div
-            className="px-4 py-1 font-mono text-xs tracking-widest animate-pulse"
-            style={{
-              color: '#ff4444',
-              background: 'rgba(255, 0, 0, 0.1)',
-              border: '1px solid rgba(255, 0, 0, 0.4)',
-              textShadow: '0 0 8px rgba(255, 0, 0, 0.6)',
-            }}
-          >
-            SHIELD INTEGRITY CRITICAL
-          </div>
-        </Html>
+        <Text
+          fontSize={0.12}
+          letterSpacing={0.1}
+          color="#ff4444"
+          anchorX="center"
+          anchorY="middle"
+          fillOpacity={0.9}
+          outlineWidth="8%"
+          outlineColor="#ff0000"
+          outlineOpacity={0.6}
+          position={[0, -3.5, 0.1]}
+        >
+          SHIELD INTEGRITY CRITICAL
+        </Text>
       )}
     </group>
   );
