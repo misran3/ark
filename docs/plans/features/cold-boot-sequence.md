@@ -3,9 +3,22 @@
 **Feature ID:** `OPENING-001`
 **Category:** Opening Experience
 **Priority:** P0 (Must-have for MVP)
-**Status:** 🔴 Not Started
-**Current Version:** 0.0
-**Target Version:** 1.0
+**Status:** 🟢 Complete
+**Current Version:** 2.0
+**Target Version:** 2.0
+
+---
+
+## Implementation Note (v2.0)
+
+This feature was redesigned and implemented as a simplified 4.6-second sequence. See `docs/plans/2026-02-07-boot-sequence-redesign.md` for the v2.0 design specification.
+
+**Key Changes from Original Spec:**
+- Removed Captain Nova materialization from boot (moved to post-boot)
+- Simplified to 7 phases (vs original 14-second timeline)
+- Console-sourced lighting replaces complex particle systems
+- Start screen added for first-time visitors
+- localStorage-based skip for return visitors
 
 ---
 
@@ -588,7 +601,8 @@ These documentation updates should be committed separately from code changes. Se
 |---------|------|---------|
 | 0.0 | 2026-02-06 | Specification created |
 | 1.0 | TBD | Full implementation with animation timeline |
+| 2.0 | 2026-02-07 | Redesigned with simplified 4.6s console-lighting sequence, Start screen, localStorage skip |
 
 ---
 
-**Status:** Ready for GSAP timeline choreography and particle system development.
+**Status:** Complete (v2.0). Original 14-second spec preserved above for reference.
