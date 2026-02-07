@@ -12,7 +12,7 @@ interface InstrumentMalfunctionProps {
  * Wraps an instrument with malfunction visuals when data fails to load.
  *
  * Effects:
- * - Backlight flickers unstably (CSS animation)
+ * - Backlight flickers unstably (irregular timeout chain)
  * - Faint red tint overlay
  * - "MALFUNCTION" text flashes
  *
@@ -22,22 +22,27 @@ interface InstrumentMalfunctionProps {
  */
 export function InstrumentMalfunction({ active, children }: InstrumentMalfunctionProps) {
   const [flickerVisible, setFlickerVisible] = useState(true);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Irregular flicker when active
+  // Irregular flicker using setTimeout chain (not setInterval) for truly random timing
   useEffect(() => {
     if (!active) {
       setFlickerVisible(true);
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
       return;
     }
 
-    intervalRef.current = setInterval(() => {
-      setFlickerVisible((v) => !v);
-    }, 80 + Math.random() * 200);
+    const scheduleFlicker = () => {
+      timeoutRef.current = setTimeout(() => {
+        setFlickerVisible((v) => !v);
+        scheduleFlicker();
+      }, 80 + Math.random() * 200);
+    };
+
+    scheduleFlicker();
 
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, [active]);
 
