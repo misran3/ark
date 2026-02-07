@@ -53,7 +53,7 @@ export function AssetNavigation() {
   });
 
   return (
-    <group scale={0.55}>
+    <group scale={0.4}>
       {/* === LAYER 1: Central star — appears first (0% - 25%) === */}
       <group scale={0.3 + layerAlpha(revealProgress, 0, 0.25) * 0.7}>
         <OrreryCore color={systemColor} health={health} />
