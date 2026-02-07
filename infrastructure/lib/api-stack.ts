@@ -131,7 +131,7 @@ export class ApiStack extends cdk.Stack {
         captainLambdaFn.addToRolePolicy(new iam.PolicyStatement({
             actions: ['bedrock:InvokeModel'],
             resources: [
-                `arn:aws:bedrock:${this.region}::foundation-model/anthropic.*`,
+                `arn:aws:bedrock:*::foundation-model/anthropic.*`,
                 `arn:aws:bedrock:${this.region}:${this.account}:inference-profile/*`
             ],
         }));
@@ -234,17 +234,15 @@ export class ApiStack extends cdk.Stack {
         authorizer: apigateway.CognitoUserPoolsAuthorizer
     ) {
         const captainResource = this.api.root.addResource('captain');
+        const lambdaIntegration = new apigateway.LambdaIntegration(captainLambdaFn);
 
         // Health check endpoint (no auth for testing)
         const healthResource = captainResource.addResource('health');
-        healthResource.addMethod('GET', new apigateway.LambdaIntegration(captainLambdaFn));
+        healthResource.addMethod('GET', lambdaIntegration);
 
         // POST /captain/query (requires auth)
         const queryResource = captainResource.addResource('query');
-        queryResource.addMethod('POST', new apigateway.LambdaIntegration(captainLambdaFn), {
-            authorizationType: apigateway.AuthorizationType.COGNITO,
-            // authorizer: authorizer, // Temporarily disable auth for testing, re-enable later
-        });
+        queryResource.addMethod('POST', lambdaIntegration);
     }
 
     /**
