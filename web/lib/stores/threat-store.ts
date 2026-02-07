@@ -123,6 +123,7 @@ interface ThreatState {
   updateThreat: (id: string, updates: Partial<Threat>) => void;
   setHoveredThreat: (id: string | null) => void;
   loadDemoThreats: () => void;
+  loadFromAPI: (threats: Threat[]) => void;
 }
 
 export const useThreatStore = create<ThreatState>((set) => ({
@@ -161,5 +162,10 @@ export const useThreatStore = create<ThreatState>((set) => ({
   loadDemoThreats: () =>
     set(() => ({
       threats: DEMO_THREATS.map((t) => ({ ...t, deflected: false })),
+    })),
+
+  loadFromAPI: (threats) =>
+    set(() => ({
+      threats: threats.map((t) => ({ ...t, deflected: false })),
     })),
 }));
