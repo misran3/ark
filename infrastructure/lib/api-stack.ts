@@ -5,6 +5,7 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
 import * as path from 'path';
@@ -112,6 +113,35 @@ export class ApiStack extends cdk.Stack {
         this.apiResource = this.api.root.addResource('api');
 
         // =============================================================
+        // VISA Lambda Function
+        // =============================================================
+        const visaLambdaFn = this.createLambdaFunction({
+            name: 'visa-lambda',
+            handler: 'handler.lambda_handler',
+            description: 'VISA Transaction Controls service',
+            additionalDeps: ['./shared', './database'],
+            copySourceFiles: true,
+            additionalEnv: {
+                USERS_TABLE_NAME: props.usersTable.tableName,
+                // NOTE: For X-Pay-Token auth:
+                // - VISA_USER_ID is the Visa API Key (apiKey)
+                // - VISA_PASSWORD is the Visa Shared Secret
+                VISA_USER_ID: process.env.VISA_USER_ID || '',
+                VISA_PASSWORD: process.env.VISA_PASSWORD || '',
+            },
+            tableGrants: [props.usersTable],
+            timeout: cdk.Duration.seconds(30),
+        });
+
+        // Grant S3 read access for VISA certificates to VISA Lambda
+        const visaCertsBucket = s3.Bucket.fromBucketName(
+            this,
+            'VisaCertsBucket',
+            'synesthesia-pay-artifacts'
+        );
+        visaCertsBucket.grantRead(visaLambdaFn, 'visa/*');
+
+        // =============================================================
         // Data API Resources and Methods
         // =============================================================
         this.createDataAPIResources(dataLambdaFn, cognitoAuthorizer);
@@ -146,6 +176,11 @@ export class ApiStack extends cdk.Stack {
         // Captain Nova API Resources
         // =============================================================
         this.createCaptainAPIResources(captainLambdaFn, cognitoAuthorizer);
+
+        // =============================================================
+        // VISA API Resources and Methods
+        // =============================================================
+        this.createVisaAPIResources(visaLambdaFn, cognitoAuthorizer);
 
         // CloudFormation Outputs
         new cdk.CfnOutput(this, 'ApiUrl', {
@@ -228,6 +263,25 @@ export class ApiStack extends cdk.Stack {
         asteroidIdResource.addResource('action').addMethod('POST', lambdaIntegration);
 
         apiResource.addResource('transactions').addMethod('GET', lambdaIntegration);
+    }
+
+    /**
+     * Creates API Gateway resources and methods for VISA operations.
+     */
+    private createVisaAPIResources(visaLambdaFn: lambda.Function, authorizer: apigateway.CognitoUserPoolsAuthorizer) {
+        const apiResource = this.api.root.getResource('api') || this.api.root.addResource('api');
+        const visaResource = apiResource.getResource('visa') || apiResource.addResource('visa');
+        const lambdaIntegration = new apigateway.LambdaIntegration(visaLambdaFn);
+
+        // VISA health check
+        visaResource.addResource('health').addMethod('GET', lambdaIntegration);
+
+        // VISA Transaction Controls endpoints
+        const visaControlsResource = visaResource.addResource('controls');
+        visaControlsResource.addMethod('POST', lambdaIntegration);
+        const visaControlIdResource = visaControlsResource.addResource('{document_id}');
+        visaControlIdResource.addMethod('GET', lambdaIntegration);
+        visaControlIdResource.addMethod('DELETE', lambdaIntegration);
     }
 
     /**

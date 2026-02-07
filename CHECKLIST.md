@@ -32,9 +32,9 @@
 | [x] | Isolation test page (/test/bridge-data) |
 | [ ] | Frontend → API Gateway integration |
 | [ ] | Captain Nova tools → real endpoints |
-| [ ] | VISA sandbox authentication (mTLS) |
-| [ ] | VISA Transaction Controls API integration |
-| [ ] | VISA controls Lambda endpoints |
+| [x] | VISA sandbox authentication (X-Pay-Token) |
+| [x] | VISA Transaction Controls API integration |
+| [x] | VISA controls Lambda endpoints (Isolated in visa-lambda) |
 | [ ] | Wire VISA tools into Captain Nova |
 | [ ] | VISA shield activation UI |
 | [ ] | VISA controls display (stretch) |
@@ -122,3 +122,29 @@
 - **Type Safety:** Hooks are strictly typed using the generated `web/src/types/api.ts` interfaces.
 - **Abstraction:** Containers now consume data through hooks rather than direct `fetch` calls, making the eventual swap to real APIs a single-line change per hook.
 - **Documentation:** Added `web/src/hooks/README.md` for developer guidance.
+
+---
+
+### Module 2: VISA Integration Implementation (Isolated)
+
+**What was added:**
+- **VISA Lambda:** `core/lambda/visa-lambda/`
+  - Dedicated Lambda function for all VISA-related operations.
+  - **Handler:** `handler.py` exposes `/api/visa/health`, `/api/visa/controls`.
+  - **Service:** `services/visa_service.py` handles X-Pay-Token signing (API key + shared secret).
+- **Separation of Concerns:**
+  - Removed VISA logic from `data-lambda` to keep it focused on financial data processing.
+  - VISA operations now have their own independent deployment and scaling.
+- **Infrastructure Updates:** `infrastructure/lib/api-stack.ts`
+  - Defined `visa-lambda` function.
+  - Configured API Gateway to route `/api/visa/*` to the new `visa-lambda`.
+  - Set environment variables: `VISA_USER_ID`, `VISA_PASSWORD`.
+
+**Auth Setup (X-Pay-Token):**
+- `VISA_USER_ID` = VISA API key (apiKey)
+- `VISA_PASSWORD` = VISA shared secret
+
+**Next Steps for VISA:**
+1. Set `VISA_USER_ID` and `VISA_PASSWORD` environment variables.
+2. Deploy updated stack: `cd infrastructure && bunx cdk deploy --all`.
+3. Test VISA endpoints using the frontend hooks.
