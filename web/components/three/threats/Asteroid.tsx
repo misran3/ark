@@ -1,8 +1,9 @@
 'use client';
 
-import { useRef, useMemo, useCallback, useEffect } from 'react';
+import { useRef, useMemo, useCallback, useEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { Vector3, Mesh, MeshStandardMaterial } from 'three';
 import { createNoise3D } from 'simplex-noise';
 import './AsteroidMaterial';
 import '@/lib/materials/VolumetricGlowMaterial';
@@ -91,6 +92,11 @@ export default function Asteroid({
 
   // Track previous collapsed prop to detect transitions
   const prevCollapsedRef = useRef(false);
+
+  // Chunk debris particles spawned on hit
+  const [chunkParticles, setChunkParticles] = useState<
+    Array<{ position: Vector3; velocity: Vector3; lifetime: number; startTime: number }>
+  >([]);
 
   // Compute damage level from HP
   const isFieldMode = hp !== undefined && maxHp !== undefined;
@@ -195,9 +201,31 @@ export default function Asteroid({
     if (isCollapsingRef.current) return;
 
     if (onHit) {
-      // Field mode: notify parent, trigger shudder
+      // Field mode: notify parent, trigger shudder, spawn chunk particles
       onHit();
       triggerShudder();
+
+      // Spawn chunk particles based on rock size (infer tier from HP)
+      const tier = maxHp === 3 ? 'large' : maxHp === 2 ? 'medium' : 'small';
+      const chunkCount = tier === 'large' ? 10 : tier === 'medium' ? 7 : 5;
+      const now = performance.now() / 1000;
+      const newChunks = Array.from({ length: chunkCount }, (_, i) => {
+        const angle = (i / chunkCount) * Math.PI * 2;
+        const speed = 0.3 + Math.random() * 0.4;
+        const velocity = new Vector3(
+          Math.cos(angle) * speed,
+          Math.sin(angle) * speed,
+          (Math.random() - 0.5) * 0.3
+        );
+        return {
+          position: new Vector3(0, 0, 0), // Will be offset from rock center
+          velocity,
+          lifetime: 2 + Math.random() * 2, // 2-4 seconds
+          startTime: now,
+        };
+      });
+
+      setChunkParticles((prev) => [...prev, ...newChunks]);
     } else {
       // Standalone mode: trigger collapse directly
       isCollapsingRef.current = true;
@@ -205,7 +233,7 @@ export default function Asteroid({
       collapseCompleteCalledRef.current = false;
       onClick?.();
     }
-  }, [onClick, onHit, triggerShudder]);
+  }, [onClick, onHit, triggerShudder, maxHp]);
 
   useFrame(({ clock }, delta) => {
     if (!groupRef.current) return;
@@ -239,6 +267,16 @@ export default function Asteroid({
         isShudderingRef.current = false;
         groupRef.current.position.copy(shudderOriginRef.current);
       }
+    }
+
+    // ---- Animate and cull chunk particles ----
+    if (chunkParticles.length > 0) {
+      setChunkParticles((prev) =>
+        prev.filter((chunk) => {
+          const age = time - chunk.startTime;
+          return age <= chunk.lifetime; // Cull expired chunks
+        })
+      );
     }
 
     // ---- Layer 1: Heat Haze atmosphere ----
@@ -571,6 +609,69 @@ export default function Asteroid({
           />
         </mesh>
       </group>
+
+      {/* Hit-triggered chunk debris */}
+      {chunkParticles.map((chunk, i) => (
+        <ChunkDebris
+          key={`${chunk.startTime}-${i}`}
+          position={position}
+          velocity={chunk.velocity}
+          startTime={chunk.startTime}
+          lifetime={chunk.lifetime}
+          size={size * 0.05} // 5% of rock size
+        />
+      ))}
     </group>
+  );
+}
+
+interface ChunkDebrisProps {
+  position: [number, number, number];
+  velocity: Vector3;
+  startTime: number;
+  lifetime: number;
+  size: number;
+}
+
+function ChunkDebris({ position, velocity, startTime, lifetime, size }: ChunkDebrisProps) {
+  const meshRef = useRef<Mesh>(null);
+
+  useFrame((state) => {
+    if (!meshRef.current) return;
+
+    const age = state.clock.elapsedTime - startTime;
+    const t = age / lifetime;
+
+    // Physics: velocity + gravity
+    const gravity = -1.5; // Units per second squared
+    const pos = new Vector3(
+      position[0] + velocity.x * age,
+      position[1] + velocity.y * age + 0.5 * gravity * age * age,
+      position[2] + velocity.z * age
+    );
+    meshRef.current.position.copy(pos);
+
+    // Fade out near end of lifetime
+    const opacity = t < 0.7 ? 1.0 : 1.0 - (t - 0.7) / 0.3;
+    if (meshRef.current.material instanceof MeshStandardMaterial) {
+      meshRef.current.material.opacity = opacity;
+    }
+
+    // Tumble
+    meshRef.current.rotation.x += 0.05;
+    meshRef.current.rotation.y += 0.03;
+  });
+
+  return (
+    <mesh ref={meshRef}>
+      <boxGeometry args={[size, size, size]} />
+      <meshStandardMaterial
+        color="#8b7355"
+        roughness={0.9}
+        metalness={0.1}
+        transparent
+        opacity={1}
+      />
+    </mesh>
   );
 }
