@@ -11,6 +11,8 @@ interface AsteroidFieldCascadeProps {
   rockPositions: [number, number, number][];
   /** Indices of rocks still alive when cascade was triggered */
   aliveRockIndices: number[];
+  /** Callback to flash a specific rock (50ms before detonation) */
+  onFlashRock: (rockIndex: number) => void;
   /** Callback to detonate a specific rock */
   onDetonateRock: (rockIndex: number) => void;
   /** Called when the entire cascade sequence completes */
@@ -42,6 +44,7 @@ export default function AsteroidFieldCascade({
   triggerPoint,
   rockPositions,
   aliveRockIndices,
+  onFlashRock,
   onDetonateRock,
   onCascadeComplete,
   fieldRadius,
@@ -114,13 +117,13 @@ export default function AsteroidFieldCascade({
 
     // --- Per-rock detonation by distance ---
     for (const rock of cascadeRocks) {
-      // Flash just before detonation
+      // Flash 50ms before detonation
       if (elapsed >= rock.flashTime && !flashedSetRef.current.has(rock.index)) {
         flashedSetRef.current.add(rock.index);
-        // The impactFlash prop on the Asteroid handles the visual
+        onFlashRock(rock.index); // Trigger white-hot flash
       }
 
-      // Detonate
+      // Detonate at scheduled time
       if (elapsed >= rock.delay && !detonatedSetRef.current.has(rock.index)) {
         detonatedSetRef.current.add(rock.index);
         onDetonateRock(rock.index);

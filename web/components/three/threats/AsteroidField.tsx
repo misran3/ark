@@ -129,6 +129,30 @@ export default function AsteroidField({
     [cascadeTriggered, fieldParams.cascadeThreshold, fieldParams.rocks]
   );
 
+  // Handle cascade flash (separate from detonation for timing)
+  const handleCascadeFlash = useCallback((rockIndex: number) => {
+    setRockStates((prev) => {
+      const next = [...prev];
+      next[rockIndex] = {
+        ...next[rockIndex],
+        impactFlash: true,
+      };
+      return next;
+    });
+
+    // Clear flash after brief duration (100ms white-hot flash)
+    setTimeout(() => {
+      setRockStates((prev) => {
+        const next = [...prev];
+        next[rockIndex] = {
+          ...next[rockIndex],
+          impactFlash: false,
+        };
+        return next;
+      });
+    }, 100);
+  }, []);
+
   // Handle cascade detonation of a specific rock
   const handleCascadeDetonate = useCallback((rockIndex: number) => {
     setRockStates((prev) => {
@@ -136,7 +160,6 @@ export default function AsteroidField({
       next[rockIndex] = {
         ...next[rockIndex],
         destroyed: true,
-        impactFlash: true,
         collapsed: true,
       };
       return next;
@@ -242,6 +265,7 @@ export default function AsteroidField({
             triggerPoint={cascadeTriggerPoint}
             rockPositions={fieldParams.rocks.map((r) => r.position)}
             aliveRockIndices={aliveRockIndices}
+            onFlashRock={handleCascadeFlash}
             onDetonateRock={handleCascadeDetonate}
             onCascadeComplete={handleCascadeComplete}
             fieldRadius={fieldParams.fieldRadius}
