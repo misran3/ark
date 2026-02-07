@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import DevThreatLayout from '@/components/dev/DevThreatLayout';
 import Asteroid from '@/components/three/threats/Asteroid';
 import AsteroidField from '@/components/three/threats/AsteroidField';
@@ -37,13 +37,16 @@ export default function DevAsteroidPage() {
     }
   };
 
-  // Compute createdAt for growth simulation
-  // If growth disabled: createdAt = now (no growth)
-  // If growth enabled: createdAt = now - (simulated elapsed time based on speed)
-  const getCreatedAt = useCallback(() => {
-    if (!growthEnabled) return Date.now();
-    // Simulate time passage: at 1x, 10 minutes ago; at 5x, 50 min; at 20x, 200 min
-    return Date.now() - growthSpeed * 10 * 60 * 1000;
+  // Stable timestamp for growth simulation (prevents continuous remounting)
+  const [growthStartTime, setGrowthStartTime] = useState(Date.now());
+
+  useEffect(() => {
+    if (!growthEnabled) {
+      setGrowthStartTime(Date.now());
+    } else {
+      // Set timestamp to simulate elapsed time
+      setGrowthStartTime(Date.now() - growthSpeed * 10 * 60 * 1000);
+    }
   }, [growthEnabled, growthSpeed]);
 
   const buttonClass =
@@ -302,7 +305,7 @@ export default function DevAsteroidPage() {
               color={color}
               amount={amount}
               seed={fieldSeed}
-              createdAt={getCreatedAt()}
+              createdAt={growthStartTime}
               driftEnabled={driftEnabled}
               onHover={() => {}}
               onDeflect={() => {
