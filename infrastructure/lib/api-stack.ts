@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
@@ -110,6 +111,35 @@ export class ApiStack extends cdk.Stack {
         // Data API Resources and Methods
         // =============================================================
         this.createDataAPIResources(dataLambdaFn, cognitoAuthorizer);
+        
+        // =============================================================
+        // Captain Nova Lambda Function
+        // =============================================================
+        const captainLambdaFn = this.createLambdaFunction({
+            name: 'captain-lambda',
+            handler: 'handler.lambda_handler',
+            description: 'Captain Nova AI agent for financial guidance',
+            additionalDeps: ['./shared', './agent'],
+             additionalEnv: {
+                BEDROCK_MODEL_ID: 'us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+                LOGFIRE_TOKEN: process.env.LOGFIRE_TOKEN || '',
+             },
+             timeout: cdk.Duration.seconds(60),
+         });
+
+        // Grant Bedrock access
+        captainLambdaFn.addToRolePolicy(new iam.PolicyStatement({
+            actions: ['bedrock:InvokeModel'],
+            resources: [
+                `arn:aws:bedrock:${this.region}::foundation-model/anthropic.*`,
+                `arn:aws:bedrock:${this.region}:${this.account}:inference-profile/*`
+            ],
+        }));
+
+        // =============================================================
+        // Captain Nova API Resources
+        // =============================================================
+        this.createCaptainAPIResources(captainLambdaFn, cognitoAuthorizer);
 
         // CloudFormation Outputs
         new cdk.CfnOutput(this, 'ApiUrl', {
@@ -192,6 +222,29 @@ export class ApiStack extends cdk.Stack {
         asteroidIdResource.addResource('action').addMethod('POST', lambdaIntegration);
 
         apiResource.addResource('transactions').addMethod('GET', lambdaIntegration);
+    }
+
+    /**
+     * Creates API Gateway resources for Captain Nova endpoints.
+     * @param captainLambdaFn The Lambda function that handles Captain Nova API requests.
+     * @param authorizer The Cognito User Pools Authorizer to secure the endpoints.
+     */
+    private createCaptainAPIResources(
+        captainLambdaFn: lambda.Function,
+        authorizer: apigateway.CognitoUserPoolsAuthorizer
+    ) {
+        const captainResource = this.api.root.addResource('captain');
+
+        // Health check endpoint (no auth for testing)
+        const healthResource = captainResource.addResource('health');
+        healthResource.addMethod('GET', new apigateway.LambdaIntegration(captainLambdaFn));
+
+        // POST /captain/query (requires auth)
+        const queryResource = captainResource.addResource('query');
+        queryResource.addMethod('POST', new apigateway.LambdaIntegration(captainLambdaFn), {
+            authorizationType: apigateway.AuthorizationType.COGNITO,
+            // authorizer: authorizer, // Temporarily disable auth for testing, re-enable later
+        });
     }
 
     /**
