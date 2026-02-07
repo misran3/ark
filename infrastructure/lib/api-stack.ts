@@ -119,6 +119,9 @@ export class ApiStack extends cdk.Stack {
             copySourceFiles: true,
             additionalEnv: {
                 USERS_TABLE_NAME: props.usersTable.tableName,
+                // NOTE: For X-Pay-Token auth:
+                // - VISA_USER_ID is the Visa API Key (apiKey)
+                // - VISA_PASSWORD is the Visa Shared Secret
                 VISA_USER_ID: process.env.VISA_USER_ID || '',
                 VISA_PASSWORD: process.env.VISA_PASSWORD || '',
             },
@@ -133,27 +136,6 @@ export class ApiStack extends cdk.Stack {
             'synesthesia-pay-artifacts'
         );
         visaCertsBucket.grantRead(visaLambdaFn, 'visa/*');
-
-        // =============================================================
-        // VISA Lambda Function
-        // =============================================================
-        const visaLambdaFn = this.createLambdaFunction({
-            name: 'visa-lambda',
-            handler: 'handler.lambda_handler',
-            description: 'VISA Transaction Controls service',
-            additionalDeps: ['./shared', './database'],
-            copySourceFiles: true,
-            additionalEnv: {
-                USERS_TABLE_NAME: props.usersTable.tableName,
-                // NOTE: For X-Pay-Token auth:
-                // - VISA_USER_ID is the Visa API Key (apiKey)
-                // - VISA_PASSWORD is the Visa Shared Secret
-                VISA_USER_ID: process.env.VISA_USER_ID || '',
-                VISA_PASSWORD: process.env.VISA_PASSWORD || '',
-            },
-            tableGrants: [props.usersTable],
-            timeout: cdk.Duration.seconds(30),
-        });
 
         // =============================================================
         // Data API Resources and Methods
@@ -275,25 +257,6 @@ export class ApiStack extends cdk.Stack {
         asteroidIdResource.addResource('action').addMethod('POST', lambdaIntegration);
 
         apiResource.addResource('transactions').addMethod('GET', lambdaIntegration);
-    }
-
-    /**
-     * Creates API Gateway resources and methods for VISA operations.
-     */
-    private createVisaAPIResources(visaLambdaFn: lambda.Function, authorizer: apigateway.CognitoUserPoolsAuthorizer) {
-        const apiResource = this.api.root.getResource('api') || this.api.root.addResource('api');
-        const visaResource = apiResource.getResource('visa') || apiResource.addResource('visa');
-        const lambdaIntegration = new apigateway.LambdaIntegration(visaLambdaFn);
-
-        // VISA health check
-        visaResource.addResource('health').addMethod('GET', lambdaIntegration);
-
-        // VISA Transaction Controls endpoints
-        const visaControlsResource = visaResource.addResource('controls');
-        visaControlsResource.addMethod('POST', lambdaIntegration);
-        const visaControlIdResource = visaControlsResource.addResource('{document_id}');
-        visaControlIdResource.addMethod('GET', lambdaIntegration);
-        visaControlIdResource.addMethod('DELETE', lambdaIntegration);
     }
 
     /**
