@@ -7,3 +7,6 @@ docs/plans
 
 # System files
 .DS_Store
+
+# Git worktrees
+.worktrees
