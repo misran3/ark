@@ -95,7 +95,7 @@ export function Sun({ solarFlareActive }: SunProps) {
 
   return (
     <mesh ref={meshRef} position={[300, 100, -800]}>
-      <sphereGeometry args={[200, 64, 64]} />
+      <sphereGeometry args={[200, 32, 32]} />
       <shaderMaterial
         ref={shaderRef}
         uniforms={{
