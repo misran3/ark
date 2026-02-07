@@ -5,6 +5,7 @@ requires-python = ">=3.12"
 [manifest]
 members = [
     "agent",
+    "captain-lambda",
     "core",
     "data-lambda",
     "database",
@@ -172,6 +173,21 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/0c/a8/a26608ff39e3a5866c6c79eda10133490205cbddd45074190becece3ff2a/botocore_stubs-1.42.41.tar.gz", hash = "sha256:dbeac2f744df6b814ce83ec3f3777b299a015cbea57a2efc41c33b8c38265825", size = 42411, upload-time = "2026-02-03T20:46:14.479Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/32/76/cab7af7f16c0b09347f2ebe7ffda7101132f786acb767666dce43055faab/botocore_stubs-1.42.41-py3-none-any.whl", hash = "sha256:9423110fb0e391834bd2ed44ae5f879d8cb370a444703d966d30842ce2bcb5f0", size = 66759, upload-time = "2026-02-03T20:46:13.02Z" },
+]
+
+[[package]]
+name = "captain-lambda"
+version = "0.1.0"
+source = { virtual = "lambda/captain-lambda" }
+dependencies = [
+    { name = "aws-lambda-powertools" },
+    { name = "aws-xray-sdk" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aws-lambda-powertools", specifier = ">=3.24.0" },
+    { name = "aws-xray-sdk", specifier = ">=2.15.0" },
 ]
 
 [[package]]
