@@ -109,27 +109,19 @@ export function StarfieldBackground() {
       <bufferGeometry>
         <bufferAttribute
           attach="attributes-position"
-          count={STAR_COUNT}
-          array={positions}
-          itemSize={3}
+          args={[positions, 3]}
         />
         <bufferAttribute
           attach="attributes-aSize"
-          count={STAR_COUNT}
-          array={sizes}
-          itemSize={1}
+          args={[sizes, 1]}
         />
         <bufferAttribute
           attach="attributes-aTwinklePhase"
-          count={STAR_COUNT}
-          array={twinklePhases}
-          itemSize={1}
+          args={[twinklePhases, 1]}
         />
         <bufferAttribute
           attach="attributes-aTwinkleSpeed"
-          count={STAR_COUNT}
-          array={twinkleSpeeds}
-          itemSize={1}
+          args={[twinkleSpeeds, 1]}
         />
       </bufferGeometry>
       <shaderMaterial
