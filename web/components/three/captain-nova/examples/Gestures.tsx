@@ -10,7 +10,7 @@ import { useSalute, usePoint } from '../gestures';
  * Example: Using gesture animations
  */
 export function GesturesExample() {
-  const characterRef = useRef<THREE.Group>(null);
+  const characterRef = useRef<THREE.Group>(null!);
   const { play: playSalute } = useSalute(characterRef);
   const { play: playPoint } = usePoint(characterRef, {
     target: new THREE.Vector3(3, 1, 0),
