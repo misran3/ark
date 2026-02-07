@@ -6,16 +6,16 @@ import { Group, Mesh, PlaneGeometry, MeshBasicMaterial, PointLight, Vector3 } fr
 import { useConsoleStore, type PanelType } from '@/lib/stores/console-store';
 import { getSystemColor } from '@/lib/hologram/colors';
 
-/** World-space Y position for the hologram group (above console bar) */
-const HOLOGRAM_Y = -0.5;
+/** World-space Y position — centered in visible area above console bar */
+const HOLOGRAM_Y = 0.6;
 /** World-space Z position (in front of scene, behind canopy struts) */
-const HOLOGRAM_Z = 1.0;
-/** X offsets per panel to position above the triggering console panel */
+const HOLOGRAM_Z = 0.8;
+/** X offsets per panel — tighter toward center so hologram stays visible */
 const PANEL_X_OFFSETS: Record<PanelType, number> = {
-  shields: -1.2,
-  networth: -0.4,
-  transactions: 0.4,
-  cards: 1.2,
+  shields: -0.8,
+  networth: -0.3,
+  transactions: 0.3,
+  cards: 0.8,
 };
 
 /** Camera rest position */
