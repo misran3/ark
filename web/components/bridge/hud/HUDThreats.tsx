@@ -2,6 +2,7 @@
 
 import { useThreatStore } from '@/lib/stores/threat-store';
 import { useAlertStore, ALERT_COLORS } from '@/lib/stores/alert-store';
+import { useNovaDialogueStore } from '@/lib/stores/nova-dialogue-store';
 import { useMemo } from 'react';
 
 const THREAT_ICONS: Record<string, string> = {
@@ -41,8 +42,10 @@ function formatBearing(pos: [number, number, number]): string {
 export function HUDThreats() {
   const allThreats = useThreatStore((state) => state.threats);
   const threats = allThreats.filter((t) => !t.deflected);
+  const setHoveredThreat = useThreatStore((state) => state.setHoveredThreat);
   const alertLevel = useAlertStore((state) => state.level);
   const colors = ALERT_COLORS[alertLevel];
+  const speakingThreatId = useNovaDialogueStore((s) => s.currentMessage?.threatId);
 
   // Sort by distance (closest first)
   const sorted = useMemo(
@@ -125,11 +128,15 @@ export function HUDThreats() {
               return (
                 <div
                   key={threat.id}
-                  className="rounded relative"
+                  className="rounded relative cursor-pointer"
+                  onMouseEnter={() => setHoveredThreat(threat.id)}
+                  onMouseLeave={() => setHoveredThreat(null)}
                   style={{
                     opacity,
                     borderLeft: `2px solid ${SEVERITY_COLORS[threat.severity]}`,
                     background: 'rgba(0, 240, 255, 0.02)',
+                    boxShadow: speakingThreatId === threat.id ? `0 0 8px ${SEVERITY_COLORS[threat.severity]}40` : 'none',
+                    transition: 'box-shadow 0.3s ease-out',
                   }}
                 >
                   {/* Top row: icon, label, severity */}
