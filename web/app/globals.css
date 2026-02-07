@@ -2,6 +2,9 @@
 @import "tailwindcss";
 
 :root {
+  /* Boot sequence — controlled by useBootSequence hook */
+  --console-intensity: 0;
+
   /* Aurora colors - dynamically updated via JavaScript */
   --aurora-primary: #8b5cf6;
   --aurora-secondary: #6366f1;
