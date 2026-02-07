@@ -4,7 +4,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useBootStore, type BootPhase } from '@/lib/stores/boot-store';
 import { storage } from '@/lib/utils/storage';
 
-const PHASE_DURATIONS: Record<string, number> = {
+const PHASE_DURATIONS_FIRST_VISIT: Record<string, number> = {
   black: 1500,           // 1.5s
   emergency: 2000,       // 2s
   'power-surge': 1000,   // 1s (includes 400-500ms breath)
@@ -12,6 +12,16 @@ const PHASE_DURATIONS: Record<string, number> = {
   'console-boot': 1500,  // 1.5s
   'hud-rise': 1000,      // 1s
   settling: 500,         // 0.5s
+};
+
+const PHASE_DURATIONS_REPEAT_VISIT: Record<string, number> = {
+  black: 500,           // Compressed
+  emergency: 0,         // Skip
+  'power-surge': 300,   // Quick surge
+  'viewport-awake': 1000, // No calibration fumble
+  'console-boot': 1000, // No hesitation
+  'hud-rise': 500,      // Snap-in
+  settling: 300,
 };
 
 const PHASES: BootPhase[] = [
@@ -54,15 +64,25 @@ export function useBootSequence() {
     isRepeatVisitRef.current = bootCount > 0;
   }, []);
 
-  // Phase progression with 2x speed on repeat visits
+  // Phase progression with compressed timing on repeat visits
   useEffect(() => {
     if (phase === 'complete') return;
 
-    const baseDuration = PHASE_DURATIONS[phase];
-    if (!baseDuration) return;
+    const baseDuration = isRepeatVisitRef.current
+      ? PHASE_DURATIONS_REPEAT_VISIT[phase]
+      : PHASE_DURATIONS_FIRST_VISIT[phase];
 
-    // Repeat visits play at 2x speed
-    const duration = isRepeatVisitRef.current ? baseDuration / 2 : baseDuration;
+    if (!baseDuration || baseDuration === 0) {
+      // Skip this phase for repeat visits
+      const currentIndex = PHASES.indexOf(phase);
+      const nextPhase = PHASES[currentIndex + 1];
+      if (nextPhase) {
+        setPhase(nextPhase);
+      }
+      return;
+    }
+
+    const duration = baseDuration;
     const startTime = Date.now();
 
     if (intervalRef.current) {
@@ -140,9 +160,11 @@ export function useBootSequence() {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
+      // Fast-forward: transition all remaining effects to completion
       setPhase('complete');
+      useBootStore.getState().setGlobalIntensity(0.96);
     }
-  }, [phase, setPhase]);
+  }, [phase]);
 
   return { phase, progress, skipBoot, isRepeatVisit: isRepeatVisitRef.current };
 }
