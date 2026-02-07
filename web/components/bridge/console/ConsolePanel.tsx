@@ -151,7 +151,7 @@ export function ConsolePanel({
         />
 
         {/* ===== INSTRUMENT CONTENT (inside well, on backplate) ===== */}
-        <div className="absolute inset-[5px] relative overflow-hidden rounded-sm">
+        <div className="absolute inset-[5px] overflow-hidden rounded-sm">
           {/* Backlight warmup — per-panel aged bulb tint, shifts on alert cascade stage 4 */}
           <div
             className="absolute inset-0 pointer-events-none"
