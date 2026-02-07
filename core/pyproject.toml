@@ -13,6 +13,7 @@ packages = []
 members = [
     "lambda/user-lambda",
     "lambda/data-lambda",
+    "lambda/captain-lambda",
     "agent",
     "shared",
     "database",
