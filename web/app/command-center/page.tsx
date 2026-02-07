@@ -1,9 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useSeamlessTransition } from '@/hooks/useSeamlessTransition';
+import { useRouter } from 'next/navigation';
 import { useFinancialSnapshot, useBudgetReport } from '@/hooks/useFinancialData';
-import { useTransitionStore } from '@/lib/stores/transition-store';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { MetricCard } from '@/components/ui/MetricCard';
 import { ShieldPanel } from '@/components/ui/ShieldPanel';
@@ -16,8 +15,7 @@ import { useShieldStore } from '@/lib/stores/shield-store';
 
 export default function CommandCenterPage() {
   const [activeTab, setActiveTab] = useState('overview');
-  const { transitionBack } = useSeamlessTransition();
-  const isTransitioning = useTransitionStore((state) => state.isTransitioning);
+  const router = useRouter();
   const snapshotQuery = useFinancialSnapshot();
   const budgetQuery = useBudgetReport();
 
@@ -28,13 +26,8 @@ export default function CommandCenterPage() {
         <div className="absolute bottom-0 left-[10%] right-[10%] h-px bg-gradient-to-r from-transparent via-aurora-primary/20 to-transparent" />
 
         <button
-          onClick={() => {
-            if (!isTransitioning) {
-              transitionBack();
-            }
-          }}
-          disabled={isTransitioning}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-[3px] border border-aurora-primary/15 bg-aurora-primary/5 text-aurora-primary/50 font-orbitron text-[8px] tracking-[2px] hover:bg-aurora-primary/10 hover:text-aurora-primary hover:border-aurora-primary/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={() => router.back()}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-[3px] border border-aurora-primary/15 bg-aurora-primary/5 text-aurora-primary/50 font-orbitron text-[8px] tracking-[2px] hover:bg-aurora-primary/10 hover:text-aurora-primary hover:border-aurora-primary/25 transition-all"
         >
           <span>◀</span> BACK TO BRIDGE
         </button>
