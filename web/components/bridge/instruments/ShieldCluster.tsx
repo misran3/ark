@@ -37,8 +37,8 @@ export function ShieldCluster() {
 
   return (
     <div className="flex flex-col h-full gap-1 py-1">
-      {/* Primary: Circular dial gauge */}
-      <div className="flex-1 min-h-0 relative">
+      {/* Primary: Circular dial gauge — fixed height prevents resize loop under CSS perspective */}
+      <div className="relative" style={{ height: '90px' }}>
         {canvasReady ? (
           <Suspense fallback={
             <div className="flex items-center justify-center h-full">

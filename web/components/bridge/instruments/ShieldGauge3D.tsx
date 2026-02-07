@@ -47,6 +47,7 @@ export function ShieldGauge3D({ value }: ShieldGauge3DProps) {
       dpr={[1, 2]}
       style={{ background: 'transparent' }}
       frameloop="always"
+      resize={{ offsetSize: true }}
     >
       <ShieldGaugeScene value={value} />
     </Canvas>
