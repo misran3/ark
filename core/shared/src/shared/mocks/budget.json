@@ -26,7 +26,13 @@
       "subscriptions": 51.97,
       "shopping": 357.11,
       "coffee": 6.75,
-      "gym": 24.99
+      "gym": 24.99,
+      "entertainment": 450.00,
+      "clothing": 380.00,
+      "travel": 300.00,
+      "personal_care": 150.00,
+      "hobbies": 200.00,
+      "alcohol": 166.00
     }
   },
   "savings": {
