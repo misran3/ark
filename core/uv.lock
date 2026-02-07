@@ -822,6 +822,18 @@ wheels = [
 ]
 
 [[package]]
+name = "pydantic-to-typescript2"
+version = "1.0.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/25/b1/7f4d86847084ad345ffb2bfe75365536b7640678c9cd5ae6ad64599a14ff/pydantic-to-typescript2-1.0.6.tar.gz", hash = "sha256:19cc0fb03802abcb508b02fbc334f1667ff50e0853a782b58df9dd0409290163", size = 8007, upload-time = "2024-09-12T04:20:27.233Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/62/74/cf2aee6837b357f7edef46584c1754d49cb29be00b3bfea97580168dea2b/pydantic_to_typescript2-1.0.6-py3-none-any.whl", hash = "sha256:89bbdd4b84b72d9f8ada33fd4d7d6605457be302dd6d4c6d48faa9310841bb69", size = 8624, upload-time = "2024-09-12T04:20:25.889Z" },
+]
+
+[[package]]
 name = "pygments"
 version = "2.19.2"
 source = { registry = "https://pypi.org/simple" }
@@ -931,6 +943,20 @@ wheels = [
 name = "shared"
 version = "0.1.0"
 source = { editable = "shared" }
+dependencies = [
+    { name = "pydantic" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pydantic-to-typescript2" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pydantic", specifier = ">=2.0.0" }]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pydantic-to-typescript2", specifier = ">=1.0.0" }]
 
 [[package]]
 name = "six"
