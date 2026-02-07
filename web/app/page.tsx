@@ -8,9 +8,11 @@ import { NetWorthPopup } from '@/components/bridge/console/panels/NetWorthPopup'
 import { TransactionsPopup } from '@/components/bridge/console/panels/TransactionsPopup';
 import { CardsPopup } from '@/components/bridge/console/panels/CardsPopup';
 import { useAlertSync } from '@/hooks/useAlertSync';
+import { useHologramDismiss } from '@/hooks/useHologramDismiss';
 
 export default function BridgePage() {
   useAlertSync();
+  useHologramDismiss();
 
   return (
     <>
