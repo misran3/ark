@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import type { FinancialSnapshot, Transaction } from '@/src/types/api';
-// import api from '@/src/lib/api';
+import api from '@/src/lib/api';
+import type { FinancialSnapshot, Transaction, BudgetReport } from '@/src/types/api';
 
 /**
  * Hook to fetch the financial snapshot (accounts + recent transactions).
  * 
- * Currently configured to use shared mocks for development.
- * Includes commented-out Axios code for production API integration.
+ * Endpoint: GET /api/snapshot
+ * Returns: FinancialSnapshot object directly (no wrapper)
  */
 export function useFinancialSnapshot() {
   const [data, setData] = useState<FinancialSnapshot | null>(null);
@@ -17,18 +17,10 @@ export function useFinancialSnapshot() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        
-        /* PRODUCTION CODE:
-        const response = await api.get<FinancialSnapshot>('/snapshot');
+        const response = await api.get<FinancialSnapshot>('/api/snapshot');
         setData(response.data);
-        */
-
-        // MOCK CODE (Using shared mocks):
-        const response = await fetch('/mocks/snapshot.json');
-        const result = await response.json();
-        setData(result);
-        
       } catch (err) {
+        console.error('useFinancialSnapshot error:', err);
         setError(err as Error);
       } finally {
         setLoading(false);
@@ -42,26 +34,27 @@ export function useFinancialSnapshot() {
 }
 
 /**
- * Hook to fetch transactions with optional filtering.
+ * Hook to fetch transactions with optional filtering by days.
+ * 
+ * Endpoint: GET /api/transactions?days={days}
+ * Returns: { transactions: Transaction[], count: number }
  */
 export function useTransactions(days: number = 30) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
-        /* PRODUCTION CODE:
-        const response = await api.get<Transaction[]>(`/transactions?days=${days}`);
-        setTransactions(response.data);
-        */
-
-        // MOCK CODE:
-        const response = await fetch('/mocks/snapshot.json');
-        const result = await response.json();
-        setTransactions(result.recent_transactions);
+        setLoading(true);
+        const response = await api.get<{ transactions: Transaction[]; count: number }>(
+          `/api/transactions?days=${days}`
+        );
+        setTransactions(response.data.transactions);
       } catch (err) {
-        console.error(err);
+        console.error('useTransactions error:', err);
+        setError(err as Error);
       } finally {
         setLoading(false);
       }
@@ -70,5 +63,36 @@ export function useTransactions(days: number = 30) {
     fetchTransactions();
   }, [days]);
 
-  return { transactions, loading };
+  return { transactions, loading, error };
+}
+
+/**
+ * Hook to fetch the 50/30/20 budget report.
+ * 
+ * Endpoint: GET /api/budget
+ * Returns: BudgetReport object directly (no wrapper)
+ */
+export function useBudgetReport() {
+  const [data, setData] = useState<BudgetReport | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get<BudgetReport>('/api/budget');
+        setData(response.data);
+      } catch (err) {
+        console.error('useBudgetReport error:', err);
+        setError(err as Error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  return { data, loading, error };
 }

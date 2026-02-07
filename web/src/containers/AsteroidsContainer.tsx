@@ -1,69 +1,33 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { AsteroidCard } from '@/src/components/data-display';
+import { useAsteroids } from '@/src/hooks/security/useSecurity';
 import type { Asteroid } from '@/src/types/api';
 
-interface AsteroidsContainerProps {
-  /** Override the default mock data URL for testing */
-  dataUrl?: string;
-}
-
-export function AsteroidsContainer({
-  dataUrl = '/mocks/asteroids.json',
-}: AsteroidsContainerProps) {
-  const [asteroids, setAsteroids] = useState<Asteroid[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+/**
+ * Smart container that manages asteroid threat display and actions.
+ * Fetches data from the real API via useAsteroids hook.
+ */
+export function AsteroidsContainer() {
+  const { asteroids, loading, error, resolveAsteroid } = useAsteroids();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const response = await fetch(dataUrl);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch: ${response.status}`);
-        }
-        const result: Asteroid[] = await response.json();
-        setAsteroids(result);
-      } catch (err) {
-        console.error('AsteroidsContainer fetch error:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [dataUrl]);
 
   const handleToggleExpand = useCallback((id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
   }, []);
 
   const handleAction = useCallback(
-    (id: string, action: 'deflect' | 'absorb' | 'redirect') => {
-      const asteroid = asteroids.find((a) => a.id === id);
-      if (!asteroid) return;
-
-      // Log the action (in real app, would POST to API)
-      console.log(`[ASTEROID ACTION] ${action.toUpperCase()}:`, {
-        id,
-        title: asteroid.title,
-        amount: asteroid.amount,
-        action,
-      });
-
+    async (id: string, action: 'deflect' | 'absorb' | 'redirect') => {
       // Mark as removing (for animation)
       setRemovingIds((prev) => new Set(prev).add(id));
 
-      // Remove after animation
+      // Call the API
+      await resolveAsteroid(id, action);
+
+      // Clean up animation state after delay
       setTimeout(() => {
-        setAsteroids((prev) => prev.filter((a) => a.id !== id));
         setRemovingIds((prev) => {
           const next = new Set(prev);
           next.delete(id);
@@ -72,7 +36,7 @@ export function AsteroidsContainer({
         setExpandedId(null);
       }, 300);
     },
-    [asteroids]
+    [resolveAsteroid]
   );
 
   if (error) {
@@ -81,7 +45,7 @@ export function AsteroidsContainer({
         <div className="text-red-500 font-mono text-sm mb-2">
           ⚠ THREAT SCANNER OFFLINE
         </div>
-        <div className="text-gray-500 text-xs font-mono">{error}</div>
+        <div className="text-gray-500 text-xs font-mono">{error.message}</div>
       </div>
     );
   }

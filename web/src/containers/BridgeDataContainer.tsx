@@ -1,50 +1,22 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { BalanceHUD, TransactionLog, BottomMetricsBar } from '@/src/components/data-display';
-import type { FinancialSnapshot } from '@/src/types/api';
+import { useFinancialSnapshot } from '@/src/hooks/finance/useFinance';
 
-interface BridgeDataContainerProps {
-  /** Override the default mock data URL for testing */
-  dataUrl?: string;
-}
-
-export function BridgeDataContainer({
-  dataUrl = '/mocks/snapshot.json',
-}: BridgeDataContainerProps) {
-  const [data, setData] = useState<FinancialSnapshot | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const response = await fetch(dataUrl);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch: ${response.status}`);
-        }
-        const result: FinancialSnapshot = await response.json();
-        setData(result);
-      } catch (err) {
-        console.error('BridgeDataContainer fetch error:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [dataUrl]);
+/**
+ * Smart container that orchestrates the Bridge Data display.
+ * Fetches data from the real API via useFinancialSnapshot hook.
+ */
+export function BridgeDataContainer() {
+  const { data, loading, error } = useFinancialSnapshot();
 
   // Calculate derived values
   const savingsRate = data
     ? ((data.monthly_income - data.monthly_spending) / data.monthly_income) * 100
     : 0;
 
-  // Mock net worth change (in real app, would compare to previous snapshot)
+  // Net worth change (in real app, would compare to previous snapshot)
   const netWorthChange = data ? data.monthly_income - data.monthly_spending : 0;
 
   if (error) {
@@ -54,7 +26,7 @@ export function BridgeDataContainer({
           ⚠ SYSTEM ERROR
         </div>
         <div className="text-gray-500 text-xs font-mono">
-          {error}
+          {error.message}
         </div>
       </div>
     );

@@ -1,19 +1,23 @@
 import axios from 'axios';
 
 /**
- * Axios instance for SynesthesiaPay API.
+ * SynesthesiaPay API Base URL
  * 
- * In development, this can be toggled to use local mocks by changing the 
- * baseURL or using an axios-mock-adapter.
+ * Production endpoint deployed on AWS API Gateway.
+ */
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://hpjg3vun6j.execute-api.us-east-1.amazonaws.com/dev';
+
+/**
+ * Axios instance for SynesthesiaPay API.
  */
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || '/api',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Add request interceptor for Auth (Cognito JWT)
+// Add request interceptor for Auth (Cognito JWT) - currently disabled for testing
 api.interceptors.request.use((config) => {
   // In a real app, you'd pull the token from your auth state/session
   // const token = getAuthToken();
