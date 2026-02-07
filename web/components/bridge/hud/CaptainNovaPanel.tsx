@@ -6,6 +6,8 @@ import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { useAlertStore, ALERT_COLORS } from '@/lib/stores/alert-store';
 import { useNovaDialogueStore } from '@/lib/stores/nova-dialogue-store';
+import { useBootStore } from '@/lib/stores/boot-store';
+import { useBootActivation } from '@/hooks/useBootActivation';
 import { useNovaVariant } from '@/contexts/NovaVariantContext';
 import CaptainNova from '@/components/three/captain-nova';
 import { NovaVariantSelector } from './NovaVariantSelector';
@@ -185,10 +187,14 @@ function NovaInlineRenderer() {
 export function CaptainNovaStation() {
   const alertLevel = useAlertStore((state) => state.level);
   const dialogueState = useNovaDialogueStore((s) => s.state);
+  const consoleIntensity = useBootStore((s) => s.consoleIntensity);
   const novaState: NovaState = dialogueState === 'speaking' ? 'analyzing' : 'idle';
   const [isBooted, setIsBooted] = useState(false);
   const borderColor = STATE_BORDER_COLORS[novaState];
   const colors = ALERT_COLORS[alertLevel];
+
+  // Nova station activates during power-surge (after consoles)
+  const stationActive = useBootActivation('power-surge', 400);
 
   // Stable callback for boot completion
   const handleBootComplete = React.useCallback(() => setIsBooted(true), []);
@@ -217,18 +223,39 @@ export function CaptainNovaStation() {
           style={{ background: 'radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.3) 100%)' }}
         />
 
-        {/* Signal strength dots */}
+        {/* Signal strength dots — light up sequentially after boot */}
         <div className="absolute top-1.5 right-1.5 flex gap-0.5">
           {[0, 1, 2, 3].map((i) => (
             <div
               key={i}
               className="w-[3px] h-[3px] rounded-full"
-              style={{ background: i < 4 ? 'rgba(34, 197, 94, 0.6)' : 'rgba(255,255,255,0.1)' }}
+              style={{
+                background: isBooted
+                  ? 'rgba(34, 197, 94, 0.6)'
+                  : stationActive
+                    ? 'rgba(34, 197, 94, 0.15)'
+                    : 'rgba(255,255,255,0.05)',
+                transition: `background 0.3s ease-out ${i * 150}ms`,
+              }}
             />
           ))}
         </div>
 
-        {!isBooted ? (
+        {!stationActive ? (
+          /* Pre-activation: dark screen with interference */
+          <div className="flex items-center justify-center h-full">
+            <div
+              className="absolute inset-0"
+              style={{
+                background: consoleIntensity > 0
+                  ? 'repeating-linear-gradient(0deg, transparent 0px, transparent 2px, rgba(0,255,255,0.02) 2px, transparent 4px)'
+                  : undefined,
+                animation: consoleIntensity > 0 ? 'crt-static-burst 2s ease-in-out infinite' : undefined,
+                opacity: 0.3,
+              }}
+            />
+          </div>
+        ) : !isBooted ? (
           /* Boot text crawl — isolated: 40ms timer won't re-render parent */
           <BootTextDisplay onComplete={handleBootComplete} />
         ) : (
