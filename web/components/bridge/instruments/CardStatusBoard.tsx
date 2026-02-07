@@ -4,7 +4,6 @@ import { Suspense } from 'react';
 import { useInstrumentPower } from '@/hooks/useInstrumentPower';
 import { useWebGLAvailable } from '@/hooks/useWebGLAvailable';
 import { CardCounter3D } from './CardCounter3D';
-import { MiniUtilizationDial3D } from './MiniUtilizationDial3D';
 import { CounterFallback } from './fallbacks';
 import { InstrumentMalfunction } from './InstrumentMalfunction';
 
@@ -120,29 +119,35 @@ export function CardStatusBoard() {
               {card.name}
             </div>
 
-            {/* Mini utilization dial */}
-            <div className="flex-shrink-0" style={{ width: '22px', height: '22px' }}>
-              {canvasReady ? (
-                <Suspense
-                  fallback={
-                    <div
-                      className="font-mono text-center"
-                      style={{ fontSize: '5px', color: card.color, opacity: 0.5 }}
-                    >
-                      {card.utilization}%
-                    </div>
-                  }
-                >
-                  <MiniUtilizationDial3D value={isOff || hasError ? 0 : card.utilization} color={card.color} />
-                </Suspense>
-              ) : (
-                <div
-                  className="font-mono text-center"
-                  style={{ fontSize: '5px', color: card.color, opacity: 0.5 }}
-                >
-                  {card.utilization}%
-                </div>
-              )}
+            {/* Mini utilization dial — CSS (22px too small for meaningful 3D) */}
+            <div
+              className="flex-shrink-0 relative"
+              style={{ width: '22px', height: '22px' }}
+            >
+              {/* Dial background */}
+              <div
+                className="absolute inset-0 rounded-full"
+                style={{
+                  border: `1.5px solid ${card.color}33`,
+                  background: 'rgba(4, 8, 18, 0.8)',
+                }}
+              />
+              {/* Fill arc using conic-gradient */}
+              <div
+                className="absolute inset-[1.5px] rounded-full"
+                style={{
+                  background: `conic-gradient(${card.color}88 ${(isOff || hasError ? 0 : card.utilization) * 3.6}deg, transparent 0deg)`,
+                  mask: 'radial-gradient(circle, transparent 55%, black 56%)',
+                  WebkitMask: 'radial-gradient(circle, transparent 55%, black 56%)',
+                }}
+              />
+              {/* Center value */}
+              <div
+                className="absolute inset-0 flex items-center justify-center font-mono"
+                style={{ fontSize: '5px', color: card.color, opacity: 0.6 }}
+              >
+                {isOff || hasError ? 0 : card.utilization}
+              </div>
             </div>
           </div>
         ))}
