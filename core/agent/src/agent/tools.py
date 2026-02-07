@@ -216,16 +216,37 @@ async def activate_visa_control(
 
     Returns:
         Confirmation of activation
+
+    Raises:
+        ValueError: If rule_id format is invalid
+        NotImplementedError: DynamoDB lookup not yet implemented
     """
+    # Validate rule_id format (must be a staged rule from recommend_visa_control)
+    if not rule_id or not rule_id.startswith("staged_"):
+        raise ValueError(
+            f"Invalid rule_id '{rule_id}'. "
+            "Must be a staged rule ID from recommend_visa_control (format: staged_<id>)."
+        )
+
+    # TODO: Implement DynamoDB lookup before production use
     # In production, this would:
     # 1. Look up the staged rule from DynamoDB
-    # 2. Call VISA Transaction Controls API
-    # 3. Update the rule status to active
+    # 2. Verify the rule exists and is in "staged" state (not already active)
+    # 3. Call VISA Transaction Controls API
+    # 4. Update the rule status to active in DynamoDB
+    #
+    # For now, raise NotImplementedError to prevent silent activation of
+    # non-existent or already-active rules.
+    raise NotImplementedError(
+        f"Cannot activate rule '{rule_id}': DynamoDB lookup not implemented. "
+        "Staged rules must be persisted and validated before activation. "
+        "This stub will be replaced with real DynamoDB integration."
+    )
 
-    print(f"[VISA STUB] Activating control: {rule_id}")
-
-    return {
-        "status": "activated",
-        "rule_id": rule_id,
-        "message": "Shield activated. VISA spending control is now in effect.",
-    }
+    # Unreachable until DynamoDB integration is implemented
+    # print(f"[VISA STUB] Activating control: {rule_id}")
+    # return {
+    #     "status": "activated",
+    #     "rule_id": rule_id,
+    #     "message": "Shield activated. VISA spending control is now in effect.",
+    # }
