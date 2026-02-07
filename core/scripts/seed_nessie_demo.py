@@ -92,15 +92,40 @@ def clean_existing():
     print()
 
 
+# Map our fixture categories to Nessie API valid categories
+NESSIE_CATEGORY_MAP = {
+    "groceries": "groceries",
+    "dining": "food",
+    "coffee": "coffee",
+    "gas": "gas",
+    "shopping": "shopping",
+    "electronics": "electronics",
+    "utilities": "utilities",
+    "transportation": "transportation",
+    "travel": "travel",
+    "subscriptions": "entertainment",
+    "gym": "fitness",
+    "rent": "housing",
+    "mortgage": "housing",
+    "insurance": "insurance",
+    "medical": "health",
+    "loan_payment": "finance",
+    "salary": "income",
+}
+
+
 def create_merchants():
     """Create all merchants from the shared definition."""
     print("Creating merchants...")
     merchants_data = load_fixture("merchants.json")
 
     for m in merchants_data["merchants"]:
+        # Map our category to Nessie's valid category
+        nessie_category = NESSIE_CATEGORY_MAP.get(m["category"], "other")
+
         result = api("POST", "/merchants", {
             "name": m["name"],
-            "category": [m["category"]],
+            "category": nessie_category,  # String, not list
             "address": {
                 "street_number": "100",
                 "street_name": "Main St",
