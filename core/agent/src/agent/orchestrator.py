@@ -161,18 +161,34 @@ def _slice_fraud_detection(data: PreFetchedData) -> str:
 
 # Fallback values when a specialist fails
 _FM_FALLBACK = FinancialMeaningOutput(
-    greeting="Commander, systems are coming online. Stand by for full analysis.",
-    verdict="Unable to complete financial analysis at this time.",
+    greeting="Commander, the bridge systems are powering up. Stand by while we run diagnostics on all ship systems.",
+    verdict="Navigation sensors offline — unable to chart the financial course at this time.",
     status="warning",
 )
-_WS_FALLBACK = AsteroidAnalysis(subscriptions=[], total_annual_waste=0.0, verdict="Subscription analysis unavailable.")
-_BO_FALLBACK = IonStormAnalysis(overruns=[], overall_budget_status="on_track", verdict="Budget analysis unavailable.")
-_UB_FALLBACK = SolarFlareAnalysis(bills=[], total_upcoming_30_days=0.0, verdict="Upcoming bills analysis unavailable.")
-_DS_FALLBACK = BlackHoleAnalysis(
-    debts=[], total_debt=0.0, total_monthly_interest=0.0, urgency="stable", verdict="Debt analysis unavailable."
+_WS_FALLBACK = AsteroidAnalysis(
+    subscriptions=[], total_annual_waste=0.0,
+    verdict="Asteroid defense scanners offline — unable to sweep for subscription debris, Commander.",
 )
-_MR_FALLBACK = WormholeAnalysis(missed_rewards=[], annual_opportunity_cost=0.0, verdict="Rewards analysis unavailable.")
-_FD_FALLBACK = EnemyCruiserAnalysis(alerts=[], overall_risk="normal", verdict="Fraud analysis unavailable.")
+_BO_FALLBACK = IonStormAnalysis(
+    overruns=[], overall_budget_status="on_track",
+    verdict="Ion storm detectors offline — power grid status unknown until sensors recalibrate.",
+)
+_UB_FALLBACK = SolarFlareAnalysis(
+    bills=[], total_upcoming_30_days=0.0,
+    verdict="Solar flare early warning system offline — incoming bill trajectory unknown.",
+)
+_DS_FALLBACK = BlackHoleAnalysis(
+    debts=[], total_debt=0.0, total_monthly_interest=0.0, urgency="stable",
+    verdict="Black hole proximity sensors offline — gravitational threat assessment unavailable.",
+)
+_MR_FALLBACK = WormholeAnalysis(
+    missed_rewards=[], annual_opportunity_cost=0.0,
+    verdict="Wormhole navigation computer offline — unable to scan for missed shortcuts.",
+)
+_FD_FALLBACK = EnemyCruiserAnalysis(
+    alerts=[], overall_risk="normal",
+    verdict="Long-range sensors offline — enemy cruiser detection array recalibrating.",
+)
 
 
 async def analyze_finances(user_id: str = "demo_user") -> CaptainAnalysis:
