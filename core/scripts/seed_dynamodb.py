@@ -5,7 +5,7 @@ Usage:
     cd core && python scripts/seed_dynamodb.py
 
 Inserts snapshot, budget, and asteroid action state data into
-SnatchedUsersTable for the demo_user, with a 1-hour TTL on cached items.
+Users table for the demo_user, with a 1-hour TTL on cached items.
 """
 
 import json
@@ -14,7 +14,7 @@ from pathlib import Path
 
 import boto3
 
-TABLE_NAME = "SnatchedUsersTable"
+TABLE_NAME = "ArkUsersTable"
 USER_ID = "demo_user"
 CACHE_TTL = 3600  # 1 hour for seeded data
 

@@ -150,3 +150,55 @@ class CaptainResponse(BaseModel):
     tools_used: list[str]
     confidence: float  # 0-1
     suggested_visa_controls: list[VisaControlRule] | None = None
+
+
+# =============================================================================
+# Financial Summary Report Models
+# =============================================================================
+
+
+class CreditCardSummary(BaseModel):
+    """Individual credit card summary."""
+
+    nickname: str
+    balance: float
+    limit: float
+    utilization: float
+
+
+class AccountsSummary(BaseModel):
+    """Summary of all accounts by type."""
+
+    checking_count: int
+    checking_balance: float
+    savings_count: int
+    savings_balance: float
+    credit_card_count: int
+    credit_card_balance: float
+    credit_card_limit: float
+    credit_card_utilization: float
+    credit_cards: list[CreditCardSummary]
+    net_worth: float
+
+
+class MonthlySummary(BaseModel):
+    """Single month financial summary."""
+
+    month: str  # YYYY-MM format
+    income: float
+    spending: float
+    net: float
+    spending_ratio: float  # spending / income
+    categories: dict[str, float]  # category -> amount
+
+
+class FinancialSummaryReport(BaseModel):
+    """6-month financial summary report."""
+
+    user_id: str
+    generated_at: datetime
+    period_start: str  # YYYY-MM-DD
+    period_end: str  # YYYY-MM-DD
+    accounts: AccountsSummary
+    monthly: list[MonthlySummary]
+    aggregate: MonthlySummary

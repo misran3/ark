@@ -45,7 +45,7 @@ This app is configured for deployment on AWS Amplify with SSR support.
    - Select the region where your CDK stacks are deployed
 
 2. **Find Your App**
-   - Look for `snatched-app` in the list of Amplify apps
+   - Look for `ark-app` in the list of Amplify apps
    - Click on the app to open it
 
 3. **Connect Repository**
@@ -81,10 +81,10 @@ This app is configured for deployment on AWS Amplify with SSR support.
 
 **Build fails with "Access Denied" on SSM**
 - Ensure the IAM service role has `ssm:GetParameter` permissions
-- The CDK stack creates this automatically via `SnatchedAmplifyServiceRole`
+- The CDK stack creates this automatically via `ArkAmplifyServiceRole`
 
 **Environment variables not set**
-- Verify SSM parameters exist: `aws ssm get-parameter --name "/snatched/user-pool-id"`
+- Verify SSM parameters exist: `aws ssm get-parameter --name "/Ark/user-pool-id"`
 - Ensure Auth and API stacks are deployed before triggering the build
 
 **Bun installation fails**
@@ -97,7 +97,7 @@ To trigger a new deployment without pushing code:
 
 ```bash
 # Get your app ID
-aws amplify list-apps --query "apps[?name=='snatched-app'].appId" --output text
+aws amplify list-apps --query "apps[?name=='ark-app'].appId" --output text
 
 # Start a new job
 aws amplify start-job --app-id <APP_ID> --branch-name main --job-type RELEASE

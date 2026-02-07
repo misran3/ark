@@ -1,5 +1,5 @@
 {
-  "name": "snatched",
+  "name": "ark",
   "version": "0.1.0",
   "bin": {
     "app": "dist/bin/app.js"

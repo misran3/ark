@@ -1,31 +1,39 @@
 """
-Data Lambda handler for SynesthesiaPay.
+FastAPI local dev server for Data Lambda.
 
-Routes:
-- GET  /api/health       - Health check (no auth)
-- GET  /api/snapshot      - Financial snapshot (Cognito auth)
-- GET  /api/budget        - Budget report (Cognito auth)
-- GET  /api/asteroids     - Financial threats (Cognito auth)
-- POST /api/asteroids/<id>/action - Take action on asteroid (Cognito auth)
-- GET  /api/transactions  - Transaction list (Cognito auth)
-- GET  /api/report/summary - 6-month financial summary (Cognito auth)
+Usage:
+    cd core/lambda/data-lambda
+    uv run uvicorn local_server:app --reload --port 8001
 
-Supports mock mode (DATA_SOURCE=mock) and live Nessie mode (DATA_SOURCE=nessie).
+Routes (same as Lambda):
+- GET  /api/health              - Health check (no auth)
+- GET  /api/snapshot            - Financial snapshot
+- GET  /api/budget              - Budget report
+- GET  /api/asteroids           - Financial threats
+- POST /api/asteroids/{id}/action - Take action on asteroid
+- GET  /api/transactions        - Transaction list
+- GET  /api/report/summary      - 6-month financial summary
 """
 
+import logging
 import os
 from typing import Any
 
-from aws_lambda_powertools import Logger, Tracer
-from aws_lambda_powertools.event_handler import APIGatewayRestResolver, CORSConfig
-from aws_lambda_powertools.logging import correlation_paths
-from aws_lambda_powertools.utilities.typing import LambdaContext
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 
-logger = Logger(service="DataLambdaHandler")
-tracer = Tracer()
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("DataLambdaLocal")
 
-cors_config = CORSConfig(allow_origin="*", max_age=300)
-app = APIGatewayRestResolver(cors=cors_config)
+app = FastAPI(title="Data Lambda Local Dev", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 DATA_SOURCE = os.getenv("DATA_SOURCE", "mock")
 
@@ -51,63 +59,45 @@ def _get_nessie_service():
     return _nessie_service
 
 
-def _get_user_id() -> str:
-    """Extract user ID from Cognito JWT claims."""
-    try:
-        claims = app.current_event.request_context.authorizer
-        if claims and hasattr(claims, "claims"):
-            return claims.claims.get("sub", "demo_user")
-        if isinstance(claims, dict):
-            return claims.get("claims", {}).get("sub", "demo_user")
-    except (AttributeError, KeyError, TypeError):
-        pass
-    return "demo_user"
-
-
-def _get_snapshot_data() -> dict:
+def _get_snapshot_data(user_id: str = "demo_user") -> dict:
     """Get financial snapshot, using cache or computing fresh."""
-    user_id = _get_user_id()
-
     if DATA_SOURCE == "nessie":
         # Check cache first
         db = _get_data_table_client()
         cached = db.get_cached_snapshot(user_id)
         if cached:
-            logger.info("Returning cached snapshot", user_id=user_id)
+            logger.info(f"Returning cached snapshot for {user_id}")
             return cached
 
         # Fetch fresh from Nessie
         try:
-            from shared.nessie_service import NessieApiError
             nessie = _get_nessie_service()
             snapshot = nessie.build_snapshot()
             snapshot_dict = snapshot.model_dump(mode="json")
             db.cache_snapshot(user_id, snapshot_dict)
             return snapshot_dict
         except Exception as e:
-            logger.warning("Nessie API failed, falling back to mock", error=str(e))
+            logger.warning(f"Nessie API failed, falling back to mock: {e}")
 
     # Mock mode or Nessie fallback
     from shared.mocks import get_mock_snapshot
     return get_mock_snapshot().model_dump(mode="json")
 
 
-def _get_budget_data() -> dict:
+def _get_budget_data(user_id: str = "demo_user") -> dict:
     """Get budget report, using cache or computing fresh."""
-    user_id = _get_user_id()
-
     if DATA_SOURCE == "nessie":
         db = _get_data_table_client()
         cached = db.get_cached_budget(user_id)
         if cached:
-            logger.info("Returning cached budget", user_id=user_id)
+            logger.info(f"Returning cached budget for {user_id}")
             return cached
 
     # Compute from snapshot
     from shared.models import FinancialSnapshot
     from shared.budget_engine import calculate
 
-    snapshot_dict = _get_snapshot_data()
+    snapshot_dict = _get_snapshot_data(user_id)
     snapshot = FinancialSnapshot.model_validate(snapshot_dict)
     budget = calculate(snapshot)
     budget_dict = budget.model_dump(mode="json")
@@ -125,39 +115,35 @@ def _get_budget_data() -> dict:
 
 
 @app.get("/api/health")
-@tracer.capture_method
-def health_check():
+async def health_check() -> dict[str, Any]:
     """Health check endpoint - no auth required."""
-    return {"status": "ok", "data_source": DATA_SOURCE}
+    return {"status": "ok", "data_source": DATA_SOURCE, "service": "data-lambda-local"}
 
 
 @app.get("/api/snapshot")
-@tracer.capture_method
-def get_snapshot() -> dict[str, Any]:
-    """Return financial snapshot for the authenticated user."""
-    logger.info("Snapshot endpoint called", user_id=_get_user_id())
-    return _get_snapshot_data()
+async def get_snapshot(user_id: str = "demo_user") -> dict[str, Any]:
+    """Return financial snapshot for the user."""
+    logger.info(f"Snapshot endpoint called for {user_id}")
+    return _get_snapshot_data(user_id)
 
 
 @app.get("/api/budget")
-@tracer.capture_method
-def get_budget() -> dict[str, Any]:
-    """Return 50/30/20 budget report for the authenticated user."""
-    logger.info("Budget endpoint called", user_id=_get_user_id())
-    return _get_budget_data()
+async def get_budget(user_id: str = "demo_user") -> dict[str, Any]:
+    """Return 50/30/20 budget report for the user."""
+    logger.info(f"Budget endpoint called for {user_id}")
+    return _get_budget_data(user_id)
 
 
 @app.get("/api/asteroids")
-@tracer.capture_method
-def get_asteroids() -> dict[str, Any]:
-    """Return financial threats (asteroids) for the authenticated user."""
-    logger.info("Asteroids endpoint called", user_id=_get_user_id())
+async def get_asteroids(user_id: str = "demo_user") -> dict[str, Any]:
+    """Return financial threats (asteroids) for the user."""
+    logger.info(f"Asteroids endpoint called for {user_id}")
 
     from shared.models import BudgetReport, FinancialSnapshot
     from services.asteroid_detector import detect
 
-    snapshot_dict = _get_snapshot_data()
-    budget_dict = _get_budget_data()
+    snapshot_dict = _get_snapshot_data(user_id)
+    budget_dict = _get_budget_data(user_id)
 
     snapshot = FinancialSnapshot.model_validate(snapshot_dict)
     budget = BudgetReport.model_validate(budget_dict)
@@ -166,7 +152,6 @@ def get_asteroids() -> dict[str, Any]:
     asteroid_list = [a.model_dump(mode="json") for a in asteroids]
 
     # Merge with persisted action states
-    user_id = _get_user_id()
     if DATA_SOURCE == "nessie":
         try:
             db = _get_data_table_client()
@@ -178,28 +163,25 @@ def get_asteroids() -> dict[str, Any]:
                     asteroid["user_action"] = state["action"]
                     asteroid["actioned_at"] = state["actioned_at"]
         except Exception as e:
-            logger.warning("Failed to load asteroid states", error=str(e))
+            logger.warning(f"Failed to load asteroid states: {e}")
 
     return {"asteroids": asteroid_list}
 
 
-@app.post("/api/asteroids/<asteroid_id>/action")
-@tracer.capture_method
-def action_asteroid(asteroid_id: str) -> dict[str, Any]:
+@app.post("/api/asteroids/{asteroid_id}/action")
+async def action_asteroid(asteroid_id: str, action: str = Query(...)) -> dict[str, Any]:
     """Record user action on an asteroid (deflect/absorb/redirect)."""
-    user_id = _get_user_id()
-    logger.info("Asteroid action endpoint called", user_id=user_id, asteroid_id=asteroid_id)
+    user_id = "demo_user"
+    logger.info(f"Asteroid action endpoint called: {user_id}, {asteroid_id}, {action}")
 
-    body = app.current_event.json_body or {}
-    action = body.get("action")
     if action not in ("deflect", "absorb", "redirect"):
-        return {"error": "Invalid action. Must be one of: deflect, absorb, redirect"}, 400
+        raise HTTPException(status_code=400, detail="Invalid action. Must be one of: deflect, absorb, redirect")
 
     try:
         db = _get_data_table_client()
         db.save_asteroid_action(user_id, asteroid_id, action)
     except Exception as e:
-        logger.warning("Failed to save asteroid action (may be in mock mode)", error=str(e))
+        logger.warning(f"Failed to save asteroid action (may be in mock mode): {e}")
 
     return {
         "asteroid_id": asteroid_id,
@@ -209,14 +191,14 @@ def action_asteroid(asteroid_id: str) -> dict[str, Any]:
 
 
 @app.get("/api/transactions")
-@tracer.capture_method
-def get_transactions() -> dict[str, Any]:
-    """Return transaction list for the authenticated user."""
-    logger.info("Transactions endpoint called", user_id=_get_user_id())
+async def get_transactions(
+    user_id: str = "demo_user",
+    days: int = 30,
+) -> dict[str, Any]:
+    """Return transaction list for the user."""
+    logger.info(f"Transactions endpoint called for {user_id}")
 
-    days = int(app.current_event.query_string_parameters.get("days", "30") if app.current_event.query_string_parameters else "30")
-
-    snapshot_dict = _get_snapshot_data()
+    snapshot_dict = _get_snapshot_data(user_id)
     transactions = snapshot_dict.get("recent_transactions", [])
 
     # Filter by days if needed
@@ -230,8 +212,7 @@ def get_transactions() -> dict[str, Any]:
 
 
 @app.get("/api/report/summary")
-@tracer.capture_method
-def get_financial_summary() -> dict[str, Any]:
+async def get_financial_summary(user_id: str = "user_maya_torres") -> dict[str, Any]:
     """Return 6-month financial summary report.
 
     Query params:
@@ -241,11 +222,7 @@ def get_financial_summary() -> dict[str, Any]:
         1. Nessie API (fresh data)
         2. DynamoDB cache (fallback)
     """
-    # Get user_id from query params, default to Maya Torres for demo
-    params = app.current_event.query_string_parameters or {}
-    user_id = params.get("user_id", "user_maya_torres")
-
-    logger.info("Financial summary endpoint called", user_id=user_id)
+    logger.info(f"Financial summary endpoint called for {user_id}")
 
     from shared.models import FinancialSnapshot
     from services.report_service import build_report
@@ -258,9 +235,9 @@ def get_financial_summary() -> dict[str, Any]:
             nessie = _get_nessie_service()
             snapshot = nessie.build_snapshot(days=180)  # 6 months
             snapshot_dict = snapshot.model_dump(mode="json")
-            logger.info("Got fresh data from Nessie", user_id=user_id)
+            logger.info(f"Got fresh data from Nessie for {user_id}")
         except Exception as e:
-            logger.warning("Nessie API failed, trying cache", error=str(e))
+            logger.warning(f"Nessie API failed, trying cache: {e}")
 
     # 2. Fallback to DynamoDB cache
     if snapshot_dict is None:
@@ -268,15 +245,15 @@ def get_financial_summary() -> dict[str, Any]:
             db = _get_data_table_client()
             snapshot_dict = db.get_cached_snapshot(user_id)
             if snapshot_dict:
-                logger.info("Using cached snapshot from DynamoDB", user_id=user_id)
+                logger.info(f"Using cached snapshot from DynamoDB for {user_id}")
         except Exception as e:
-            logger.warning("DynamoDB cache failed", error=str(e))
+            logger.warning(f"DynamoDB cache failed: {e}")
 
     # 3. Final fallback to mock data
     if snapshot_dict is None:
         from shared.mocks import get_mock_snapshot
         snapshot_dict = get_mock_snapshot().model_dump(mode="json")
-        logger.info("Using mock data as final fallback", user_id=user_id)
+        logger.info(f"Using mock data as final fallback for {user_id}")
 
     snapshot = FinancialSnapshot.model_validate(snapshot_dict)
     report = build_report(snapshot, user_id)
@@ -284,13 +261,10 @@ def get_financial_summary() -> dict[str, Any]:
     return report.model_dump(mode="json")
 
 
-# =============================================================================
-# Lambda entry point
-# =============================================================================
+# ---------------------------------------------------------------------------
+# Run with: uv run uvicorn local_server:app --reload --port 8001
+# ---------------------------------------------------------------------------
 
-
-@logger.inject_lambda_context(correlation_id_path=correlation_paths.API_GATEWAY_REST)
-@tracer.capture_lambda_handler
-def lambda_handler(event: dict, context: LambdaContext) -> dict[str, Any]:
-    """Main Lambda handler function."""
-    return app.resolve(event, context)
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8001)

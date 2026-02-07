@@ -1,10 +1,10 @@
 ---
-description: Snatched project patterns and conventions
+description: Ark project patterns and conventions
 globs: "**/*"
 alwaysApply: true
 ---
 
-# Snatched Development Patterns
+# Ark Development Patterns
 
 ## Monorepo Structure
 

@@ -36,8 +36,9 @@ from .tools import (
 
 validate_aws_credentials()
 
-logfire.configure()
-logfire.instrument_pydantic_ai()
+if os.getenv('ENVIRONMENT') == 'local':
+    logfire.configure()
+    logfire.instrument_pydantic_ai()
 
 # Initialize Bedrock client
 AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
