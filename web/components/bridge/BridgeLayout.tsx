@@ -9,7 +9,6 @@ import { CommandConsole } from './console/CommandConsole';
 import { CaptainNovaStation } from './hud/CaptainNovaPanel';
 import { CockpitFrame } from './cockpit/CockpitFrame';
 
-import { Viewport3D } from '../viewport/Viewport3D';
 import { ViewportGlass } from './cockpit/ViewportGlass';
 import { EnvironmentalCohesion } from './cockpit/EnvironmentalCohesion';
 import { CockpitDust } from './cockpit/CockpitDust';
@@ -23,6 +22,7 @@ export function BridgeLayout() {
   const phase = useBootStore((state) => state.phase);
   const consoleIntensity = useBootStore((state) => state.consoleIntensity);
   const isComplete = phase === 'complete';
+  const isPreBoot = phase === 'start-screen' || phase === 'name-exit';
 
   // Base layout dimming — opacity controls overall visibility
   const layoutStyle = {
@@ -45,11 +45,8 @@ export function BridgeLayout() {
   return (
     <>
       <div style={layoutStyle} className="relative w-full h-screen">
-      <div className="fixed inset-0 bg-space-black overflow-hidden">
-        {/* Layer 1: Full-screen 3D viewport (behind everything) */}
-        <div className="absolute inset-0 z-0">
-          <Viewport3D />
-        </div>
+      <div className="fixed inset-0 overflow-hidden">
+        {/* Viewport3D now lives in BootSequence (always visible at z-0) */}
 
         {/* Glass layers: z-5 through z-8 between viewport and frame */}
         <ViewportGlass />
@@ -136,10 +133,10 @@ export function BridgeLayout() {
       </div>
       </div>
 
-      {/* Boot lighting effects — outside opacity wrapper for correct compositing */}
+      {/* Boot lighting effects — skip during pre-boot (viewport visible behind start screen) */}
 
       {/* Console glow: cyan light source emanating from bottom */}
-      {!isComplete && consoleIntensity > 0 && (
+      {!isComplete && !isPreBoot && consoleIntensity > 0 && (
         <div
           className="fixed inset-x-0 bottom-0 z-[35] pointer-events-none"
           style={{
@@ -150,7 +147,7 @@ export function BridgeLayout() {
       )}
 
       {/* Bottom-up lighting sweep: darkness recedes from console upward */}
-      {!isComplete && (
+      {!isComplete && !isPreBoot && (
         <div
           className="fixed inset-0 z-[36] pointer-events-none"
           style={{
