@@ -1,111 +1,72 @@
----
-description: Use Bun instead of Node.js, npm, pnpm, or vite.
-globs: "*.ts, *.tsx, *.html, *.css, *.js, *.jsx, package.json"
-alwaysApply: false
----
+# Snatched - Project Guidelines
 
-Default to using Bun instead of Node.js.
+## Project Structure
 
-- Use `bun <file>` instead of `node <file>` or `ts-node <file>`
-- Use `bun test` instead of `jest` or `vitest`
-- Use `bun build <file.html|file.ts|file.css>` instead of `webpack` or `esbuild`
-- Use `bun install` instead of `npm install` or `yarn install` or `pnpm install`
-- Use `bun run <script>` instead of `npm run <script>` or `yarn run <script>` or `pnpm run <script>`
-- Use `bunx <package> <command>` instead of `npx <package> <command>`
-- Bun automatically loads .env, so don't use dotenv.
-
-## APIs
-
-- `Bun.serve()` supports WebSockets, HTTPS, and routes. Don't use `express`.
-- `bun:sqlite` for SQLite. Don't use `better-sqlite3`.
-- `Bun.redis` for Redis. Don't use `ioredis`.
-- `Bun.sql` for Postgres. Don't use `pg` or `postgres.js`.
-- `WebSocket` is built-in. Don't use `ws`.
-- Prefer `Bun.file` over `node:fs`'s readFile/writeFile
-- Bun.$`ls` instead of execa.
-
-## Testing
-
-Use `bun test` to run tests.
-
-```ts#index.test.ts
-import { test, expect } from "bun:test";
-
-test("hello world", () => {
-  expect(1).toBe(1);
-});
+```
+snatched/
+├── web/            # Next.js 16 frontend (React 19, TailwindCSS 4)
+├── infrastructure/ # AWS CDK stacks (TypeScript)
+├── core/           # Python backend modules (uv workspace)
+│   ├── lambda/     # Lambda handlers
+│   ├── agent/      # Pydantic AI agents
+│   ├── database/   # DynamoDB clients
+│   └── shared/     # Shared utilities
+└── conductor/      # Documentation
 ```
 
-## Frontend
+## TypeScript (web/, infrastructure/)
 
-Use HTML imports with `Bun.serve()`. Don't use `vite`. HTML imports fully support React, CSS, Tailwind.
+Use Bun instead of Node.js:
+- `bun install` instead of npm/yarn/pnpm
+- `bun run <script>` instead of npm run
+- `bunx <pkg>` instead of npx
 
-Server:
+## Python (core/)
 
-```ts#index.ts
-import index from "./index.html"
+Use `uv` package manager:
+- `uv sync --all-packages` to install all workspace packages
+- `uv add <pkg>` to add dependencies
+- Workspace imports via `[tool.uv.sources]` in pyproject.toml
 
-Bun.serve({
-  routes: {
-    "/": index,
-    "/api/users/:id": {
-      GET: (req) => {
-        return new Response(JSON.stringify({ id: req.params.id }));
-      },
-    },
-  },
-  // optional websocket support
-  websocket: {
-    open: (ws) => {
-      ws.send("Hello, world!");
-    },
-    message: (ws, message) => {
-      ws.send(message);
-    },
-    close: (ws) => {
-      // handle close
-    }
-  },
-  development: {
-    hmr: true,
-    console: true,
-  }
-})
-```
+## Frontend (web/)
 
-HTML files can import .tsx, .jsx or .js files directly and Bun's bundler will transpile & bundle automatically. `<link>` tags can point to stylesheets and Bun's CSS bundler will bundle.
+- Next.js 16 with App Router
+- React 19 with TypeScript strict mode
+- TailwindCSS 4 for styling
+- Run: `cd web && bun dev`
 
-```html#index.html
-<html>
-  <body>
-    <h1>Hello, world!</h1>
-    <script type="module" src="./frontend.tsx"></script>
-  </body>
-</html>
-```
+## Infrastructure (infrastructure/)
 
-With the following `frontend.tsx`:
+- AWS CDK v2 with TypeScript
+- Stacks: Amplify, Auth, Storage, Api
+- Deploy: `cd infrastructure && bunx cdk deploy --all`
+- Stack dependencies defined in `bin/app.ts`
 
-```tsx#frontend.tsx
-import React from "react";
-import { createRoot } from "react-dom/client";
+## Backend Patterns
 
-// import .css files directly and it works
-import './index.css';
+### Lambda (Python)
+- AWS Lambda Powertools for logging/tracing
+- APIGatewayRestResolver for routing
+- ARM64 architecture, Python 3.12
 
-const root = createRoot(document.body);
+### DynamoDB
+- Single-table design with composite keys (PK/SK)
+- GSI on email for lookups
+- Pydantic models with `to_dynamodb_item()` / `from_dynamodb_item()`
+- Extend `DynamoDBClient` base class for new tables (provides put/get/delete/query/update)
 
-export default function Frontend() {
-  return <h1>Hello, world!</h1>;
-}
+### AI Agents
+- Pydantic AI with BedrockConverseModel
+- Claude Sonnet 4.5 via AWS Bedrock
+- Type-safe RunContext with dependencies
 
-root.render(<Frontend />);
-```
+## Environment Variables
 
-Then, run index.ts
+Frontend (via SSM → Amplify):
+- `NEXT_PUBLIC_USER_POOL_ID`
+- `NEXT_PUBLIC_USER_POOL_CLIENT_ID`
+- `NEXT_PUBLIC_API_BASE_URL`
 
-```sh
-bun --hot ./index.ts
-```
-
-For more information, read the Bun API docs in `node_modules/bun-types/docs/**.mdx`.
+Lambda:
+- `ENVIRONMENT`, `LOG_LEVEL`
+- `USERS_TABLE_NAME`, `USERS_TABLE_EMAIL_INDEX`
