@@ -133,7 +133,10 @@ export class ApiStack extends cdk.Stack {
         // Grant Bedrock access
         captainLambdaFn.addToRolePolicy(new iam.PolicyStatement({
             actions: ['bedrock:InvokeModel'],
-            resources: ['*'],
+            resources: [
+                `arn:aws:bedrock:${this.region}::foundation-model/anthropic.*`,
+                `arn:aws:bedrock:${this.region}:${this.account}:inference-profile/*`
+            ],
         }));
 
         // =============================================================
