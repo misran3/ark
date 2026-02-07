@@ -6,7 +6,7 @@ Currently backed by mock data; will be swapped to real HTTP calls at integration
 """
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Literal
 
 from pydantic_ai import RunContext
@@ -83,12 +83,15 @@ async def get_spending_by_category(
         Dictionary mapping category names to total spending amounts
     """
     snapshot = get_mock_snapshot()
-    cutoff = datetime.now() - timedelta(days=days)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
 
     spending: dict[str, float] = {}
     for tx in snapshot.recent_transactions:
+        # Ensure tx.date is timezone-aware for comparison
+        tx_date = tx.date if tx.date.tzinfo is not None else tx.date.replace(tzinfo=timezone.utc)
+
         # Only count expenses (negative amounts), skip income
-        if tx.amount < 0 and tx.date >= cutoff:
+        if tx.amount < 0 and tx_date >= cutoff:
             category = tx.category
             spending[category] = spending.get(category, 0) + abs(tx.amount)
 
