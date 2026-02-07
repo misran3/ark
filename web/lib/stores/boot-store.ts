@@ -1,73 +1,68 @@
 import { create } from 'zustand';
 
 export type BootPhase =
-  | 'black'           // Beat 0: True black (1.5s)
-  | 'emergency'       // Beat 1: Emergency lighting (2s)
-  | 'power-surge'     // Beat 2: Primary power surge (~1s)
-  | 'viewport-awake'  // Beat 3: Viewport awakening (2s)
-  | 'console-boot'    // Beat 4: Console cascade (1.5s)
-  | 'hud-rise'        // Beat 5: HUD projection (1s)
-  | 'settling'        // Beat 6: The settle (0.5s)
+  | 'start-screen'    // First visit only: name + Start button
+  | 'name-exit'       // Name dropping off screen (0.6s)
+  | 'darkness'        // Brief beat after name exits (0.5s)
+  | 'console-glow'    // Consoles begin glowing (1.5s)
+  | 'power-surge'     // Console lights surge bright (1s)
+  | 'full-power'      // Room fully illuminated (1s)
   | 'complete';       // Normal operation
 
 interface BootStore {
   phase: BootPhase;
-  progress: number; // 0-100
-  globalIntensity: number; // 1.0 during boot, 0.96 after settle
+  consoleIntensity: number; // 0-1, controls console brightness
+  hasSeenBoot: boolean;
   isBooting: boolean;
-  bootComplete: boolean;
   setPhase: (phase: BootPhase) => void;
-  setProgress: (progress: number) => void;
-  setGlobalIntensity: (intensity: number) => void;
-  reset: () => void;
+  setConsoleIntensity: (intensity: number) => void;
+  setHasSeenBoot: (seen: boolean) => void;
+  startBoot: () => void;
   skipBoot: () => void;
-  completeBoot: () => void;
+  reset: () => void;
 }
 
 /**
- * Boot sequence state management
+ * Boot sequence state management (v2.0)
  *
  * State flow:
- * black → emergency → power-surge → viewport-awake → console-boot → hud-rise → settling → complete
+ * First visit: start-screen → name-exit → darkness → console-glow → power-surge → full-power → complete
+ * Return visit: complete (immediately)
  *
- * Derived state:
- * - isBooting: true when phase !== 'complete'
- * - bootComplete: true when phase === 'complete'
- *
- * Side effects:
- * - setPhase() automatically updates derived state
- * - LocalStorage managed by useBootSequence hook
+ * Console intensity drives UI brightness via CSS variable.
+ * LocalStorage managed by useBootSequence hook.
  */
 export const useBootStore = create<BootStore>((set) => ({
-  phase: 'black',
-  progress: 0,
-  globalIntensity: 1.0,
+  phase: 'start-screen',
+  consoleIntensity: 0,
+  hasSeenBoot: false,
   isBooting: true,
-  bootComplete: false,
+
   setPhase: (phase) => set({
     phase,
     isBooting: phase !== 'complete',
-    bootComplete: phase === 'complete',
   }),
-  setProgress: (progress) => set({ progress }),
-  setGlobalIntensity: (intensity) => set({ globalIntensity: intensity }),
-  reset: () => set({
-    phase: 'black',
-    progress: 0,
-    globalIntensity: 1.0,
+
+  setConsoleIntensity: (intensity) => set({ consoleIntensity: intensity }),
+
+  setHasSeenBoot: (seen) => set({ hasSeenBoot: seen }),
+
+  startBoot: () => set({
+    phase: 'name-exit',
+    hasSeenBoot: true,
     isBooting: true,
-    bootComplete: false
   }),
+
   skipBoot: () => set({
     phase: 'complete',
-    globalIntensity: 0.96,
+    consoleIntensity: 0.96,
     isBooting: false,
-    bootComplete: true
   }),
-  completeBoot: () => set({
-    phase: 'complete',
-    globalIntensity: 0.96,
-    isBooting: false,
-    bootComplete: true
+
+  reset: () => set({
+    phase: 'start-screen',
+    consoleIntensity: 0,
+    hasSeenBoot: false,
+    isBooting: true,
   }),
 }));
