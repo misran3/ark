@@ -68,9 +68,9 @@ export function DefenseGrid() {
           : 'CRITICAL';
 
   return (
-    <group>
+    <group scale={0.55}>
       {/* Background: Radar sweep */}
-      <RadarSweep color={systemColor} radius={4} />
+      <RadarSweep color={systemColor} radius={3.2} />
 
       {/* Outer ring: Emergency Fund (6 month segments) */}
       <ShieldRing
@@ -104,10 +104,10 @@ export function DefenseGrid() {
       <ShieldEmblem health={health} color={systemColor} size={0.6} />
 
       {/* Ambient particles */}
-      <HologramParticles count={40} color={systemColor} spread={[3.5, 3.5, 0.5]} />
+      <HologramParticles count={40} color={systemColor} spread={[2.8, 2.8, 0.4]} />
 
       {/* Scan pulse */}
-      <ScanPulse color={systemColor} interval={4} maxRadius={3.5} />
+      <ScanPulse color={systemColor} interval={4} maxRadius={2.8} />
 
       {/* HTML Data Readouts */}
       <Html center position={[0, 3.8, 0]} style={{ pointerEvents: 'none' }}>
