@@ -19,6 +19,8 @@ interface PowerStore {
   coldStart: () => void;
   /** Trigger power failure — reverse all elements to off */
   powerFailure: () => void;
+  /** Internal: tracked timeout IDs for sequence cancellation */
+  _timeoutIds: ReturnType<typeof setTimeout>[];
 }
 
 /**
@@ -37,6 +39,7 @@ export const usePowerStore = create<PowerStore>((set, get) => ({
   state: 'off',
   elements: {},
   errors: {},
+  _timeoutIds: [],
 
   setPowerState: (state) => set({ state }),
 
@@ -51,46 +54,59 @@ export const usePowerStore = create<PowerStore>((set, get) => ({
     })),
 
   coldStart: () => {
-    const { setElementPower, setPowerState } = get();
+    const store = get();
+    // Clear any in-flight sequence
+    store._timeoutIds.forEach(clearTimeout);
+    const ids: ReturnType<typeof setTimeout>[] = [];
+
+    const { setElementPower, setPowerState } = store;
     setPowerState('boot');
 
     // Stage 1: Dashboard wells (0-400ms)
     const wells = ['inst-01', 'inst-02', 'inst-03', 'inst-04'];
     wells.forEach((id, i) => {
-      setTimeout(() => setElementPower(id, 'boot'), i * 100);
+      ids.push(setTimeout(() => setElementPower(id, 'boot'), i * 100));
     });
 
     // Stage 2: Instruments initialize (400-1200ms)
     wells.forEach((id, i) => {
-      setTimeout(() => setElementPower(id, 'running'), 400 + i * 200);
+      ids.push(setTimeout(() => setElementPower(id, 'running'), 400 + i * 200));
     });
 
-    // Stage 3: Left data strip (600ms)
-    setTimeout(() => setElementPower('left-strip', 'boot'), 300);
-    setTimeout(() => setElementPower('left-strip', 'running'), 800);
+    // Stage 3: Left data strip
+    ids.push(setTimeout(() => setElementPower('left-strip', 'boot'), 300));
+    ids.push(setTimeout(() => setElementPower('left-strip', 'running'), 800));
 
-    // Stage 4: HUD elements (800-1200ms)
-    setTimeout(() => setElementPower('hud-top', 'boot'), 800);
-    setTimeout(() => setElementPower('hud-top', 'running'), 1200);
-    setTimeout(() => setElementPower('hud-threats', 'boot'), 900);
-    setTimeout(() => setElementPower('hud-threats', 'running'), 1300);
+    // Stage 4: HUD elements
+    ids.push(setTimeout(() => setElementPower('hud-top', 'boot'), 800));
+    ids.push(setTimeout(() => setElementPower('hud-top', 'running'), 1200));
+    ids.push(setTimeout(() => setElementPower('hud-threats', 'boot'), 900));
+    ids.push(setTimeout(() => setElementPower('hud-threats', 'running'), 1300));
 
-    // Stage 5: Glass reflection (1000ms)
-    setTimeout(() => setElementPower('glass', 'boot'), 1000);
-    setTimeout(() => setElementPower('glass', 'running'), 1500);
+    // Stage 5: Glass reflection
+    ids.push(setTimeout(() => setElementPower('glass', 'boot'), 1000));
+    ids.push(setTimeout(() => setElementPower('glass', 'running'), 1500));
 
     // Global running state
-    setTimeout(() => setPowerState('running'), 1500);
+    ids.push(setTimeout(() => setPowerState('running'), 1500));
+
+    set({ _timeoutIds: ids });
   },
 
   powerFailure: () => {
-    const { elements, setElementPower, setPowerState } = get();
+    const store = get();
+    // Clear any in-flight cold start
+    store._timeoutIds.forEach(clearTimeout);
+    const ids: ReturnType<typeof setTimeout>[] = [];
+
+    const { elements, setElementPower, setPowerState } = store;
     setPowerState('off');
 
-    // Reverse all elements to off with rapid stagger
-    const ids = Object.keys(elements);
-    ids.forEach((id, i) => {
-      setTimeout(() => setElementPower(id, 'off'), i * 50);
+    const elementIds = Object.keys(elements);
+    elementIds.forEach((id, i) => {
+      ids.push(setTimeout(() => setElementPower(id, 'off'), i * 50));
     });
+
+    set({ _timeoutIds: ids });
   },
 }));

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 
 /**
  * Dashboard Micro-Creaks
@@ -18,11 +18,12 @@ const CREAK_POSITIONS = [
 
 export function DashboardMicroCreaks() {
   const [activeCreak, setActiveCreak] = useState<number | null>(null);
+  const clearTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const triggerCreak = useCallback(() => {
     const pos = Math.floor(Math.random() * CREAK_POSITIONS.length);
     setActiveCreak(pos);
-    setTimeout(() => setActiveCreak(null), 200);
+    clearTimeoutRef.current = setTimeout(() => setActiveCreak(null), 200);
   }, []);
 
   useEffect(() => {
@@ -35,7 +36,10 @@ export function DashboardMicroCreaks() {
     };
 
     let timerId = scheduleNext();
-    return () => clearTimeout(timerId);
+    return () => {
+      clearTimeout(timerId);
+      if (clearTimeoutRef.current) clearTimeout(clearTimeoutRef.current);
+    };
   }, [triggerCreak]);
 
   if (activeCreak === null) return null;
