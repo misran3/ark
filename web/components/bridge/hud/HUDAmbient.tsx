@@ -12,10 +12,14 @@ export function HUDAmbient() {
 
   return (
     <div className="absolute inset-0 pointer-events-none z-25" aria-hidden="true">
-      {/* Horizon reference line */}
+      {/* Horizon reference line — with subtle holographic bloom */}
       <div
         className="absolute left-[60px] right-[190px] top-1/2 h-px"
-        style={{ background: `linear-gradient(90deg, transparent, ${colors.hud}, transparent)`, opacity: 0.025 }}
+        style={{
+          background: `linear-gradient(90deg, transparent, ${colors.hud}, transparent)`,
+          opacity: 0.035,
+          boxShadow: `0 0 6px ${colors.glow}`,
+        }}
       >
         {/* Tick marks */}
         <div className="absolute left-[25%] top-0 w-px h-1 -translate-y-1/2" style={{ background: colors.hud, opacity: 0.04 }} />
@@ -23,9 +27,9 @@ export function HUDAmbient() {
         <div className="absolute left-[75%] top-0 w-px h-1 -translate-y-1/2" style={{ background: colors.hud, opacity: 0.04 }} />
       </div>
 
-      {/* Compass bearing arc (top of viewscreen) */}
+      {/* Compass bearing arc (top of viewscreen) — with holographic glow */}
       <div className="absolute top-8 left-1/2 -translate-x-1/2">
-        <svg width="200" height="20" viewBox="0 0 200 20" className="overflow-visible" style={{ opacity: 0.06 }}>
+        <svg width="200" height="20" viewBox="0 0 200 20" className="overflow-visible" style={{ opacity: 0.08 }}>
           <path d="M 20 18 Q 100 2, 180 18" fill="none" stroke={colors.hud} strokeWidth="0.5" />
           {/* Tick marks */}
           {[30, 60, 100, 140, 170].map((x, i) => (

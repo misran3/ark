@@ -49,12 +49,12 @@ export function CockpitFrame() {
         </div>
       </div>
 
-      {/* ========== LEFT FRAME (~50px) — perspective angled ========== */}
-      <div style={{ perspective: '600px', contain: 'layout style paint' }} className="absolute top-6 left-0 w-[50px] bottom-[220px]">
+      {/* ========== LEFT FRAME (~50px) — perspective angled inward ========== */}
+      <div style={{ perspective: '500px', contain: 'layout style paint' }} className="absolute top-6 left-0 w-[50px] bottom-[220px]">
       <div
         className="absolute inset-0 hull-metal-v"
         style={{
-          transform: 'rotateY(3deg)',
+          transform: 'rotateY(5deg)',
           transformOrigin: 'left center',
         }}
       >
@@ -95,22 +95,22 @@ export function CockpitFrame() {
         {/* Emergency shutter mark */}
         <div className="absolute top-[10%] right-0 bottom-[10%] w-px bg-white/[0.03]" />
 
-        {/* Light falloff — lighter on left edge (near overhead light), darker on right */}
+        {/* Light falloff — lighter near inner edge, darker toward outer wall */}
         <div
           className="absolute inset-0"
           style={{
-            background: 'linear-gradient(90deg, rgba(200,220,255,0.025) 0%, transparent 60%)',
+            background: 'linear-gradient(90deg, rgba(0,0,0,0.3) 0%, rgba(200,220,255,0.02) 40%, transparent 100%)',
           }}
         />
       </div>
       </div>
 
-      {/* ========== RIGHT FRAME (~180px, houses Captain Nova station) — perspective angled ========== */}
-      <div style={{ perspective: '600px', contain: 'layout style paint' }} className="absolute top-6 right-0 w-[180px] bottom-[220px]">
+      {/* ========== RIGHT FRAME (~180px, houses Captain Nova station) — perspective angled inward ========== */}
+      <div style={{ perspective: '500px', contain: 'layout style paint' }} className="absolute top-6 right-0 w-[180px] bottom-[220px]">
       <div
         className="absolute inset-0 hull-metal-v"
         style={{
-          transform: 'rotateY(-2deg)',
+          transform: 'rotateY(-4deg)',
           transformOrigin: 'right center',
         }}
       >
@@ -147,11 +147,11 @@ export function CockpitFrame() {
         {/* Thermal discoloration near bottom (engine heat) */}
         <div className="absolute bottom-0 left-0 right-0 h-[30%] hull-thermal" />
 
-        {/* Light falloff — lighter on right edge, darker on left */}
+        {/* Light falloff — lighter near inner edge, darker toward outer wall */}
         <div
           className="absolute inset-0"
           style={{
-            background: 'linear-gradient(270deg, rgba(200,220,255,0.015) 0%, transparent 50%)',
+            background: 'linear-gradient(270deg, rgba(0,0,0,0.25) 0%, rgba(200,220,255,0.015) 30%, transparent 100%)',
           }}
         />
 

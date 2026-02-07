@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html><head><title>Boot Debug</title></head><body>
+<h2>Boot Sequence Debug</h2>
+<p>bootCount: <span id="count"></span></p>
+<p>Mode: <span id="mode"></span></p>
+<button onclick="clear()">Clear & Reload</button>
+<script>
+const count = localStorage.getItem('bootCount') || '0';
+document.getElementById('count').textContent = count;
+document.getElementById('mode').textContent = parseInt(count) > 0 ? 'COMPRESSED (repeat)' : 'FULL (first visit)';
+function clear() { localStorage.clear(); location.reload(); }
+</script>
+</body></html>

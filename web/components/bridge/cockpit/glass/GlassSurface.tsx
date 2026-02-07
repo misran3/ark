@@ -60,7 +60,6 @@ export function GlassSurface() {
               'rgba(200, 220, 255, 0.03) 60%, ' +
               'transparent 80%)',
             clipPath: 'polygon(8% 0%, 92% 0%, 100% 100%, 0% 100%)',
-            filter: 'blur(8px)',
             animation: 'glass-specular-drift 25s ease-in-out infinite',
             willChange: 'transform',
           }}

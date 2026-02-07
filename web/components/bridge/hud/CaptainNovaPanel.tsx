@@ -1,7 +1,7 @@
 'use client';
 
-import { Suspense, useState, useEffect, useMemo } from 'react';
-import { Canvas } from '@react-three/fiber';
+import React, { Suspense, useState, useEffect, useMemo, useRef, memo } from 'react';
+import { Canvas, useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { useAlertStore, ALERT_COLORS } from '@/lib/stores/alert-store';
@@ -25,6 +25,111 @@ const STATE_BORDER_COLORS: Record<NovaState, string> = {
   ready: 'rgba(34, 197, 94, 0.5)',
   alert: 'rgba(239, 68, 68, 0.6)',
 };
+
+// ---- Isolated timer sub-components (prevent Canvas re-renders) ----
+
+/** Boot text typewriter — runs at 40ms, isolates re-renders from parent */
+const BootTextDisplay = memo(function BootTextDisplay({ onComplete }: { onComplete: () => void }) {
+  const [bootText, setBootText] = useState('');
+
+  useEffect(() => {
+    const bootMsg = 'INITIALIZING ADVISORY SYSTEMS...';
+    let i = 0;
+    const typeTimer = setInterval(() => {
+      if (i <= bootMsg.length) {
+        setBootText(bootMsg.slice(0, i));
+        i++;
+      } else {
+        clearInterval(typeTimer);
+        setTimeout(onComplete, 600);
+      }
+    }, 40);
+    return () => clearInterval(typeTimer);
+  }, [onComplete]);
+
+  return (
+    <div className="flex items-center justify-center h-full">
+      <div className="font-mono text-[8px] text-cyan-400/60 px-3 text-center">
+        {bootText}
+        <span className="animate-pulse-slow">_</span>
+      </div>
+    </div>
+  );
+});
+
+/** Mission time clock — ticks every 1s, isolated from Canvas */
+const MissionTimeClock = memo(function MissionTimeClock() {
+  const [missionTime, setMissionTime] = useState('00:00:00');
+
+  useEffect(() => {
+    const tick = () => {
+      const d = new Date();
+      setMissionTime(d.toLocaleTimeString('en-US', { hour12: false }));
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="font-mono text-[6px] text-cyan-400/20">
+      {missionTime}
+    </div>
+  );
+});
+
+/** Cycling idle status — ticks every 8s, isolated from Canvas */
+const IdleStatusDisplay = memo(function IdleStatusDisplay({ active }: { active: boolean }) {
+  const [statusMsg, setStatusMsg] = useState(IDLE_MESSAGES[0]);
+  const [prevStatus, setPrevStatus] = useState('');
+
+  useEffect(() => {
+    if (!active) return;
+    const interval = setInterval(() => {
+      setStatusMsg((prev) => {
+        setPrevStatus(prev);
+        const idx = IDLE_MESSAGES.indexOf(prev);
+        return IDLE_MESSAGES[(idx + 1) % IDLE_MESSAGES.length];
+      });
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [active]);
+
+  return (
+    <>
+      <div className="font-mono text-[8px] text-cyan-300/70">
+        {statusMsg}
+      </div>
+      {prevStatus && (
+        <div className="font-mono text-[6px] text-cyan-400/25 truncate">
+          Prev: {prevStatus}
+        </div>
+      )}
+    </>
+  );
+});
+
+/** Renders the demand-mode Canvas at ~10fps instead of 60fps */
+function ThrottledInvalidator() {
+  const { invalidate } = useThree();
+  const rafRef = useRef(0);
+
+  useEffect(() => {
+    let lastTime = 0;
+    const interval = 100; // ~10fps
+    const loop = (time: number) => {
+      rafRef.current = requestAnimationFrame(loop);
+      if (time - lastTime >= interval) {
+        lastTime = time;
+        invalidate();
+      }
+    };
+    rafRef.current = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [invalidate]);
+
+  return null;
+}
 
 function GLBModel({ path }: { path: string }) {
   const { scene } = useGLTF(path);
@@ -79,54 +184,12 @@ function NovaInlineRenderer() {
 export function CaptainNovaStation() {
   const alertLevel = useAlertStore((state) => state.level);
   const [novaState] = useState<NovaState>('idle');
-  const [statusMsg, setStatusMsg] = useState(IDLE_MESSAGES[0]);
-  const [prevStatus, setPrevStatus] = useState('');
-  const [missionTime, setMissionTime] = useState('00:00:00');
   const [isBooted, setIsBooted] = useState(false);
-  const [bootText, setBootText] = useState('');
   const borderColor = STATE_BORDER_COLORS[novaState];
   const colors = ALERT_COLORS[alertLevel];
 
-  // Boot sequence (fires last, after console panels)
-  useEffect(() => {
-    const bootMsg = 'INITIALIZING ADVISORY SYSTEMS...';
-    let i = 0;
-    const typeTimer = setInterval(() => {
-      if (i <= bootMsg.length) {
-        setBootText(bootMsg.slice(0, i));
-        i++;
-      } else {
-        clearInterval(typeTimer);
-        setTimeout(() => setIsBooted(true), 600);
-      }
-    }, 40);
-    return () => clearInterval(typeTimer);
-  }, []);
-
-  // Cycling idle messages
-  useEffect(() => {
-    if (!isBooted || novaState !== 'idle') return;
-    const interval = setInterval(() => {
-      setStatusMsg((prev) => {
-        setPrevStatus(prev);
-        const idx = IDLE_MESSAGES.indexOf(prev);
-        return IDLE_MESSAGES[(idx + 1) % IDLE_MESSAGES.length];
-      });
-    }, 8000);
-    return () => clearInterval(interval);
-  }, [isBooted, novaState]);
-
-  // Mission time clock
-  useEffect(() => {
-    const start = Date.now();
-    const tick = () => {
-      const d = new Date();
-      setMissionTime(d.toLocaleTimeString('en-US', { hour12: false }));
-    };
-    tick();
-    const interval = setInterval(tick, 1000);
-    return () => clearInterval(interval);
-  }, []);
+  // Stable callback for boot completion
+  const handleBootComplete = React.useCallback(() => setIsBooted(true), []);
 
   return (
     <div className="h-full flex flex-col">
@@ -164,13 +227,8 @@ export function CaptainNovaStation() {
         </div>
 
         {!isBooted ? (
-          /* Boot text crawl */
-          <div className="flex items-center justify-center h-full">
-            <div className="font-mono text-[8px] text-cyan-400/60 px-3 text-center">
-              {bootText}
-              <span className="animate-pulse-slow">_</span>
-            </div>
-          </div>
+          /* Boot text crawl — isolated: 40ms timer won't re-render parent */
+          <BootTextDisplay onComplete={handleBootComplete} />
         ) : (
           /* Booted content */
           <div className="flex flex-col items-center h-full pt-3 px-2">
@@ -185,9 +243,11 @@ export function CaptainNovaStation() {
               />
               <Canvas
                 camera={{ position: [0, 0, 3], fov: 45 }}
-                gl={{ antialias: true, alpha: true }}
+                gl={{ antialias: false, alpha: true, powerPreference: 'low-power' }}
                 style={{ background: 'transparent' }}
+                frameloop="demand"
               >
+                <ThrottledInvalidator />
                 <ambientLight intensity={0.4} />
                 <pointLight position={[2, 3, 3]} intensity={0.6} color="#06b6d4" />
                 <pointLight position={[-2, -1, 2]} intensity={0.3} color="#8b5cf6" />
@@ -195,22 +255,10 @@ export function CaptainNovaStation() {
               </Canvas>
             </div>
 
-            {/* Status area */}
+            {/* Status area — all timer-driven, isolated from Canvas re-renders */}
             <div className="text-center flex flex-col justify-center gap-1 w-full py-1">
-              {/* Current status */}
-              <div className="font-mono text-[8px] text-cyan-300/70">
-                {statusMsg}
-              </div>
-              {/* Previous status (faded) */}
-              {prevStatus && (
-                <div className="font-mono text-[6px] text-cyan-400/25 truncate">
-                  Prev: {prevStatus}
-                </div>
-              )}
-              {/* Timestamp */}
-              <div className="font-mono text-[6px] text-cyan-400/20">
-                {missionTime}
-              </div>
+              <IdleStatusDisplay active={isBooted && novaState === 'idle'} />
+              <MissionTimeClock />
             </div>
 
             {/* COMM button */}

@@ -32,8 +32,7 @@ export function EnvironmentalCohesion() {
         style={{
           bottom: '220px',
           height: '3px',
-          background: 'rgba(0, 0, 0, 0.4)',
-          filter: 'blur(1px)',
+          background: 'rgba(0, 0, 0, 0.3)',
         }}
       />
 

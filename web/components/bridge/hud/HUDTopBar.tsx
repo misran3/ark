@@ -180,9 +180,16 @@ export function HUDTopBar() {
   return (
     <div
       ref={flickerRef}
-      className="h-10 px-8 flex items-center justify-between"
+      className="h-10 px-8 flex items-center justify-between relative"
       style={containerStyle}
     >
+      {/* Holographic bloom backdrop — soft glow behind all HUD text (no blur filter) */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: `linear-gradient(180deg, ${colors.glow}15 0%, transparent 80%)`,
+        }}
+      />
       <StardateClock textStyle={textStyle} />
       <ShipName alertLevel={alertLevel} textStyle={textStyle} />
       <StatusText textStyle={textStyle} />

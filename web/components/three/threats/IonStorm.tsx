@@ -240,8 +240,8 @@ export default function IonStorm({
     }
 
     // ---- Layer 4: Lightning Arcs — regenerate as TubeGeometry ----
-    const outerRegenRate = hovered ? 6 : 12; // frames between regen
-    const coreRegenRate = hovered ? 4 : 10;
+    const outerRegenRate = hovered ? 12 : 20; // frames between regen (increased to reduce React re-renders)
+    const coreRegenRate = hovered ? 8 : 16;
 
     if (frameCountRef.current % outerRegenRate === 0 && outerArcsGroupRef.current) {
       const newGeos: THREE.TubeGeometry[] = [];

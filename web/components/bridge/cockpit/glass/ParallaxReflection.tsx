@@ -124,11 +124,11 @@ export function ParallaxReflection() {
         style={{
           inset: '-15px', // Larger than viewport to allow shift without edges showing
           background: reflectionGradient,
-          filter: 'blur(12px)',
+          filter: 'blur(6px)',
           willChange: 'transform',
         }}
       >
-        {/* Ghost shapes suggesting console panel layout */}
+        {/* Ghost shapes suggesting console panel layout — no nested blur (parent already blurred) */}
         <div
           className="absolute"
           style={{
@@ -148,33 +148,6 @@ export function ParallaxReflection() {
               'rgba(160, 130, 70, 0.015) 70%, ' +
               'rgba(140, 120, 60, 0.01) 80%, ' +
               'transparent 95%)',
-            filter: 'blur(6px)',
-          }}
-        />
-
-        {/* Faint status light glows */}
-        <div
-          className="absolute"
-          style={{
-            bottom: '25%',
-            left: '8%',
-            width: 6,
-            height: 6,
-            borderRadius: '50%',
-            background: 'rgba(100, 200, 100, 0.02)',
-            filter: 'blur(4px)',
-          }}
-        />
-        <div
-          className="absolute"
-          style={{
-            bottom: '30%',
-            right: '5%',
-            width: 5,
-            height: 5,
-            borderRadius: '50%',
-            background: 'rgba(80, 180, 200, 0.015)',
-            filter: 'blur(4px)',
           }}
         />
       </div>
@@ -186,7 +159,7 @@ export function ParallaxReflection() {
         style={{
           inset: '-15px',
           background: reflectionGradient,
-          filter: 'blur(16px)',
+          filter: 'blur(8px)',
           opacity: 0.35,
           willChange: 'transform',
         }}

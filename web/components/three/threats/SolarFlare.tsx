@@ -245,9 +245,9 @@ export default function SolarFlare({
       surfaceRef.current.emissiveIntensity = hovered ? 6.5 : 5.0;
     }
 
-    // ---- Layer 4: Prominence arcs — regenerate every 4 seconds ----
+    // ---- Layer 4: Prominence arcs — regenerate every 8 seconds (reduced from 4s for perf) ----
     arcTimerRef.current += delta;
-    if (arcTimerRef.current > 4.0) {
+    if (arcTimerRef.current > 8.0) {
       arcTimerRef.current = 0;
       arcGeos.forEach(g => g.dispose());
       setArcGeos(regenerateArcs());

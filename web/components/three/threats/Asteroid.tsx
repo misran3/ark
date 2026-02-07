@@ -10,6 +10,10 @@ import '@/lib/materials/VolumetricGlowMaterial';
 import '@/lib/materials/EnergyFlowMaterial';
 import { InstancedParticleSystem, TrailRibbon } from '@/lib/particles';
 
+// Pre-allocated reusable temp objects (module-level, zero GC pressure)
+const _lerpTarget = new THREE.Vector3();
+const _chunkPos = new THREE.Vector3();
+
 export interface AsteroidProps {
   position: [number, number, number];
   size?: number;
@@ -338,10 +342,8 @@ export default function Asteroid({
 
       // Apply hover scale on top of instability pulse
       const targetScale = hovered ? 1.1 * scaleFactor : scaleFactor;
-      meshRef.current.scale.lerp(
-        new THREE.Vector3(targetScale, targetScale, targetScale),
-        delta * 5
-      );
+      _lerpTarget.setScalar(targetScale);
+      meshRef.current.scale.lerp(_lerpTarget, delta * 5);
     }
 
     if (materialRef.current) {
@@ -693,14 +695,14 @@ function ChunkDebris({ position, velocity, startTime, lifetime, size }: ChunkDeb
     const age = state.clock.elapsedTime - startTime;
     const t = age / lifetime;
 
-    // Physics: velocity + gravity
+    // Physics: velocity + gravity (reuse module-level _chunkPos)
     const gravity = -1.5; // Units per second squared
-    const pos = new Vector3(
+    _chunkPos.set(
       position[0] + velocity.x * age,
       position[1] + velocity.y * age + 0.5 * gravity * age * age,
       position[2] + velocity.z * age
     );
-    meshRef.current.position.copy(pos);
+    meshRef.current.position.copy(_chunkPos);
 
     // Fade out near end of lifetime
     const opacity = t < 0.7 ? 1.0 : 1.0 - (t - 0.7) / 0.3;

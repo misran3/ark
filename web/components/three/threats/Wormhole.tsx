@@ -9,6 +9,9 @@ import '@/lib/materials/EnergyFlowMaterial';
 import { InstancedParticleSystem, type ParticleState } from '@/lib/particles';
 import { generateLightningPath, tubeFromPoints } from '@/lib/utils/geometry';
 
+// Pre-allocated reusable temp objects
+const _wormholeLerpTarget = new THREE.Vector3();
+
 // ── Portal Swirl Shader (kept + enhanced with depth tinting) ──
 const PortalSwirlMaterial = shaderMaterial(
   {
@@ -113,14 +116,16 @@ export default function Wormhole({
   const portalRefs = useRef<(any | null)[]>([null, null, null, null]);
   const throughPortalRef = useRef<THREE.Group>(null);
   const ghostIconRef = useRef<THREE.Mesh>(null);
+  const ghostHaloRef = useRef<THREE.Mesh>(null);
   const bracketsRef = useRef<THREE.Group>(null);
   const flashRef = useRef<THREE.Mesh>(null);
   const isHoveredRef = useRef(false);
   const isCollapsingRef = useRef(false);
   const collapseStartRef = useRef(0);
 
-  // Electrical rim arc geometries (regenerate periodically)
+  // Electrical rim arc geometries (regenerate periodically, ref-based to avoid setState in useFrame)
   const frameCountRef = useRef(0);
+  const arcGeometriesRef = useRef<THREE.TubeGeometry[]>([]);
   const [arcGeometries, setArcGeometries] = useState<THREE.TubeGeometry[]>([]);
 
   const outerRadius = 2.5 * size;
@@ -306,10 +311,8 @@ export default function Wormhole({
     // Torus hover scale
     if (torusMeshRef.current && !isCollapsingRef.current) {
       const targetScale = hovered ? 1.2 : 1.0;
-      torusMeshRef.current.scale.lerp(
-        new THREE.Vector3(targetScale, targetScale, targetScale),
-        delta * 5,
-      );
+      _wormholeLerpTarget.setScalar(targetScale);
+      torusMeshRef.current.scale.lerp(_wormholeLerpTarget, delta * 5);
     }
 
     // ---- Layer 3: Portal Surface Shaders ----
@@ -322,12 +325,13 @@ export default function Wormhole({
       }
     }
 
-    // ---- Layer 4: Regenerate rim arcs ----
+    // ---- Layer 4: Regenerate rim arcs (ref-based to avoid React re-render in useFrame) ----
     frameCountRef.current++;
-    if (frameCountRef.current % 20 === 0) {
-      const oldArcs = arcGeometries;
-      setArcGeometries(generateArcs());
-      oldArcs.forEach((g) => g.dispose());
+    if (frameCountRef.current % 40 === 0) {
+      arcGeometriesRef.current.forEach((g) => g.dispose());
+      const newArcs = generateArcs();
+      arcGeometriesRef.current = newArcs;
+      setArcGeometries(newArcs);
     }
 
     // ---- Layer 6: Through-portal icon ----
@@ -337,15 +341,14 @@ export default function Wormhole({
     }
     if (throughPortalRef.current) {
       throughPortalRef.current.position.y = Math.sin(time * 0.8) * 0.3;
-      // Pulse opacity
-      throughPortalRef.current.traverse((node) => {
-        if (node instanceof THREE.Mesh && node.material) {
-          const mat = node.material as THREE.MeshBasicMaterial;
-          if (mat.opacity !== undefined) {
-            mat.opacity = (hovered ? 0.5 : 0.25) + Math.sin(time * 2) * 0.1;
-          }
-        }
-      });
+      // Pulse opacity — direct ref updates instead of traverse()
+      const portalOpacity = (hovered ? 0.5 : 0.25) + Math.sin(time * 2) * 0.1;
+      if (ghostIconRef.current) {
+        (ghostIconRef.current.material as THREE.MeshBasicMaterial).opacity = portalOpacity;
+      }
+      if (ghostHaloRef.current) {
+        (ghostHaloRef.current.material as THREE.MeshBasicMaterial).opacity = portalOpacity;
+      }
     }
 
     // ---- Collapse animation (1.8s) ----
@@ -519,7 +522,7 @@ export default function Wormhole({
         </mesh>
 
         {/* Background halo */}
-        <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <mesh ref={ghostHaloRef} rotation={[Math.PI / 2, 0, 0]}>
           <circleGeometry args={[1.2 * size, 32]} />
           <meshBasicMaterial
             color="#60a5fa"

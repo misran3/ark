@@ -20,6 +20,14 @@ interface TrailRibbonProps {
   opacity?: number;
 }
 
+// Pre-allocated reusable temp objects (module-level, zero GC pressure)
+const _wp = new THREE.Vector3();
+const _up = new THREE.Vector3();
+const _dir = new THREE.Vector3();
+const _toCam = new THREE.Vector3();
+const _off = new THREE.Vector3();
+const _ribbonColor = new THREE.Color();
+
 export default function TrailRibbon({
   targetRef,
   maxPoints = 60,
@@ -61,13 +69,12 @@ export default function TrailRibbon({
   useFrame(({ camera }, delta) => {
     if (!targetRef.current || !meshRef.current) return;
 
-    const wp = new THREE.Vector3();
-    targetRef.current.getWorldPosition(wp);
+    targetRef.current.getWorldPosition(_wp);
 
     // Only record if moved enough
-    if (wp.distanceTo(lastPos.current) > 0.01) {
-      trail.current.unshift({ pos: wp.clone(), age: 0 });
-      lastPos.current.copy(wp);
+    if (_wp.distanceTo(lastPos.current) > 0.01) {
+      trail.current.unshift({ pos: _wp.clone(), age: 0 });
+      lastPos.current.copy(_wp);
       if (trail.current.length > maxPoints) trail.current.pop();
     }
 
@@ -77,8 +84,7 @@ export default function TrailRibbon({
     // Write geometry
     const posArr = geometry.attributes.position.array as Float32Array;
     const colArr = geometry.attributes.color.array as Float32Array;
-    const up = camera.up.clone();
-    const _c = new THREE.Color();
+    _up.copy(camera.up);
 
     for (let i = 0; i < maxPoints; i++) {
       if (i < trail.current.length) {
@@ -86,25 +92,27 @@ export default function TrailRibbon({
         const t = pt.age / lifetime;
         const w = width * (1.0 - t);
 
-        // Direction for ribbon expansion
-        let dir = up;
+        // Direction for ribbon expansion (reuse pre-allocated vectors)
         if (i < trail.current.length - 1) {
-          dir = new THREE.Vector3().subVectors(trail.current[i + 1].pos, pt.pos).normalize();
-          dir.cross(new THREE.Vector3().subVectors(camera.position, pt.pos).normalize()).normalize();
+          _dir.subVectors(trail.current[i + 1].pos, pt.pos).normalize();
+          _toCam.subVectors(camera.position, pt.pos).normalize();
+          _dir.cross(_toCam).normalize();
+        } else {
+          _dir.copy(_up);
         }
-        const off = dir.clone().multiplyScalar(w);
+        _off.copy(_dir).multiplyScalar(w);
 
         const idx = i * 6;
-        posArr[idx] = pt.pos.x - off.x;
-        posArr[idx + 1] = pt.pos.y - off.y;
-        posArr[idx + 2] = pt.pos.z - off.z;
-        posArr[idx + 3] = pt.pos.x + off.x;
-        posArr[idx + 4] = pt.pos.y + off.y;
-        posArr[idx + 5] = pt.pos.z + off.z;
+        posArr[idx] = pt.pos.x - _off.x;
+        posArr[idx + 1] = pt.pos.y - _off.y;
+        posArr[idx + 2] = pt.pos.z - _off.z;
+        posArr[idx + 3] = pt.pos.x + _off.x;
+        posArr[idx + 4] = pt.pos.y + _off.y;
+        posArr[idx + 5] = pt.pos.z + _off.z;
 
-        _c.copy(headColor).lerp(tailColor, t);
-        colArr[idx] = _c.r; colArr[idx + 1] = _c.g; colArr[idx + 2] = _c.b;
-        colArr[idx + 3] = _c.r; colArr[idx + 4] = _c.g; colArr[idx + 5] = _c.b;
+        _ribbonColor.copy(headColor).lerp(tailColor, t);
+        colArr[idx] = _ribbonColor.r; colArr[idx + 1] = _ribbonColor.g; colArr[idx + 2] = _ribbonColor.b;
+        colArr[idx + 3] = _ribbonColor.r; colArr[idx + 4] = _ribbonColor.g; colArr[idx + 5] = _ribbonColor.b;
       } else {
         const idx = i * 6;
         posArr[idx] = posArr[idx + 1] = posArr[idx + 2] = 0;

@@ -95,6 +95,9 @@ export default function InstancedParticleSystem({
     return { positions, velocities, lifetimes, maxLifetimes, count } as Omit<ParticleState, 'mesh'>;
   }, [count, lifespan, velocityMin, velocityMax, spawnRadius, emitRate]);
 
+  // Pre-built ParticleState object for onTick — avoids spread operator allocation every frame
+  const tickStateRef = useRef<ParticleState | null>(null);
+
   const startColor = useMemo(() => new THREE.Color(color), [color]);
   const endColor = useMemo(() => (colorEnd ? new THREE.Color(colorEnd) : null), [colorEnd]);
 
@@ -127,9 +130,14 @@ export default function InstancedParticleSystem({
     const elapsed = clock.getElapsedTime();
     const { positions, velocities, lifetimes, maxLifetimes } = state;
 
-    // Let external code do custom work
+    // Let external code do custom work — reuse pre-built object to avoid allocation
     if (onTick) {
-      onTick({ ...state, mesh } as ParticleState, delta, elapsed);
+      if (!tickStateRef.current) {
+        tickStateRef.current = { ...state, mesh } as ParticleState;
+      } else {
+        tickStateRef.current.mesh = mesh;
+      }
+      onTick(tickStateRef.current, delta, elapsed);
     }
 
     for (let i = 0; i < count; i++) {

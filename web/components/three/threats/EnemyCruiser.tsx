@@ -66,6 +66,8 @@ export default function EnemyCruiser({
   const bracketsRef = useRef<THREE.Group>(null);
   const flashSphereRef = useRef<THREE.Mesh>(null);
   const shockwaveRingRef = useRef<THREE.Mesh>(null);
+  // Cached materials for collapse fade — populated once at collapse start to avoid traverse() per frame
+  const collapseMaterialsRef = useRef<THREE.Material[]>([]);
 
   // Targeting bracket geometry
   const bracketGeometry = useMemo(() => {
@@ -258,17 +260,20 @@ export default function EnemyCruiser({
         groupRef.current.rotation.x += p3 * 0.1;
         groupRef.current.position.z -= p3 * 0.1;
 
-        // Fade all meshes
-        const opacity = 1 - p3;
-        groupRef.current.traverse((node) => {
-          if (node instanceof THREE.Mesh && node.material) {
-            const mat = node.material as any;
-            if (mat.transparent !== undefined) {
-              mat.transparent = true;
-              mat.opacity = Math.min(mat.opacity ?? 1, opacity);
+        // Fade all meshes — use cached materials instead of traverse() per frame
+        if (collapseMaterialsRef.current.length === 0) {
+          // Collect once at start of phase 3
+          groupRef.current.traverse((node) => {
+            if (node instanceof THREE.Mesh && node.material) {
+              collapseMaterialsRef.current.push(node.material);
             }
-          }
-        });
+          });
+        }
+        const opacity = 1 - p3;
+        for (const mat of collapseMaterialsRef.current) {
+          (mat as any).transparent = true;
+          (mat as any).opacity = Math.min((mat as any).opacity ?? 1, opacity);
+        }
       }
     }
 

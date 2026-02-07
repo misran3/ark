@@ -9,6 +9,7 @@
  *   </Canvas>
  */
 
+import { useMemo } from 'react';
 import { EffectComposer, Bloom, ChromaticAberration, Vignette } from '@react-three/postprocessing';
 import { BlendFunction } from 'postprocessing';
 import { Vector2 } from 'three';
@@ -30,6 +31,8 @@ export default function SceneEffects({
   chromaticOffset = 0.0004,
   vignetteDarkness = 0.45,
 }: SceneEffectsProps) {
+  const caOffset = useMemo(() => new Vector2(chromaticOffset, chromaticOffset), [chromaticOffset]);
+
   return (
     <EffectComposer multisampling={0}>
       <Bloom
@@ -40,7 +43,7 @@ export default function SceneEffects({
         blendFunction={BlendFunction.ADD}
       />
       <ChromaticAberration
-        offset={new Vector2(chromaticOffset, chromaticOffset)}
+        offset={caOffset}
         blendFunction={BlendFunction.NORMAL}
       />
       <Vignette
