@@ -5,6 +5,7 @@ import { Canvas, useThree } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { useAlertStore, ALERT_COLORS } from '@/lib/stores/alert-store';
+import { useNovaDialogueStore } from '@/lib/stores/nova-dialogue-store';
 import { useNovaVariant } from '@/contexts/NovaVariantContext';
 import CaptainNova from '@/components/three/captain-nova';
 import { NovaVariantSelector } from './NovaVariantSelector';
@@ -183,7 +184,8 @@ function NovaInlineRenderer() {
 
 export function CaptainNovaStation() {
   const alertLevel = useAlertStore((state) => state.level);
-  const [novaState] = useState<NovaState>('idle');
+  const dialogueState = useNovaDialogueStore((s) => s.state);
+  const novaState: NovaState = dialogueState === 'speaking' ? 'analyzing' : 'idle';
   const [isBooted, setIsBooted] = useState(false);
   const borderColor = STATE_BORDER_COLORS[novaState];
   const colors = ALERT_COLORS[alertLevel];
@@ -257,7 +259,13 @@ export function CaptainNovaStation() {
 
             {/* Status area — all timer-driven, isolated from Canvas re-renders */}
             <div className="text-center flex flex-col justify-center gap-1 w-full py-1">
-              <IdleStatusDisplay active={isBooted && novaState === 'idle'} />
+              {novaState === 'analyzing' ? (
+                <div className="font-mono text-[8px] text-amber-300/70">
+                  Transmitting...
+                </div>
+              ) : (
+                <IdleStatusDisplay active={isBooted && novaState === 'idle'} />
+              )}
               <MissionTimeClock />
             </div>
 
