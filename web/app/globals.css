@@ -44,6 +44,11 @@
   --animate-scan: scan 2s linear infinite;
   --animate-glow: glow 2s ease-in-out infinite;
   --animate-pulse-shield: pulse-shield 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-fade-in: fadeIn 0.6s ease-out forwards;
+  --animate-fade-in-up: fadeInUp 0.3s ease-out forwards;
+  --animate-reduce-blur: reduceBlur 0.5s ease-out forwards;
+  --animate-quick-blink: quickBlink 0.5s ease-in-out;
+  --animate-lift-up: liftUp 0.3s ease-out;
 }
 
 @keyframes pulse-slow {
@@ -567,4 +572,213 @@ body {
 .top-bar-boot,
 .bottom-console-boot {
   will-change: transform, opacity;
+}
+
+/* ========================================
+   COCKPIT FRAME SYSTEM
+   ======================================== */
+
+/* Breathing edge glow - subtle 2-3% opacity shift over 4s */
+@keyframes cockpit-edge-breathe {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.55; }
+}
+
+/* Reflective glint - slow sweep across frame panels */
+@keyframes cockpit-glint {
+  0% { transform: translateX(-200%) skewX(-15deg); }
+  100% { transform: translateX(400%) skewX(-15deg); }
+}
+
+/* Status light pulse */
+@keyframes status-light-pulse {
+  0%, 100% { opacity: 0.6; box-shadow: 0 0 4px currentColor; }
+  50% { opacity: 1; box-shadow: 0 0 8px currentColor; }
+}
+
+/* Damage flicker - occasional red flash */
+@keyframes damage-flicker {
+  0%, 85%, 100% { background: #22c55e; box-shadow: 0 0 4px #22c55e; }
+  87% { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
+  90% { background: #22c55e; box-shadow: 0 0 4px #22c55e; }
+  92% { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
+  95% { background: #22c55e; box-shadow: 0 0 4px #22c55e; }
+}
+
+/* Under-panel bleed light */
+@keyframes seam-bleed {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.35; }
+}
+
+/* Power conduit pulse */
+@keyframes conduit-pulse {
+  0%, 100% { opacity: 0.1; }
+  50% { opacity: 0.3; }
+}
+
+/* CRT warm-up (console instrument boot) */
+@keyframes crt-warmup {
+  0% {
+    opacity: 0;
+    filter: brightness(0.3);
+    transform: scaleY(0.01);
+  }
+  30% {
+    opacity: 0.5;
+    filter: brightness(0.6);
+    transform: scaleY(0.8);
+  }
+  100% {
+    opacity: 1;
+    filter: brightness(1);
+    transform: scaleY(1);
+  }
+}
+
+/* CRT static burst */
+@keyframes crt-static-burst {
+  0% { opacity: 0; }
+  10% { opacity: 0.8; }
+  100% { opacity: 0; }
+}
+
+/* Phosphor ghost fade */
+@keyframes phosphor-fade {
+  0% { opacity: 0.5; }
+  100% { opacity: 0; }
+}
+
+/* Sensor sweep - rotating radar line */
+@keyframes sensor-sweep {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* HUD text drift - subtle holographic instability */
+@keyframes hud-drift {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(0.5px, -0.3px); }
+  50% { transform: translate(-0.4px, 0.6px); }
+  75% { transform: translate(0.3px, -0.5px); }
+}
+
+/* HUD interference flicker */
+@keyframes hud-flicker {
+  0%, 94%, 100% { opacity: 1; transform: translateX(0); }
+  95% { opacity: 0.3; transform: translateX(2px); }
+  97% { opacity: 0.8; transform: translateX(-1px); }
+}
+
+/* Hull brushed-metal texture (horizontal) */
+.hull-metal-h {
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 1px,
+      rgba(255, 255, 255, 0.008) 1px,
+      rgba(255, 255, 255, 0.008) 2px
+    ),
+    linear-gradient(180deg, #0a0e1a 0%, #151b2d 40%, #0d1220 100%);
+}
+
+/* Hull brushed-metal texture (vertical) */
+.hull-metal-v {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 1px,
+      rgba(255, 255, 255, 0.008) 1px,
+      rgba(255, 255, 255, 0.008) 2px
+    ),
+    linear-gradient(90deg, #0a0e1a 0%, #151b2d 40%, #0d1220 100%);
+}
+
+/* Hull panel seam line */
+.hull-seam {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.06) 20%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.06) 80%,
+    transparent 100%
+  );
+}
+
+/* Rivet dot pattern */
+.hull-rivets {
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.1) 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
+}
+
+/* Thermal discoloration patch */
+.hull-thermal {
+  background: radial-gradient(ellipse at center, rgba(180, 120, 60, 0.04) 0%, transparent 70%);
+}
+
+/* Scratch/scuff overlay */
+.hull-scuffs {
+  background:
+    linear-gradient(35deg, transparent 40%, rgba(255, 255, 255, 0.015) 40.5%, transparent 41%),
+    linear-gradient(155deg, transparent 55%, rgba(255, 255, 255, 0.01) 55.5%, transparent 56%),
+    linear-gradient(75deg, transparent 30%, rgba(255, 255, 255, 0.012) 30.5%, transparent 31%);
+}
+
+/* Console well recess */
+.console-well {
+  background: rgba(2, 5, 16, 0.9);
+  border: 1px solid rgba(0, 240, 255, 0.15);
+  box-shadow:
+    inset 0 2px 8px rgba(0, 0, 0, 0.6),
+    inset 0 0 1px rgba(0, 240, 255, 0.1);
+  border-radius: 4px;
+}
+
+/* Console CRT screen effect */
+.crt-screen {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 255, 255, 0.02) 2px,
+      rgba(0, 255, 255, 0.02) 4px
+    );
+  box-shadow:
+    inset 0 0 30px rgba(0, 0, 0, 0.3),
+    inset 0 0 4px rgba(0, 240, 255, 0.05);
+}
+
+/* Caution stripe pattern */
+.caution-stripe {
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(251, 191, 36, 0.3),
+    rgba(251, 191, 36, 0.3) 2px,
+    rgba(0, 0, 0, 0.4) 2px,
+    rgba(0, 0, 0, 0.4) 4px
+  );
+}
+
+/* Stencil label base style */
+.hull-stencil {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.08);
+  text-transform: uppercase;
+}
+
+/* Ventilation grille pattern */
+.vent-grille {
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(255, 255, 255, 0.04) 0px,
+    rgba(255, 255, 255, 0.04) 1px,
+    transparent 1px,
+    transparent 3px
+  );
 }
