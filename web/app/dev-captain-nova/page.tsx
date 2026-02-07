@@ -6,18 +6,11 @@ import CaptainNova, {
   type CaptainNovaHandle,
   type AnimationConfig,
 } from '@/components/three/captain-nova';
+import { NovaVariantDropdown, type NovaVariant } from '@/components/ui/NovaVariantDropdown';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
-
-const MODEL_OPTIONS = [
-  { id: 'nova', label: 'A: Captain Nova v3', description: 'Low-poly holographic officer' },
-  { id: 'caucasian-man', label: 'B: Caucasian Man', description: 'GLB model (14MB)', path: '/models/caucasian-man.glb' },
-  { id: 'vinayagar', label: 'C: Vinayagar', description: 'GLB model (21MB)', path: '/models/vinayagar.glb' },
-] as const;
-
-type ModelId = (typeof MODEL_OPTIONS)[number]['id'];
 
 const defaultAnimConfig: AnimationConfig = {
   breathing: { enabled: true, cycleDuration: 4, scaleAmount: 0.015 },
@@ -69,7 +62,16 @@ function GLBModel({ path, scale, rotationY }: { path: string; scale: number; rot
 export default function DevCaptainNovaPage() {
   const router = useRouter();
   const novaRef = useRef<CaptainNovaHandle>(null);
-  const [activeModel, setActiveModel] = useState<ModelId>('nova');
+
+  // Hardcoded variants for client-side (in real app, pass via server props)
+  const [variants] = useState<NovaVariant[]>([
+    { type: 'skeletal', label: 'A: Skeletal-less Hierarchical' },
+    { type: 'community', label: 'CAUCASIAN MAN', path: '/3D/CAUCASIAN MAN.glb' },
+    { type: 'community', label: 'Vinayagar', path: '/3D/Vinayagar.glb' },
+    { type: 'community', label: 'https storage googleapis', path: '/3D/https___storage_googleapis_com_ai_services_quality_jobs_xr4enzsf_input_png.glb' },
+  ]);
+
+  const [activeVariant, setActiveVariant] = useState<NovaVariant>(variants[0]);
   const [position, setPosition] = useState<[number, number, number]>([0, 0, 0]);
   const [modelScale, setModelScale] = useState(1);
   const [modelRotationY, setModelRotationY] = useState(0);
@@ -79,13 +81,15 @@ export default function DevCaptainNovaPage() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') router.push('/dev');
-      if (e.key === '1') setActiveModel('nova');
-      if (e.key === '2') setActiveModel('caucasian-man');
-      if (e.key === '3') setActiveModel('vinayagar');
+      // Quick switch: 1/2/3/4 keys
+      if (e.key === '1' && variants[0]) setActiveVariant(variants[0]);
+      if (e.key === '2' && variants[1]) setActiveVariant(variants[1]);
+      if (e.key === '3' && variants[2]) setActiveVariant(variants[2]);
+      if (e.key === '4' && variants[3]) setActiveVariant(variants[3]);
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [router]);
+  }, [router, variants]);
 
   const toggleAnim = (key: keyof AnimationConfig) => {
     setAnimConfig((prev) => ({
@@ -94,8 +98,7 @@ export default function DevCaptainNovaPage() {
     }));
   };
 
-  const activeOption = MODEL_OPTIONS.find((m) => m.id === activeModel)!;
-  const isGLB = activeModel !== 'nova';
+  const isGLB = activeVariant.type === 'community';
 
   return (
     <div className="fixed inset-0 bg-black">
@@ -113,26 +116,28 @@ export default function DevCaptainNovaPage() {
               DEV: Captain Nova v3.0
             </h1>
             <p className="font-rajdhani text-xs text-cyan-400/60 mt-1">
-              {activeOption.description} &middot; Press 1/2/3 to quick-switch
+              Model variant selector &middot; Press 1/2/3/4 to quick-switch
             </p>
           </div>
         </div>
 
-        {/* Model Switcher */}
-        <div className="flex gap-2 mt-3">
-          {MODEL_OPTIONS.map((opt) => (
-            <button
-              key={opt.id}
-              onClick={() => setActiveModel(opt.id)}
-              className={`px-4 py-2 rounded border text-sm font-orbitron tracking-wider transition-all ${
-                activeModel === opt.id
-                  ? 'border-cyan-400 bg-cyan-500/30 text-cyan-300 shadow-[0_0_12px_rgba(0,255,255,0.3)]'
-                  : 'border-gray-600/40 bg-gray-800/40 text-gray-400 hover:border-gray-500/60 hover:text-gray-300'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
+        {/* Variant Switcher Dropdown */}
+        <div className="mt-3">
+          <div className="font-rajdhani text-xs text-cyan-400/60 mb-1">
+            Captain Nova Variant (or 1/2/3/4 keys)
+          </div>
+          <NovaVariantDropdown
+            value={activeVariant}
+            onChange={setActiveVariant}
+            variants={variants}
+            className="max-w-sm"
+          />
+          <p className="font-rajdhani text-xs text-cyan-400/60 mt-1">
+            {activeVariant.type === 'skeletal'
+              ? 'Built-in primitives with hologram shader'
+              : `GLB model: ${activeVariant.path?.split('/').pop()}`
+            }
+          </p>
         </div>
       </div>
 
@@ -158,23 +163,16 @@ export default function DevCaptainNovaPage() {
 
         <Suspense fallback={<LoadingIndicator />}>
           <group position={position}>
-            {activeModel === 'nova' && (
+            {activeVariant.type === 'skeletal' && (
               <CaptainNova
                 ref={novaRef}
                 position={[0, 0, 0]}
                 animationConfig={animConfig}
               />
             )}
-            {activeModel === 'caucasian-man' && (
+            {activeVariant.type === 'community' && activeVariant.path && (
               <GLBModel
-                path="/models/caucasian-man.glb"
-                scale={modelScale}
-                rotationY={modelRotationY}
-              />
-            )}
-            {activeModel === 'vinayagar' && (
-              <GLBModel
-                path="/models/vinayagar.glb"
+                path={activeVariant.path}
                 scale={modelScale}
                 rotationY={modelRotationY}
               />
@@ -194,7 +192,7 @@ export default function DevCaptainNovaPage() {
       <div className="absolute bottom-0 left-0 right-0 z-10 p-4 bg-gradient-to-t from-black/80 to-transparent">
         <div className="max-w-2xl mx-auto space-y-3">
           {/* Nova Controls - only when Nova is active */}
-          {activeModel === 'nova' && (
+          {activeVariant.type === 'skeletal' && (
             <>
               {/* Gesture Controls */}
               <div>
