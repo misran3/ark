@@ -21,7 +21,7 @@ const DEFAULT_CONFIG: Required<BreathingConfig> = {
  * @param config - Breathing configuration
  */
 export function useBreathing(
-  torsoRef: React.RefObject<THREE.Mesh>,
+  torsoRef: React.RefObject<THREE.Mesh | null>,
   config: BreathingConfig = {}
 ) {
   const cfg = { ...DEFAULT_CONFIG, ...config };

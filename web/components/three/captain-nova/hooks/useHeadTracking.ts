@@ -22,7 +22,7 @@ const DEFAULT_CONFIG: Required<HeadTrackingConfig> = {
  * @param config - Head tracking configuration
  */
 export function useHeadTracking(
-  headRef: React.RefObject<THREE.Mesh>,
+  headRef: React.RefObject<THREE.Mesh | null>,
   config: HeadTrackingConfig = {}
 ) {
   const cfg = { ...DEFAULT_CONFIG, ...config };

@@ -23,7 +23,7 @@ const DEFAULT_CONFIG: Required<WeightShiftConfig> = {
  * @param config - Weight shift configuration
  */
 export function useWeightShift(
-  hipsRef: React.RefObject<THREE.Mesh>,
+  hipsRef: React.RefObject<THREE.Mesh | null>,
   config: WeightShiftConfig = {}
 ) {
   const cfg = { ...DEFAULT_CONFIG, ...config };

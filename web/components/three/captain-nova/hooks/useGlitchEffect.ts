@@ -23,7 +23,7 @@ const DEFAULT_CONFIG: Required<GlitchConfig> = {
  * @param config - Glitch configuration
  */
 export function useGlitchEffect(
-  materialRef: React.RefObject<THREE.ShaderMaterial>,
+  materialRef: React.RefObject<THREE.ShaderMaterial | null>,
   config: GlitchConfig = {}
 ) {
   const cfg = { ...DEFAULT_CONFIG, ...config };
