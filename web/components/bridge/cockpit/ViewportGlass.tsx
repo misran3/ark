@@ -4,6 +4,7 @@ import { GlassBevel } from './glass/GlassBevel';
 import { GlassSurface } from './glass/GlassSurface';
 import { ParallaxReflection } from './glass/ParallaxReflection';
 import { NearFieldParticles } from './glass/NearFieldParticles';
+import { LensDirt } from './glass/LensDirt';
 
 /**
  * Four-layer glass stack between CockpitFrame (z-10) and Viewport3D (z-0).
@@ -17,6 +18,7 @@ export function ViewportGlass() {
       <GlassSurface />
       <ParallaxReflection />
       <NearFieldParticles />
+      <LensDirt />
     </>
   );
 }
