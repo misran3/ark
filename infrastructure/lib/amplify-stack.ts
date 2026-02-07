@@ -24,7 +24,7 @@ export class AmplifyStack extends cdk.Stack {
         const amplifyAppConfig: any = {
             name: `${APP_NAME_LOWERCASE}-app`,
             description: `${APP_NAME}`,
-            platform: 'WEB_COMPUTE',
+            platform: 'WEB',
             iamServiceRole: amplifyServiceRole.roleArn,
             customRules: [
                 {
