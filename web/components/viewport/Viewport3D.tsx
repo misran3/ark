@@ -7,6 +7,7 @@ import { ThreatsLayer } from './ThreatsLayer';
 import SceneEffects from '@/components/three/SceneEffects';
 import { CanopyStruts } from './CanopyStruts';
 import { useThreatStore } from '@/lib/stores/threat-store';
+import { HologramOverlay } from '@/components/bridge/hologram/HologramOverlay';
 
 export function Viewport3D() {
   const allThreats = useThreatStore((state) => state.threats);
@@ -46,6 +47,9 @@ export function Viewport3D() {
 
         {/* Canopy struts — converging structural beams */}
         <CanopyStruts />
+
+        {/* Hologram expansion overlay */}
+        <HologramOverlay />
 
         {/* Post-processing: bloom, chromatic aberration, vignette */}
         <SceneEffects />
