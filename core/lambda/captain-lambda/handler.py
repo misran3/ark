@@ -73,7 +73,7 @@ def captain_query() -> Response:
 
         logger.info(f"Response tools used: {response.tools_used}")
 
-        return Response(status_code=200, body=response.model_dump())
+        return Response(status_code=200, body=response.model_dump(), content_type="application/json")
 
     except Exception as e:
         logger.exception(f"Error processing captain query: {e}")
@@ -85,6 +85,7 @@ def captain_query() -> Response:
                 "confidence": 0.0,
                 "suggested_visa_controls": None,
             },
+            content_type="application/json",
         )
 
 
