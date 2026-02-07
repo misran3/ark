@@ -430,12 +430,117 @@ export function Wormhole({ position, lostValue, description }: WormholeProps) {
 
 ---
 
+## Brainstormed Enhancements
+
+### Visual Enhancements
+
+**1. Parallel Universe Window**
+Through the portal, render a miniature "mirror dashboard" — the same metrics panel but with BETTER numbers. More rewards points, higher savings, optimized spending. The alternate timeline where they made the right card choice. Seeing your own dashboard but better is more emotionally resonant than abstract numbers.
+
+**2. Temporal Echo Ghosts**
+When a wormhole passes without action, it doesn't fully disappear. It leaves a "ghost" — a faint, semi-transparent portal outline that lingers in the background. Multiple ghosts overlap and accumulate, creating an increasingly visible constellation of missed opportunities. After 5+ ghosts, they begin to pulse together rhythmically. Haunting.
+
+**3. Value Vortex**
+Inside the portal, dollar amounts spiral inward like water down a drain. The numbers are your actual lost rewards values, spinning faster and faster toward the center. Hypnotic and slightly uncomfortable to watch — exactly the right emotional response to wasted money.
+
+**4. Opportunity Decay**
+The portal slowly shrinks over time (loses 5% radius per minute). If it closes completely before you act, the opportunity is gone for this billing cycle. Creates gentle but real urgency. A closing portal is more motivating than a permanent one.
+
+### Interaction Enhancements
+
+**5. Correction Ripple**
+When user optimizes routing through a wormhole, the portal emits a visible ripple wave that spreads through space — "correcting the fabric of spacetime." The ripple passes through nearby threats and UI elements, causing a brief positive shimmer. The correction feels like it's fixing something fundamental.
+
+**6. Wistful Tone (Not Threatening)**
+Wormholes should feel fundamentally different from other threats. They're not aggressive — they're SAD. The color palette should be cool blues and silvers. The ambient sound should be ethereal, like distant wind chimes. When they pass without action, a single melancholy piano note plays. The emotional register is regret, not fear.
+
+**7. Accumulation Escalation**
+If 3+ wormholes are ignored, they begin to gravitationally attract each other. They merge into a larger "Inefficiency Vortex" — a more dramatic visualization that's harder to ignore. The vortex shows the CUMULATIVE annual loss, which is always a much larger (and more alarming) number than individual instances.
+
+---
+
 ## Related Features
 
 - `THREAT-003`: Solar Flare Threats (creates wormholes when missed)
-- `BACKEND-006`: Card Optimization Engine (corrects routing)
+- `FINANCIAL-001`: Credit Card Intelligence (corrects routing)
 - `UI-007`: Rewards Tracking Panel (shows reclaimed future value)
 - `FINANCIAL-005`: Card Routing Optimization (routing rules)
+
+---
+
+## Implementation Checklist
+
+### Phase 1: Portal Geometry & Shaders
+- [ ] Create Wormhole.tsx component with torus and portal surface
+- [ ] Implement portal swirl shader (custom fragment/vertex shaders)
+- [ ] Add portal rim glow and transparency
+- [ ] Test shader performance at 60fps
+
+### Phase 2: Movement & Animation
+- [ ] Implement spawn position randomization (800-1000 units radius)
+- [ ] Create tumble rotation (0.1 rad/s on X and Y axes)
+- [ ] Implement slow drift toward camera (0.4 units/second)
+- [ ] Add wobble/figure-8 movement pattern
+
+### Phase 3: Particle Effects
+- [ ] Create edge ripple particle system (40-60 particles)
+- [ ] Implement particle orbit animation around portal rim
+- [ ] Add particle trails and fade-out
+- [ ] Set particle size and color (blue-white gradient)
+
+### Phase 4: Through-Portal Vision
+- [ ] Implement ghostly reward visualization (numbers, points, bar)
+- [ ] Add animation for rewards counting up
+- [ ] Create zoom effect that appears on hover
+- [ ] Make vision semi-transparent and dreamlike
+
+### Phase 5: Hover & Info Panel
+- [ ] Detect proximity hover (60px threshold)
+- [ ] Implement portal expansion on hover (20% inner radius growth)
+- [ ] Create blue-themed info panel
+- [ ] Show lost rewards breakdown and annual impact
+
+### Phase 6: Interaction & Optimization
+- [ ] Implement "Optimize Routing" action with beam scan animation
+- [ ] Create routing map visualization (red lines → green lines)
+- [ ] Build routing rule creation in backend
+- [ ] Implement portal closure animation and particle dispersion
+
+### Phase 7: State Transitions & Feedback
+- [ ] Implement dismiss action with fade-out
+- [ ] Add Captain Nova dialogue for optimization/dismiss/missed opportunity
+- [ ] Create critical proximity state (Zone 4) with screen tint and audio
+- [ ] Implement persistence (lingering after drift-by) and fade-out timing
+
+### Phase 8: Cumulative Mechanics
+- [ ] Track missed rewards over time
+- [ ] Implement wormhole merging (3+ become "Inefficiency Vortex")
+- [ ] Add larger vortex visualization
+- [ ] Create cumulative opportunity cost display
+
+### Phase 9: Audio & Polish
+- [ ] Add ethereal whisper ambient sound (portal present)
+- [ ] Add portal close sound effect
+- [ ] Add sad piano note (opportunity lost)
+- [ ] Implement screen tint pulsing on critical proximity
+
+### Phase 10: Documentation & Cleanup
+- [ ] Update this feature spec: set Status to 🟢 Complete, bump Current Version, add Revision History entry
+- [ ] Update `MASTER-synesthesiapay-bridge.md`: change this feature's status in the Feature Catalog table
+- [ ] Update `IMPLEMENTATION-GUIDE.md`: note progress in any relevant phase tracking
+- [ ] Commit documentation changes separately from code: `docs: mark wormhole-threat as complete`
+
+---
+
+## Completion Protocol
+
+When this feature's implementation is finished and all acceptance criteria pass, the implementing agent **must** update the following documents before considering the work done:
+
+1. **This feature spec** — Set `Status` to 🟢 Complete (or 🔵 Needs Polish if partially done), update `Current Version`, and add a row to the Revision History table.
+2. **Master Document** (`docs/plans/MASTER-synesthesiapay-bridge.md`) — Update this feature's row in the Feature Catalog to reflect the new status.
+3. **Implementation Guide** (`docs/plans/IMPLEMENTATION-GUIDE.md`) — Record any learnings, update phase progress tracking, and note actual vs estimated time if a build guide was created.
+
+These documentation updates should be committed separately from code changes. See the Implementation Guide's [Status Updates](../IMPLEMENTATION-GUIDE.md#status-updates) section for detailed instructions.
 
 ---
 

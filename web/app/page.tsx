@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useSeamlessTransition } from '@/hooks/useSeamlessTransition';
 import { useFinancialSnapshot, useBudgetReport } from '@/hooks/useFinancialData';
+import { GlassPanel } from '@/components/ui/GlassPanel';
 
 export default function BridgePage() {
   const [stardate, setStardate] = useState('');
@@ -81,9 +82,9 @@ export default function BridgePage() {
         <div className="absolute top-0 left-[5%] right-[5%] h-px bg-gradient-to-r from-transparent via-aurora-primary/15 to-transparent" />
 
         {/* Shield Panel */}
-        <div className="flex-[0_0_180px] glass flex flex-col">
+        <GlassPanel level={1} className="flex-[0_0_180px] flex flex-col">
           <div className="font-orbitron text-[6.5px] tracking-[3px] text-aurora-primary/25 p-2 pb-1 uppercase flex-shrink-0">
-            🛡 Shield Status
+            Shield Status
           </div>
           <div className="flex-1 overflow-y-auto p-2 pt-1 min-h-0 space-y-2">
             {[
@@ -107,15 +108,17 @@ export default function BridgePage() {
               </div>
             ))}
           </div>
-        </div>
+        </GlassPanel>
 
         {/* Command Center */}
-        <div
+        <GlassPanel
+          level={2}
+          hover
+          className="flex-1 flex flex-col cursor-pointer"
           onClick={() => transitionTo('/command-center')}
-          className="flex-1 glass flex flex-col cursor-pointer hover:bg-aurora-primary/[0.015] transition-colors"
         >
           <div className="font-orbitron text-[6.5px] tracking-[3px] text-aurora-primary/25 p-2 pb-1 uppercase flex-shrink-0">
-            ◆ Command Center
+            Command Center
           </div>
           <div className="flex-1 p-2 pt-1 flex items-center justify-center">
             <div className="grid grid-cols-2 gap-2 w-full">
@@ -137,14 +140,14 @@ export default function BridgePage() {
             </div>
           </div>
           <div className="text-center p-1 font-orbitron text-[6px] tracking-[3px] text-aurora-primary/20 border-t border-aurora-primary/[0.03] mt-auto">
-            ▲ EXPAND COMMAND CENTER ▲
+            EXPAND COMMAND CENTER
           </div>
-        </div>
+        </GlassPanel>
 
         {/* Transaction Log */}
-        <div className="flex-[0_0_240px] glass flex flex-col">
+        <GlassPanel level={1} className="flex-[0_0_240px] flex flex-col">
           <div className="font-orbitron text-[6.5px] tracking-[3px] text-aurora-primary/25 p-2 pb-1 uppercase flex-shrink-0">
-            ◈ Transaction Log
+            Transaction Log
           </div>
           <div className="flex-1 overflow-y-auto p-2 pt-1 min-h-0 space-y-1">
             {[
@@ -171,7 +174,7 @@ export default function BridgePage() {
               </div>
             ))}
           </div>
-        </div>
+        </GlassPanel>
       </div>
     </div>
   );

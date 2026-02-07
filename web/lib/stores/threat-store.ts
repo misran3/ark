@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 export interface Threat {
   id: string;
-  type: 'asteroid' | 'ion_storm' | 'solar_flare' | 'black_hole' | 'wormhole';
+  type: 'asteroid' | 'ion_storm' | 'solar_flare' | 'black_hole' | 'wormhole' | 'enemy_cruiser';
   position: [number, number, number];
   size: number;
   color: string;
@@ -11,6 +11,8 @@ export interface Threat {
   amount: number;
   severity: 'danger' | 'warning' | 'info';
   deflected: boolean;
+  seed?: number;
+  angularVelocity?: [number, number, number];
 }
 
 interface ThreatState {
@@ -35,6 +37,8 @@ export const useThreatStore = create<ThreatState>((set) => ({
       amount: 49.99,
       severity: 'danger',
       deflected: false,
+      seed: 42,
+      angularVelocity: [0.35, 0.5, 0.2],
     },
     {
       id: 'dining-overspend',
@@ -70,6 +74,44 @@ export const useThreatStore = create<ThreatState>((set) => ({
       detail: 'Card routing error - $12/mo lost',
       amount: 12,
       severity: 'info',
+      deflected: false,
+      seed: 137,
+      angularVelocity: [0.25, 0.4, 0.15],
+    },
+    {
+      id: 'credit-card-debt',
+      type: 'black_hole',
+      position: [5, -2, -22],
+      size: 1.5,
+      color: '#4c1d95',
+      label: 'DEBT SPIRAL',
+      detail: 'Compounding interest pulling $2,400 deeper',
+      amount: 2400,
+      severity: 'danger',
+      deflected: false,
+    },
+    {
+      id: 'savings-opportunity',
+      type: 'wormhole',
+      position: [-5, 1, -30],
+      size: 1,
+      color: '#60a5fa',
+      label: 'SAVINGS PORTAL',
+      detail: 'High-yield account opportunity — $180/yr missed',
+      amount: 180,
+      severity: 'info',
+      deflected: false,
+    },
+    {
+      id: 'fraud-alert',
+      type: 'enemy_cruiser',
+      position: [2, -3, -18],
+      size: 1.2,
+      color: '#991b1b',
+      label: 'FRAUD ALERT',
+      detail: 'Suspicious $892 charge from unknown merchant',
+      amount: 892,
+      severity: 'danger',
       deflected: false,
     },
   ],

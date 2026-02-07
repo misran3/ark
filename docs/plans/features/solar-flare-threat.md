@@ -518,15 +518,62 @@ void main() {
 - [ ] Test cancellation flow
 - [ ] Test missed optimization consequence
 
+### Phase 7: Documentation & Cleanup
+- [ ] Update this feature spec: set Status to 🟢 Complete, bump Current Version, add Revision History entry
+- [ ] Update `MASTER-synesthesiapay-bridge.md`: change this feature's status in the Feature Catalog table
+- [ ] Update `IMPLEMENTATION-GUIDE.md`: note progress in any relevant phase tracking
+- [ ] Commit documentation changes separately from code: `docs: mark solar-flare-threat as complete`
+
+---
+
+## Brainstormed Enhancements
+
+### Visual Enhancements
+
+**1. Countdown Rings**
+Concentric rings orbit the flare, one per day until the charge date. Each ring disappears as a day passes — 7 rings for 7 days out, counting down to zero. When only 1-2 rings remain, they pulse urgently. This is an instantly readable countdown without needing text.
+
+**2. Card Aura Ghosts**
+When hovering, translucent credit card silhouettes appear floating around the flare — one per eligible payment card. The recommended card glows brightest (green aurora), suboptimal cards are dim (gray). Cards orbit slowly, and the recommended one drifts forward. Instant visual hierarchy of payment options.
+
+**3. Optimization Spectrum**
+The flare's color shifts in real-time based on the currently selected card: red (no card selected / worst option) -> gold (decent option) -> emerald green (optimal card). As you cycle through cards in the panel, the flare itself transforms. Makes the optimization feel immediate and visual.
+
+**4. Bundle Constellation**
+When multiple subscriptions renew on the same day, their flares orbit each other in a tight formation — a "constellation" pattern. They share a gravitational center and their rays interleave. The info panel shows the combined total. Deflecting/routing one lets you handle all at once.
+
+### Interaction Enhancements
+
+**5. Photosphere Surface Detail**
+The flare's surface shows subtle animated patterns inspired by real solar imagery — granulation cells, magnetic field lines, and occasional surface eruptions. These details differentiate solar flares from other glowing threats and reward close inspection.
+
+**6. Heartbeat Rhythm**
+The pulse frequency should be AUDIBLE as well as visual — a soft, rhythmic thrum. 7+ days: slow heartbeat. 3 days: moderate. <24 hours: rapid. The heartbeat creates unconscious urgency even when the flare isn't being looked at directly.
+
+**7. Gentle Nature**
+Solar flares are the friendliest threat type — they represent expected, scheduled expenses, not waste or danger. Their interaction should feel like optimization (making something good even better), not combat. The visual language should use warm golds and greens rather than aggressive reds. Impact state should feel like a missed opportunity, not damage.
+
 ---
 
 ## Related Features
 
 - `THREAT-001`: Asteroid Threats (contrast: scheduled vs wasteful)
 - `THREAT-005`: Wormhole Threats (created by missed optimization)
-- `BACKEND-006`: Card Optimization Engine (recommends best card)
+- `FINANCIAL-001`: Credit Card Intelligence (recommends best card)
 - `UI-007`: Rewards Tracking Panel (receives rewards particles)
 - `FINANCIAL-004`: Subscription Management (cancellation integration)
+
+---
+
+## Completion Protocol
+
+When this feature's implementation is finished and all acceptance criteria pass, the implementing agent **must** update the following documents before considering the work done:
+
+1. **This feature spec** — Set `Status` to 🟢 Complete (or 🔵 Needs Polish if partially done), update `Current Version`, and add a row to the Revision History table.
+2. **Master Document** (`docs/plans/MASTER-synesthesiapay-bridge.md`) — Update this feature's row in the Feature Catalog to reflect the new status.
+3. **Implementation Guide** (`docs/plans/IMPLEMENTATION-GUIDE.md`) — Record any learnings, update phase progress tracking, and note actual vs estimated time if a build guide was created.
+
+These documentation updates should be committed separately from code changes. See the Implementation Guide's [Status Updates](../IMPLEMENTATION-GUIDE.md#status-updates) section for detailed instructions.
 
 ---
 

@@ -1,8 +1,49 @@
 # Implementation Guide & Process Steering Document
 
-**Version:** 1.0
-**Last Updated:** 2026-02-06
+**Version:** 1.1
+**Last Updated:** 2026-02-07
 **Purpose:** Define the systematic process for building features, maintaining documentation, and tracking progress
+
+---
+
+## Wave 1 Progress (2026-02-07)
+
+**Completed features (visual core only, no backend integration):**
+
+| Feature | File Created | Status | Notes |
+|---------|-------------|--------|-------|
+| Black Hole Threat | `web/components/three/threats/BlackHole.tsx` | 🔵 Needs Polish | Event horizon, accretion disk (400-600 particles), gravitational glow, hover brackets, collapse animation |
+| Wormhole Threat | `web/components/three/threats/Wormhole.tsx` | 🔵 Needs Polish | Portal torus + swirl shader, 50 rim particles, tumble animation, hover expansion, collapse animation |
+| Enemy Cruiser Threat | `web/components/three/threats/EnemyCruiser.tsx` | 🔵 Needs Polish | Procedural ship (box+cone+cylinders), red engine trails, weapon turrets, running lights, weaving movement |
+| Glassmorphism Panels | `web/components/ui/GlassPanel.tsx`, `MetricCard.tsx`, `InfoPanel.tsx` | 🟢 Complete | 4 depth levels, 4 variants, hover/pulse states, CSS animations (no framer-motion) |
+| Cold Boot Sequence | `web/components/ui/ColdBootSequence.tsx`, `web/lib/stores/boot-store.ts` | 🟢 Complete | 8s GSAP timeline, eyelid reveal, progress bar, HUD materialization, skip+sessionStorage |
+| Dependencies | `package.json` | 🟢 Complete | Installed @react-three/fiber, @react-three/drei, three, zustand, @tanstack/react-query, gsap |
+
+**Learnings:**
+- Subagents work well for independent threat components (zero merge conflicts between 3 parallel threat agents)
+- Glassmorphism implemented without framer-motion (CSS-only approach) to keep deps minimal
+- Cold Boot uses GSAP timeline for precise multi-phase orchestration
+
+---
+
+## Wave 2 Progress (2026-02-07)
+
+**Completed integration and polish tasks:**
+
+| Task | Files Modified | Status | Notes |
+|------|---------------|--------|-------|
+| Wire new threats into orchestrator | `Threats.tsx`, `threat-store.ts` | 🟢 Complete | Added BlackHole, Wormhole, EnemyCruiser imports + switch cases; added `enemy_cruiser` to type union; added 3 mock data entries (debt spiral, savings portal, fraud alert) |
+| Apply GlassPanel to Bridge page | `web/app/page.tsx` | 🟢 Complete | Shield panel (level 1), Command Center preview (level 2 + hover), Transaction Log (level 1) |
+| Apply GlassPanel to Command Center | `web/app/command-center/page.tsx` | 🟢 Complete | Hero metrics (level 2), MetricCard for 4 quick metrics, Active Threats panel (level 2 warning), Shield Status (level 2), Budget tab, placeholder tabs (Threats tab with error+pulse variant) |
+| Polish Ion Storm | `web/components/three/threats/IonStorm.tsx` | 🟢 Complete | Rewrote: 350 vortex particles with purple-to-pink vertex colors, 6 animated lightning arcs with flicker, outer nebula glow, targeting brackets, point light, ref-based hover |
+| Polish Solar Flare | `web/components/three/threats/SolarFlare.tsx` | 🟢 Complete | Rewrote: 120 corona particles radiating outward with white-gold-orange gradient, 10 animated rays with pulsing length, 3 expanding countdown rings, white-hot inner core, targeting brackets, point light |
+
+**Key decisions:**
+- Used ref-based hover (not useState) for Ion Storm and Solar Flare to avoid re-renders in useFrame
+- Added vertex colors to both Ion Storm and Solar Flare particle systems for gradient effects
+- Ion Storm arcs are always-on (dim) and intensify on hover (no re-mount flicker)
+- Solar Flare countdown rings expand/fade on staggered cycles for organic feel
+- Budget tab had a variable shadowing bug (`budget` vs `budgetItem` in .map) — fixed during GlassPanel migration
 
 ---
 
@@ -415,95 +456,30 @@ vec4 finalColor = vec4(color.rgb, color.a * hologramOpacity);
 
 ## Status Updates
 
-### When to Update Status
+When a feature's implementation is complete, follow this protocol to keep documentation in sync:
 
-**Update immediately when:**
-- Starting a feature (🔴 → 🟡)
-- Completing a feature (🟡 → 🟢)
-- Discovering a feature needs work (🟢 → 🔵)
-- Blocking/unblocking a feature (add/remove dependencies)
+### Per-Feature Spec Updates
+1. Change `Status` from 🟡 In Progress (or 🔴 Not Started) to 🟢 Complete (or 🔵 Needs Polish if partially done)
+2. Bump `Current Version` (e.g., 1.0 → 1.1)
+3. Add a new row to the spec's **Revision History** table with the date, new version, and a brief summary of what was implemented
 
-### How to Update Status
+### Master Document Updates
+1. Open `MASTER-synesthesiapay-bridge.md`
+2. Find the feature's row in the **Feature Catalog** table
+3. Update the status emoji and any notes column to reflect completion
 
-**1. Update Master Document**
+### Implementation Guide Updates
+1. Note the feature as complete in the relevant phase tracking section above
+2. Record any architectural learnings or deviations from the original spec
+3. If a time estimate was provided, note the actual time taken
 
-```markdown
-# In MASTER-synesthesiapay-bridge.md
-
-## Feature Catalog
-
-### 👤 Captain Nova System
-
-| Feature | Status | Priority | Doc Link | Dependencies |
-|---------|--------|----------|----------|--------------|
-| Hologram Visual Shader | 🟢 Complete | P0 | [link] | None |  ← CHANGED
-| Idle Breathing Animation | 🟡 In Progress | P0 | [link] | Hologram Shader |  ← NEW
+### Commit Convention
+Documentation updates should be committed **separately** from code changes using this format:
+```
+docs: mark [feature-name] as complete
 ```
 
-**Find/replace for bulk updates:**
-- Old: `| Hologram Visual Shader | 🔴 Not Started |`
-- New: `| Hologram Visual Shader | 🟢 Complete |`
-
-**2. Update Feature Spec Header**
-
-```markdown
-# In features/captain-nova-hologram.md
-
-**Feature ID:** `NOVA-001`
-**Category:** Captain Nova System
-**Priority:** P0 (Must-have for MVP)
-**Status:** 🟢 Complete  ← CHANGED
-**Current Version:** 1.0  ← CHANGED (was 0.4)
-**Target Version:** 1.0
-```
-
-**3. Update Revision History**
-
-```markdown
-## Revision History
-
-| Version | Date | Changes |
-|---------|------|---------|
-| 0.4 | 2026-02-06 | Initial implementation (basic shader) |
-| 1.0 | 2026-02-07 | Full spec implementation ← ADDED
-```
-
-**4. Commit the Documentation Changes**
-
-```bash
-git add docs/plans/MASTER-synesthesiapay-bridge.md
-git add docs/plans/features/captain-nova-hologram.md
-git commit -m "docs: mark hologram shader as complete
-
-Updated status from 🟡 In Progress to 🟢 Complete.
-All acceptance criteria verified passing."
-```
-
-### Status Change Rules
-
-**🔴 Not Started → 🟡 In Progress**
-- When: You begin working on the feature
-- Requires: Declaration in master doc
-
-**🟡 In Progress → 🟢 Complete**
-- When: ALL acceptance criteria pass
-- Requires: Testing completed, documentation updated
-
-**🟡 In Progress → 🔴 Not Started**
-- When: You decide to stop and work on something else
-- Requires: Brief note explaining why (in master doc)
-
-**🟢 Complete → 🔵 Needs Polish**
-- When: Feature works but you discover quality issues
-- Requires: List of specific polish items in feature spec
-
-**🔵 Needs Polish → 🟢 Complete**
-- When: Polish items completed
-- Requires: Verification of polish acceptance criteria
-
-**Never go backwards from 🟢 Complete to 🔴 Not Started**
-- If a completed feature breaks, mark it 🔵 Needs Polish
-- Create a new task for the fix (don't un-complete it)
+This keeps the git history clean and makes it easy to distinguish code changes from documentation updates.
 
 ---
 

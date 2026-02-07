@@ -439,6 +439,80 @@ Current pace: $4,200/mo ✅ On track
 
 ---
 
+## Implementation Checklist
+
+### Phase 1: Data Model & Card Database
+- [ ] Define Pydantic models: CreditCard, RewardsRule, BonusCategory, SpendingCap
+- [ ] Create DynamoDB table for card profiles with GSI on issuer
+- [ ] Build card import/sync system (manual upload or plaid-like integration)
+- [ ] Create mock card data for 3 test cards (Sapphire Reserve, Freedom Flex, Discover)
+- [ ] Build card management API endpoint (GET /cards, POST /cards/{id}/update)
+
+### Phase 2: AI Recommendation Engine
+- [ ] Set up Pydantic AI agent with Claude Sonnet 4.5
+- [ ] Implement `analyze_transaction()` function with portfolio context
+- [ ] Create system prompt for card optimization logic
+- [ ] Test recommendation accuracy against manual calculations
+- [ ] Add reasoning explanation generation
+
+### Phase 3: Category Detection
+- [ ] Build merchant categorization agent using Claude
+- [ ] Create merchant → category cache (in-memory + Redis for scale)
+- [ ] Implement category learning from user overrides
+- [ ] Set up common merchant database (Chipotle → dining, Target → shopping)
+
+### Phase 4: Spending Cap Tracking
+- [ ] Build spending cap validation logic (`check_spending_cap()`)
+- [ ] Implement quarterly cap monitoring
+- [ ] Create cap utilization UI indicators
+- [ ] Set up warning threshold (80% utilization)
+
+### Phase 5: Rotating Category Management
+- [ ] Implement rotating category detection (Chase Freedom, Discover)
+- [ ] Build activation reminder system
+- [ ] Create CTA component for activation
+- [ ] Wire to Chase website for one-click activation
+
+### Phase 6: Annual Fee ROI Calculator
+- [ ] Implement ROI calculation for each card
+- [ ] Create annual rewards tracking
+- [ ] Build breakeven spend calculator
+- [ ] Display ROI in Card Fleet UI
+
+### Phase 7: Frontend Integration
+- [ ] Create CardSelector.tsx component
+- [ ] Integrate with transaction flow (show before checkout)
+- [ ] Build card option display with reasoning
+- [ ] Implement useQuery for recommendations
+- [ ] Add confirmation flow
+
+### Phase 8: Testing & Optimization
+- [ ] Unit test recommendation accuracy (100% on calculations)
+- [ ] Load test recommendation latency (< 500ms)
+- [ ] Integration test with VISA data
+- [ ] Performance optimize merchant categorization
+- [ ] Set up monitoring/logging for AI decisions
+
+### Phase 9: Documentation & Cleanup
+- [ ] Update this feature spec: set Status to 🟢 Complete, bump Current Version, add Revision History entry
+- [ ] Update `MASTER-synesthesiapay-bridge.md`: change this feature's status in the Feature Catalog table
+- [ ] Update `IMPLEMENTATION-GUIDE.md`: note progress in any relevant phase tracking
+- [ ] Commit documentation changes separately from code: `docs: mark Credit Card Intelligence as complete`
+
+---
+
+## Completion Protocol
+
+When this feature's implementation is finished and all acceptance criteria pass, the implementing agent **must** update the following documents before considering the work done:
+
+1. **This feature spec** — Set `Status` to 🟢 Complete (or 🔵 Needs Polish if partially done), update `Current Version`, and add a row to the Revision History table.
+2. **Master Document** (`docs/plans/MASTER-synesthesiapay-bridge.md`) — Update this feature's row in the Feature Catalog to reflect the new status.
+3. **Implementation Guide** (`docs/plans/IMPLEMENTATION-GUIDE.md`) — Record any learnings, update phase progress tracking, and note actual vs estimated time if a build guide was created.
+
+These documentation updates should be committed separately from code changes. See the Implementation Guide's [Status Updates](../IMPLEMENTATION-GUIDE.md#status-updates) section for detailed instructions.
+
+---
+
 ## Revision History
 
 | Version | Date | Changes |

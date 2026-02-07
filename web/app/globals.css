@@ -1,11 +1,12 @@
-@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap');
+@import "tailwindcss";
 
 :root {
   /* Aurora colors - dynamically updated via JavaScript */
   --aurora-primary: #8b5cf6;
   --aurora-secondary: #6366f1;
   --aurora-tertiary: #3b82f6;
+  --aurora-primary-rgb: 139, 92, 246;
 
   /* Space colors */
   --space-black: #030818;
@@ -188,15 +189,315 @@ body {
   z-index: 9998;
 }
 
-/* Vignette effect */
-.vignette {
-  position: fixed;
-  inset: 0;
-  background: radial-gradient(
-    ellipse at center,
-    transparent 40%,
-    rgba(0, 0, 0, 0.7) 100%
-  );
-  pointer-events: none;
-  z-index: 9997;
+
+/* ========================================
+   GLASSMORPHISM PANEL SYSTEM
+   ======================================== */
+
+/* Keyframe animations */
+@keyframes glass-panel-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+    backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    backdrop-filter: blur(20px);
+  }
+}
+
+@keyframes glass-panel-exit {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+    backdrop-filter: blur(0px);
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 0 30px rgba(var(--aurora-primary-rgb), 0.15);
+  }
+  50% {
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 0 50px rgba(var(--aurora-primary-rgb), 0.3);
+  }
+}
+
+@keyframes red-glow-pulse {
+  0%, 100% {
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 0 30px rgba(220, 38, 38, 0.25);
+  }
+  50% {
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 0 50px rgba(220, 38, 38, 0.4);
+  }
+}
+
+/* Base glass-panel class */
+.glass-panel {
+  background: rgba(6, 10, 22, 0.6);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid rgba(var(--aurora-primary-rgb), 0.3);
+  border-radius: 12px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 30px rgba(var(--aurora-primary-rgb), 0.15);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Depth Level 1: Background Panels */
+.glass-panel-level-1 {
+  background: rgba(6, 10, 22, 0.55);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid rgba(var(--aurora-primary-rgb), 0.3);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 20px rgba(var(--aurora-primary-rgb), 0.1);
+}
+
+/* Depth Level 2: Card Panels */
+.glass-panel-level-2 {
+  background: rgba(6, 10, 22, 0.65);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgba(var(--aurora-primary-rgb), 0.4);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 30px rgba(var(--aurora-primary-rgb), 0.1);
+}
+
+/* Depth Level 3: Overlay Panels */
+.glass-panel-level-3 {
+  background: rgba(6, 10, 22, 0.75);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  border: 1.5px solid rgba(var(--aurora-primary-rgb), 0.5);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 40px rgba(var(--aurora-primary-rgb), 0.2);
+}
+
+/* Depth Level 4: Critical Alerts */
+.glass-panel-level-4 {
+  background: rgba(220, 38, 38, 0.15);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  border: 2px solid rgba(220, 38, 38, 0.6);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 30px rgba(220, 38, 38, 0.25);
+}
+
+/* Variant: Default */
+.glass-panel-default {
+  border-color: rgba(var(--aurora-primary-rgb), 0.3);
+}
+
+/* Variant: Warning (Yellow) */
+.glass-panel-warning {
+  border-color: rgba(251, 146, 60, 0.5);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 30px rgba(251, 146, 60, 0.2);
+}
+
+/* Variant: Error (Red) */
+.glass-panel-error {
+  border-color: rgba(220, 38, 38, 0.6);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 30px rgba(220, 38, 38, 0.25);
+}
+
+/* Variant: Success (Green) */
+.glass-panel-success {
+  border-color: rgba(34, 197, 94, 0.5);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 30px rgba(34, 197, 94, 0.2);
+}
+
+/* Hoverable state */
+.glass-panel-hoverable:hover {
+  background: rgba(6, 10, 22, 0.7);
+  border-color: rgba(var(--aurora-primary-rgb), 0.5);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 40px rgba(var(--aurora-primary-rgb), 0.25);
+  transform: translateY(-2px);
+  cursor: pointer;
+}
+
+.glass-panel-warning.glass-panel-hoverable:hover {
+  border-color: rgba(251, 146, 60, 0.7);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 40px rgba(251, 146, 60, 0.35);
+}
+
+.glass-panel-error.glass-panel-hoverable:hover {
+  border-color: rgba(220, 38, 38, 0.8);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 40px rgba(220, 38, 38, 0.35);
+}
+
+.glass-panel-success.glass-panel-hoverable:hover {
+  border-color: rgba(34, 197, 94, 0.7);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 40px rgba(34, 197, 94, 0.35);
+}
+
+/* Pulse animation (glow) */
+.glass-panel-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+.glass-panel-pulse.glass-panel-error,
+.glass-panel-pulse.glass-panel-level-4 {
+  animation: red-glow-pulse 2s ease-in-out infinite;
+}
+
+/* Text styling inside panels */
+.glass-panel h1,
+.glass-panel h2,
+.glass-panel h3,
+.glass-panel h4,
+.glass-panel h5,
+.glass-panel h6 {
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  font-family: 'Orbitron', sans-serif;
+}
+
+.glass-panel p,
+.glass-panel span {
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  font-family: 'Rajdhani', sans-serif;
+}
+
+.glass-panel .label {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* Fallback for browsers without backdrop-filter support */
+.no-backdrop-filter .glass-panel {
+  background: rgba(6, 10, 22, 0.95);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.no-backdrop-filter .glass-panel-level-1 {
+  background: rgba(6, 10, 22, 0.9);
+}
+
+.no-backdrop-filter .glass-panel-level-2 {
+  background: rgba(6, 10, 22, 0.93);
+}
+
+.no-backdrop-filter .glass-panel-level-3 {
+  background: rgba(6, 10, 22, 0.96);
+}
+
+/* Low performance mode */
+.low-performance-mode .glass-panel {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: rgba(6, 10, 22, 0.9);
+}
+
+.low-performance-mode .glass-panel-pulse {
+  animation: none;
+}
+
+/* ========================================
+   COLD BOOT SEQUENCE STYLES
+   ======================================== */
+
+.cold-boot-overlay {
+  will-change: opacity;
+}
+
+.boot-text {
+  will-change: opacity;
+  text-shadow: 0 0 20px rgba(139, 92, 246, 0.4);
+}
+
+.progress-bar {
+  will-change: opacity;
+}
+
+.progress-bar-fill {
+  will-change: width;
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.6);
+}
+
+.aurora-shimmer {
+  will-change: opacity;
+}
+
+.flash {
+  will-change: opacity;
+}
+
+.eyelid-top,
+.eyelid-bottom {
+  will-change: transform;
+}
+
+.corner-bracket {
+  will-change: opacity, transform;
+  box-shadow: inset 0 0 15px rgba(139, 92, 246, 0.2);
+  transition: border-color 0.3s ease;
+}
+
+.corner-bracket:not(.opacity-0) {
+  border-color: rgba(139, 92, 246, 0.6) !important;
+  box-shadow: inset 0 0 15px rgba(139, 92, 246, 0.4), 0 0 10px rgba(139, 92, 246, 0.3);
+}
+
+.side-beam-left,
+.side-beam-right {
+  will-change: transform, opacity;
+}
+
+.top-bar-boot,
+.bottom-console-boot {
+  will-change: transform, opacity;
 }

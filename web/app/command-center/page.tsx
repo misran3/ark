@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useSeamlessTransition } from '@/hooks/useSeamlessTransition';
 import { useFinancialSnapshot, useBudgetReport } from '@/hooks/useFinancialData';
+import { GlassPanel } from '@/components/ui/GlassPanel';
+import { MetricCard } from '@/components/ui/MetricCard';
 
 export default function CommandCenterPage() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -75,39 +77,28 @@ function OverviewTab({ snapshot, budget }: { snapshot?: any; budget?: any }) {
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-[fi_0.4s_ease-out] opacity-100">
       {/* Hero Metrics */}
-      <div className="text-center glass p-6 rounded-lg">
+      <GlassPanel level={2} className="text-center p-6">
         <div className="font-orbitron text-[7px] tracking-[4px] text-aurora-primary/25 mb-2">
           TOTAL NET WORTH
         </div>
         <div className="text-5xl font-black aurora-text mb-1">${netWorth.toLocaleString()}</div>
         <div className="text-sm text-green-500 font-semibold">
-          ▲ +$1,247 this cycle · +2.7%
+          +$1,247 this cycle · +2.7%
         </div>
-      </div>
+      </GlassPanel>
 
       {/* Quick Metrics Grid */}
       <div className="grid grid-cols-4 gap-4">
-        {[
-          { label: 'INCOME', value: `$${snapshot?.monthly_income.toLocaleString() || '6,240'}`, color: 'text-cyan-500' },
-          { label: 'SAVINGS', value: `$${savings.toLocaleString()}`, color: 'text-green-500' },
-          { label: 'SPENDING', value: `$${snapshot?.monthly_spending.toLocaleString() || '3,891'}`, color: 'text-purple-500' },
-          { label: 'INVEST', value: '$22,100', color: 'text-yellow-500' },
-        ].map((metric, i) => (
-          <div key={i} className="glass p-4 rounded-lg text-center">
-            <div className="font-orbitron text-[6px] tracking-[3px] text-aurora-primary/25 mb-2">
-              {metric.label}
-            </div>
-            <div className={`text-2xl font-bold ${metric.color}`}>
-              {metric.value}
-            </div>
-          </div>
-        ))}
+        <MetricCard title="INCOME" value={`$${snapshot?.monthly_income.toLocaleString() || '6,240'}`} trend={3.2} color="text-cyan-500" />
+        <MetricCard title="SAVINGS" value={`$${savings.toLocaleString()}`} trend={1.8} color="text-green-500" />
+        <MetricCard title="SPENDING" value={`$${snapshot?.monthly_spending.toLocaleString() || '3,891'}`} trend={-5.1} color="text-purple-500" />
+        <MetricCard title="INVEST" value="$22,100" trend={4.7} color="text-yellow-500" />
       </div>
 
       {/* Two Column Layout */}
       <div className="grid grid-cols-2 gap-4">
         {/* Active Threats */}
-        <div className="glass p-4 rounded-lg">
+        <GlassPanel level={2} variant="warning" className="p-4">
           <div className="font-orbitron text-[7px] tracking-[3px] text-aurora-primary/25 mb-3">
             ACTIVE THREATS
           </div>
@@ -117,6 +108,8 @@ function OverviewTab({ snapshot, budget }: { snapshot?: any; budget?: any }) {
               { label: 'DINING SURGE', sub: '142% over budget', color: '#a855f7' },
               { label: 'STREAMING BILLS', sub: 'Renews in 48h', color: '#fbbf24' },
               { label: 'MISSED REWARDS', sub: '$12/mo lost', color: '#06b6d4' },
+              { label: 'DEBT SPIRAL', sub: 'Compounding at 24.9% APR', color: '#4c1d95' },
+              { label: 'FRAUD ALERT', sub: 'Suspicious $892 charge', color: '#991b1b' },
             ].map((threat, i) => (
               <div key={i} className="flex items-center gap-2 text-xs">
                 <div
@@ -133,10 +126,10 @@ function OverviewTab({ snapshot, budget }: { snapshot?: any; budget?: any }) {
               </div>
             ))}
           </div>
-        </div>
+        </GlassPanel>
 
         {/* Shield Status */}
-        <div className="glass p-4 rounded-lg">
+        <GlassPanel level={2} className="p-4">
           <div className="font-orbitron text-[7px] tracking-[3px] text-aurora-primary/25 mb-3">
             SHIELD STATUS
           </div>
@@ -170,7 +163,7 @@ function OverviewTab({ snapshot, budget }: { snapshot?: any; budget?: any }) {
               </div>
             ))}
           </div>
-        </div>
+        </GlassPanel>
       </div>
     </div>
   );
@@ -180,7 +173,7 @@ function OverviewTab({ snapshot, budget }: { snapshot?: any; budget?: any }) {
 function BudgetTab({ budget }: { budget?: any }) {
   return (
     <div className="max-w-4xl mx-auto space-y-4 animate-[fi_0.4s_ease-out]">
-      <div className="glass p-6 rounded-lg">
+      <GlassPanel level={2} className="p-6">
         <div className="font-orbitron text-sm tracking-[2px] text-aurora-primary mb-4">
           50/30/20 BUDGET ANALYSIS
         </div>
@@ -212,33 +205,33 @@ function BudgetTab({ budget }: { budget?: any }) {
             },
           ].map((budgetItem, i) => (
             <div key={i} className="flex items-center gap-4">
-              <div className="text-2xl">{budget.icon}</div>
+              <div className="text-2xl">{budgetItem.icon}</div>
               <div className="flex-1">
-                <div className="font-semibold text-sm">{budget.name}</div>
-                <div className="text-xs opacity-40">{budget.sub}</div>
+                <div className="font-semibold text-sm">{budgetItem.name}</div>
+                <div className="text-xs opacity-40">{budgetItem.sub}</div>
               </div>
               <div className="w-48">
                 <div className="h-2 bg-white/5 rounded-full overflow-hidden mb-1">
                   <div
-                    className={`h-full bg-gradient-to-r from-${budget.color}-500 to-cyan-500 transition-all duration-1000`}
-                    style={{ width: `${Math.min((budget.pct / budget.alloc) * 100, 100)}%` }}
+                    className={`h-full bg-gradient-to-r from-${budgetItem.color}-500 to-cyan-500 transition-all duration-1000`}
+                    style={{ width: `${Math.min((budgetItem.pct / budgetItem.alloc) * 100, 100)}%` }}
                   />
                 </div>
                 <div className="text-xs text-right font-orbitron">
                   <span
                     className={
-                      budget.pct > budget.alloc ? 'text-red-500' : 'text-green-500'
+                      budgetItem.pct > budgetItem.alloc ? 'text-red-500' : 'text-green-500'
                     }
                   >
-                    {budget.pct}%
+                    {budgetItem.pct}%
                   </span>{' '}
-                  / {budget.alloc}%
+                  / {budgetItem.alloc}%
                 </div>
               </div>
             </div>
           ))}
         </div>
-      </div>
+      </GlassPanel>
     </div>
   );
 }
@@ -246,30 +239,30 @@ function BudgetTab({ budget }: { budget?: any }) {
 // Placeholder tabs
 function FleetTab() {
   return (
-    <div className="glass p-6 rounded-lg text-center animate-[fi_0.4s_ease-out]">
+    <GlassPanel level={2} className="p-6 text-center animate-[fi_0.4s_ease-out]">
       <div className="text-4xl mb-2">💳</div>
       <div className="font-orbitron text-aurora-primary">CARD FLEET MODULE</div>
       <div className="text-sm opacity-40 mt-2">Card optimization coming soon...</div>
-    </div>
+    </GlassPanel>
   );
 }
 
 function ThreatsTab() {
   return (
-    <div className="glass p-6 rounded-lg text-center animate-[fi_0.4s_ease-out]">
+    <GlassPanel level={2} variant="error" pulse className="p-6 text-center animate-[fi_0.4s_ease-out]">
       <div className="text-4xl mb-2">☄️</div>
       <div className="font-orbitron text-aurora-primary">THREAT MANAGEMENT</div>
       <div className="text-sm opacity-40 mt-2">Advanced threat analysis coming soon...</div>
-    </div>
+    </GlassPanel>
   );
 }
 
 function TravelTab() {
   return (
-    <div className="glass p-6 rounded-lg text-center animate-[fi_0.4s_ease-out]">
+    <GlassPanel level={2} className="p-6 text-center animate-[fi_0.4s_ease-out]">
       <div className="text-4xl mb-2">✈️</div>
       <div className="font-orbitron text-aurora-primary">TRAVEL OPTIMIZATION</div>
       <div className="text-sm opacity-40 mt-2">Lounge access & perks coming soon...</div>
-    </div>
+    </GlassPanel>
   );
 }

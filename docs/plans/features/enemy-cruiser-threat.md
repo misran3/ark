@@ -388,12 +388,100 @@ def calculate_fraud_risk(txn: Transaction) -> float:
 
 ---
 
+## Brainstormed Enhancements
+
+### Visual Enhancements
+
+**1. Stealth Approach**
+Cruiser starts CLOAKED — a Predator-style refraction shimmer that's barely visible against the starfield. Only becomes fully visible when the targeting system detects and locks on. This represents how fraud starts hidden and requires detection to reveal. The "de-cloak" moment (shimmer -> solid hostile ship) should be a dramatic reveal.
+
+**2. Electronic Warfare Interference**
+The cruiser actively scrambles nearby UI elements. Text garbles and re-corrects. Numbers briefly show wrong values. Panel borders flicker and distort. The effect intensifies with proximity. This represents the chaos that identity theft causes to your financial information — your own data becomes unreliable.
+
+**3. Warp-In Entry**
+Cruisers don't drift in from distance like other threats. They WARP IN — a sudden space distortion, a flash, and the ship is there at medium range. No warning from the distance. This communicates the sudden nature of fraud. One moment everything's fine, the next you're under attack.
+
+**4. Fleet Escalation**
+If account is under coordinated attack (multiple fraudulent transactions), cruisers arrive in formation — 3-5 ships in V-pattern. Each represents a different fraudulent charge. They coordinate their approach, sharing targeting data (visible data streams between ships). Defeating the lead ship doesn't stop the others.
+
+### Interaction Enhancements
+
+**5. Shield Frequency Matching**
+Deflection isn't just a click — the user must "match shield frequency" by selecting the correct verification method (2FA code, biometric confirm, security question). A simple 1-second interactive moment that represents the verification step and makes the defense feel earned.
+
+**6. Wreckage Intelligence**
+After defeating a cruiser, its debris field can be "scanned" (hover over wreckage for 2 seconds). The scan reveals intelligence about the fraud: origin location, device used, attack pattern. This serves as an educational moment — users learn what fraud indicators look like while feeling like they're conducting post-battle analysis.
+
+**7. Cruiser Personality**
+Different fraud types get different cruiser variants:
+- **Interceptor** (small, fast): Single suspicious transaction
+- **Destroyer** (medium, armed): Multiple related fraud attempts
+- **Dreadnought** (large, heavily armored): Full identity theft attempt
+Each has distinct silhouette and threat level, making the threat type readable at a glance.
+
+**8. Hackathon Reframe**
+For demo purposes, reframe from real-time fraud interception to "Security Review" mode. Show historical fraud that was caught, present it as a battle replay. This avoids the liability concern of users manually approving/blocking live transactions, while keeping the dramatic combat interaction.
+
+---
+
 ## Related Features
 
-- `BACKEND-007`: VISA Fraud Detection (spawns cruisers)
-- `BACKEND-008`: Transaction Control API (blocks charges)
+- `BACKEND-001`: Threat Detection Engine (spawns cruisers from fraud data)
+- `BACKEND-002`: VISA Controls API (blocks charges)
 - `UI-008`: Security Log Panel (shows blocked attempts)
 - `FINANCIAL-007`: Identity Protection System
+
+---
+
+## Implementation Checklist
+
+### Phase 1: Ship Model & Rendering
+- [ ] Load enemy-cruiser.glb model
+- [ ] Apply hull and emissive textures
+- [ ] Implement red glow shader
+- [ ] Test on starfield background
+
+### Phase 2: Movement & Behavior
+- [ ] Implement spawning logic (random radius 1000-1200 units)
+- [ ] Code approach/combat/attack phases
+- [ ] Implement evasion dodging behavior
+- [ ] Add sine-wave strafing pattern
+
+### Phase 3: Hover & Targeting
+- [ ] Create targeting reticle (red, with health display)
+- [ ] Implement threat assessment panel UI
+- [ ] Add lock-on beeping audio
+- [ ] Weapon turret tracking animation
+
+### Phase 4: Click Interaction - Defensive Sequence
+- [ ] Implement weapons lock laser (0-200ms)
+- [ ] Add cruiser evasion maneuvers
+- [ ] Build VISA protection shield visualization
+- [ ] Create transaction block "DECLINED" stamp
+
+### Phase 5: Countermeasure & Aftermath
+- [ ] Implement laser impact explosion
+- [ ] Add cruiser retreat animation
+- [ ] Build security log UI panel
+- [ ] Integrate Captain Nova debrief dialogue
+
+### Phase 6: Documentation & Cleanup
+- [ ] Update this feature spec: set Status to 🟢 Complete, bump Current Version, add Revision History entry
+- [ ] Update `MASTER-synesthesiapay-bridge.md`: change this feature's status in the Feature Catalog table
+- [ ] Update `IMPLEMENTATION-GUIDE.md`: note progress in any relevant phase tracking
+- [ ] Commit documentation changes separately from code: `docs: mark enemy-cruiser-threat as complete`
+
+---
+
+## Completion Protocol
+
+When this feature's implementation is finished and all acceptance criteria pass, the implementing agent **must** update the following documents before considering the work done:
+
+1. **This feature spec** — Set `Status` to 🟢 Complete (or 🔵 Needs Polish if partially done), update `Current Version`, and add a row to the Revision History table.
+2. **Master Document** (`docs/plans/MASTER-synesthesiapay-bridge.md`) — Update this feature's row in the Feature Catalog to reflect the new status.
+3. **Implementation Guide** (`docs/plans/IMPLEMENTATION-GUIDE.md`) — Record any learnings, update phase progress tracking, and note actual vs estimated time if a build guide was created.
+
+These documentation updates should be committed separately from code changes. See the Implementation Guide's [Status Updates](../IMPLEMENTATION-GUIDE.md#status-updates) section for detailed instructions.
 
 ---
 

@@ -427,6 +427,12 @@ utterance.onmark = (event) => {
 - [ ] Add tools used pills
 - [ ] Test edge cases (long text, special chars)
 
+### Phase 6: Documentation & Cleanup
+- [ ] Update this feature spec: set Status to 🟢 Complete, bump Current Version, add Revision History entry
+- [ ] Update `MASTER-synesthesiapay-bridge.md`: change this feature's status in the Feature Catalog table
+- [ ] Update `IMPLEMENTATION-GUIDE.md`: note progress in any relevant phase tracking
+- [ ] Commit documentation changes separately from code: `docs: mark text-to-speech as complete`
+
 ---
 
 ## Related Features
@@ -434,7 +440,7 @@ utterance.onmark = (event) => {
 - `NOVA-003`: Mouth Animation Sync (uses phoneme data from this system)
 - `NOVA-001`: Captain Nova Hologram (breathing syncs with speech)
 - `UI-003`: Captain Nova UI Panel (displays text being spoken)
-- `BACKEND-003`: AI Response Generation (provides text to speak)
+- `BACKEND-001`: Threat Detection Engine / AI Analysis (provides text to speak)
 
 ---
 
@@ -448,6 +454,18 @@ utterance.onmark = (event) => {
 | Edge 120+ | ✅ Excellent | Good | Microsoft voices available |
 | Mobile Safari | ✅ Good | Good | Works but may require user gesture |
 | Mobile Chrome | ✅ Good | Good | Works with limitations |
+
+---
+
+## Completion Protocol
+
+When this feature's implementation is finished and all acceptance criteria pass, the implementing agent **must** update the following documents before considering the work done:
+
+1. **This feature spec** — Set `Status` to 🟢 Complete (or 🔵 Needs Polish if partially done), update `Current Version`, and add a row to the Revision History table.
+2. **Master Document** (`docs/plans/MASTER-synesthesiapay-bridge.md`) — Update this feature's row in the Feature Catalog to reflect the new status.
+3. **Implementation Guide** (`docs/plans/IMPLEMENTATION-GUIDE.md`) — Record any learnings, update phase progress tracking, and note actual vs estimated time if a build guide was created.
+
+These documentation updates should be committed separately from code changes. See the Implementation Guide's [Status Updates](../IMPLEMENTATION-GUIDE.md#status-updates) section for detailed instructions.
 
 ---
 

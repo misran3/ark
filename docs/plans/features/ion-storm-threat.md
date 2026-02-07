@@ -417,12 +417,93 @@ function LightningArc({ start, end }: { start: Vector3; end: Vector3 }) {
 
 ---
 
+## Brainstormed Enhancements
+
+### Visual Enhancements
+
+**1. Category Bleed Tendrils**
+Storm tendrils (thin particle streams) reach toward OTHER budget categories' shield bars, visualizing how overspending in one area threatens to "spread." If dining is over budget, purple tendrils stretch toward the Recreation Deck shield. This makes the interconnected nature of budgets tangible and spatial.
+
+**2. Calm Eye Reveal**
+The center of the storm occasionally clears for 2-3 seconds, revealing the actual spending number floating in the void — a moment of clarity amid chaos. The number pulses, then the storm closes back around it. Creates a haunting "the truth is in there" effect.
+
+**3. Color Temperature Shift**
+Storm color shifts dynamically based on severity: purple (10-20% over budget) -> hot pink (20-50% over) -> angry red (50%+ over). The color change is gradual and continuous, providing an instant visual read on how bad the overrun is without needing to hover for details.
+
+**4. Contagion Arcs**
+If multiple ion storms exist simultaneously, lightning can arc BETWEEN them — showing interconnected overspending patterns. Two storms linked by arcs feel more dangerous than two isolated ones, communicating that simultaneous budget overruns compound each other.
+
+### Interaction Enhancements
+
+**5. Intensity Meter HUD**
+When hovering, a small "VOLATILITY" gauge appears that fluctuates randomly (like a seismograph). The gauge occasionally spikes, and each spike corresponds to the storm surging forward briefly. Creates tension — you never know when the next surge hits.
+
+**6. Absorption Tug-of-War**
+During the absorption sequence, the storm doesn't go quietly. It "fights back" — particles resist the containment field, lightning strikes the barrier, and there's a visible power struggle. The containment field flickers and strains. This makes the absorption feel earned, not trivial.
+
+**7. Static Screen Interference**
+The closer an ion storm gets, the more it interferes with the UI itself. Nearby text garbles briefly, panel borders flicker, numbers scramble for a frame then correct. Subtle at Zone 3, noticeable at Zone 4. The storm is literally disrupting your command systems.
+
+---
+
 ## Related Features
 
 - `THREAT-001`: Asteroid Threats (contrast: solid vs cloud)
-- `THREAT-006`: Threat Detection Engine (spawns storms from spending data)
+- `BACKEND-001`: Threat Detection Engine (spawns storms from spending data)
 - `UI-004`: Shield Status Panels (VISA controls integration)
-- `BACKEND-004`: VISA Controls API (activates spend limits)
+- `BACKEND-002`: VISA Controls API (activates spend limits)
+
+---
+
+## Implementation Checklist
+
+### Phase 1: Particle System
+- [ ] Initialize particle geometry (300 particles)
+- [ ] Implement orbital + Perlin noise drift
+- [ ] Apply additive blending and gradient colors
+- [ ] Test particle performance at 60fps
+
+### Phase 2: Electrical Arcs
+- [ ] Implement lightning path generation (jagged bezier)
+- [ ] Create arc spawning system (3-5 active arcs)
+- [ ] Add arc material (bright electric blue, bloom)
+- [ ] Implement arc fade-out animation (200-400ms)
+
+### Phase 3: Movement & Behavior
+- [ ] Implement spawning logic (random radius 1000-1200 units)
+- [ ] Code wander + noise-based approach
+- [ ] Add sine-wave horizontal wobble pattern
+- [ ] Implement surge behavior (2x speed, 5-8 arcs)
+
+### Phase 4: Hover & Targeting
+- [ ] Implement targeting ring visualization
+- [ ] Create info panel with overspend details
+- [ ] Add electric crackling audio
+- [ ] Implement arcs reaching toward cursor
+
+### Phase 5: Click Interaction - Absorption Sequence
+- [ ] Create containment field (wireframe, purple glow)
+- [ ] Implement energy drain streams (purple ribbons)
+- [ ] Build shield overload effect
+- [ ] Integrate Captain Nova dialogue
+
+### Phase 6: Documentation & Cleanup
+- [ ] Update this feature spec: set Status to 🟢 Complete, bump Current Version, add Revision History entry
+- [ ] Update `MASTER-synesthesiapay-bridge.md`: change this feature's status in the Feature Catalog table
+- [ ] Update `IMPLEMENTATION-GUIDE.md`: note progress in any relevant phase tracking
+- [ ] Commit documentation changes separately from code: `docs: mark ion-storm-threat as complete`
+
+---
+
+## Completion Protocol
+
+When this feature's implementation is finished and all acceptance criteria pass, the implementing agent **must** update the following documents before considering the work done:
+
+1. **This feature spec** — Set `Status` to 🟢 Complete (or 🔵 Needs Polish if partially done), update `Current Version`, and add a row to the Revision History table.
+2. **Master Document** (`docs/plans/MASTER-synesthesiapay-bridge.md`) — Update this feature's row in the Feature Catalog to reflect the new status.
+3. **Implementation Guide** (`docs/plans/IMPLEMENTATION-GUIDE.md`) — Record any learnings, update phase progress tracking, and note actual vs estimated time if a build guide was created.
+
+These documentation updates should be committed separately from code changes. See the Implementation Guide's [Status Updates](../IMPLEMENTATION-GUIDE.md#status-updates) section for detailed instructions.
 
 ---
 

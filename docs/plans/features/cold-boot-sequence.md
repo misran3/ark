@@ -516,7 +516,69 @@ export function ColdBootSequence({ onComplete }: { onComplete: () => void }) {
 - `NOVA-001`: Captain Nova Hologram (materialization)
 - `NOVA-002`: Text-to-Speech (first words)
 - `UI-001`: Command Bridge Main View (revealed by sequence)
-- `DESIGN-001`: Aurora Color System (used throughout)
+- Aurora Color System (used throughout boot sequence)
+
+---
+
+## Implementation Checklist
+
+### Phase 1: UI Layout & Text Animation
+- [ ] Build boot screen layout (centered text, progress bar)
+- [ ] Implement glitch effect on "SYNESTHESIAPAY" text
+- [ ] Animate progress bar (0-100% over 2s)
+- [ ] Add particle flow along progress bar
+
+### Phase 2: Viewport & Starfield
+- [ ] Create eyelid divs (top/bottom)
+- [ ] Implement eyelid open animation (2s-2.6s)
+- [ ] Build starfield background (5000 stars)
+- [ ] Implement depth-based fade-in (parallax layers)
+- [ ] Add star twinkling with aurora color pulse
+
+### Phase 3: Bridge Frame Materialization
+- [ ] Create corner bracket components
+- [ ] Implement bracket fade-in + scale animation (4s-4.4s)
+- [ ] Build side beam elements with glow
+- [ ] Implement top status bar slide down (4.8s-5.1s)
+- [ ] Implement bottom console slide up (5.1s-5.4s)
+
+### Phase 4: Captain Nova Materialization
+- [ ] Create projection cone Three.js component
+- [ ] Implement particle swirl system (7s-8.5s)
+- [ ] Implement form coalescence (8.5s-9.5s)
+- [ ] Activate hologram shader effects (9.5s-10s)
+- [ ] Sync with Three.js nova model
+
+### Phase 5: First Contact Speech
+- [ ] Create speech bubble component (glassmorphism)
+- [ ] Integrate text-to-speech engine
+- [ ] Implement typewriter text animation
+- [ ] Sync text with voice playback
+- [ ] Add tools used pills (13.5s-14s)
+
+### Phase 6: Timeline Integration & Audio
+- [ ] Build GSAP master timeline (coordinating all phases)
+- [ ] Add audio assets (hum, whoosh, slide, particle-swirl, lock-beep)
+- [ ] Sync audio with visual timeline
+- [ ] Implement skip functionality (user can bypass sequence)
+
+### Phase 7: Documentation & Cleanup
+- [ ] Update this feature spec: set Status to 🟢 Complete, bump Current Version, add Revision History entry
+- [ ] Update `MASTER-synesthesiapay-bridge.md`: change this feature's status in the Feature Catalog table
+- [ ] Update `IMPLEMENTATION-GUIDE.md`: note progress in any relevant phase tracking
+- [ ] Commit documentation changes separately from code: `docs: mark cold-boot-sequence as complete`
+
+---
+
+## Completion Protocol
+
+When this feature's implementation is finished and all acceptance criteria pass, the implementing agent **must** update the following documents before considering the work done:
+
+1. **This feature spec** — Set `Status` to 🟢 Complete (or 🔵 Needs Polish if partially done), update `Current Version`, and add a row to the Revision History table.
+2. **Master Document** (`docs/plans/MASTER-synesthesiapay-bridge.md`) — Update this feature's row in the Feature Catalog to reflect the new status.
+3. **Implementation Guide** (`docs/plans/IMPLEMENTATION-GUIDE.md`) — Record any learnings, update phase progress tracking, and note actual vs estimated time if a build guide was created.
+
+These documentation updates should be committed separately from code changes. See the Implementation Guide's [Status Updates](../IMPLEMENTATION-GUIDE.md#status-updates) section for detailed instructions.
 
 ---
 

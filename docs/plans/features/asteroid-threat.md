@@ -554,6 +554,38 @@ interface ThreatStore {
 - [ ] Test with multiple asteroids
 - [ ] Edge case testing (rapid clicks, off-screen, etc.)
 
+### Phase 8: Documentation & Cleanup
+- [ ] Update this feature spec: set Status to 🟢 Complete, bump Current Version, add Revision History entry
+- [ ] Update `MASTER-synesthesiapay-bridge.md`: change this feature's status in the Feature Catalog table
+- [ ] Update `IMPLEMENTATION-GUIDE.md`: note progress in any relevant phase tracking
+- [ ] Commit documentation changes separately from code: `docs: mark asteroid-threat as complete`
+
+---
+
+## Brainstormed Enhancements
+
+### Visual Enhancements
+
+**1. Frost/Decay Indicator**
+Unused subscriptions accumulate ice crystals on the asteroid surface — a visual dormancy indicator. The longer the subscription goes unused, the more frost covers the rock. A subscription dormant for 90+ days should be nearly encased in blue-white ice, making it visually obvious this charge has been dead weight for months. This makes each asteroid tell its own story at a glance.
+
+**2. Micro-Asteroid Swarm**
+Very small subscriptions ($1-10/mo) appear as swarms of 5-8 tiny asteroids rather than a single rock. They move in loose formation, creating a "nuisance cloud" visual. Deflecting one triggers a chain reaction that pops the entire swarm. This differentiates low-value recurring charges from significant ones without making them invisible.
+
+**3. Impact Crater Memory**
+When an asteroid impacts (not deflected), it leaves a visible "scar" on the viewport frame — a cracked glass effect with faint red glow. Scars accumulate over time, creating a permanent visual record of missed savings opportunities. This adds consequence weight and motivates proactive deflection.
+
+### Interaction Enhancements
+
+**4. Formation Flying**
+Multiple subscriptions from the same service provider (e.g., Spotify Premium + Spotify Family, or Netflix + Hulu under same parent company) fly in V-formation. Deflecting the lead asteroid triggers a chain reaction — all formation members explode in rapid sequence with escalating particle effects. Creates a satisfying "combo" moment.
+
+**5. Deflection Combo System**
+Rapidly deflecting 3+ asteroids within 5 seconds triggers a "COMBO" multiplier visual — cascading particle chains link the explosion sites, screen briefly flashes aurora, and Captain Nova gives an impressed reaction ("Impressive targeting, Commander! Multiple threats neutralized."). Gamification without complexity.
+
+**6. Urgency Escalation**
+As an asteroid enters Zone 3, its tumbling becomes more erratic — rotation speed increases, fire trail intensifies, and subtle screen-edge red pulses begin. The asteroid's behavior itself communicates urgency without needing to read the info panel. By Zone 4 it should feel genuinely threatening just from body language.
+
 ---
 
 ## Related Features
@@ -565,6 +597,18 @@ interface ThreatStore {
 - `THREAT-006`: Enemy Cruiser Threats (combat pattern)
 - `BACKEND-001`: Threat Detection Engine (spawns asteroids from data)
 - `UI-004`: Shield Status Panels (receives deflection updates)
+
+---
+
+## Completion Protocol
+
+When this feature's implementation is finished and all acceptance criteria pass, the implementing agent **must** update the following documents before considering the work done:
+
+1. **This feature spec** — Set `Status` to 🟢 Complete (or 🔵 Needs Polish if partially done), update `Current Version`, and add a row to the Revision History table.
+2. **Master Document** (`docs/plans/MASTER-synesthesiapay-bridge.md`) — Update this feature's row in the Feature Catalog to reflect the new status.
+3. **Implementation Guide** (`docs/plans/IMPLEMENTATION-GUIDE.md`) — Record any learnings, update phase progress tracking, and note actual vs estimated time if a build guide was created.
+
+These documentation updates should be committed separately from code changes. See the Implementation Guide's [Status Updates](../IMPLEMENTATION-GUIDE.md#status-updates) section for detailed instructions.
 
 ---
 

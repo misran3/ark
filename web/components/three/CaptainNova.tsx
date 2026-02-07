@@ -126,6 +126,7 @@ export default function CaptainNova({ position = [-4, -2, 0] }: { position?: [nu
           uniforms={shaderUniforms}
           transparent
           side={THREE.DoubleSide}
+          toneMapped={false}
         />
       </mesh>
 
@@ -138,6 +139,7 @@ export default function CaptainNova({ position = [-4, -2, 0] }: { position?: [nu
           uniforms={shaderUniforms}
           transparent
           side={THREE.DoubleSide}
+          toneMapped={false}
         />
       </mesh>
     </group>

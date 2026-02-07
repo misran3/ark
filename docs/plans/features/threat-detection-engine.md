@@ -452,6 +452,12 @@ export function ThreeScene() {
 - [ ] Load testing (simulate 100 concurrent users)
 - [ ] End-to-end test (transaction → threat appears in UI)
 
+### Phase 7: Documentation & Cleanup
+- [ ] Update this feature spec: set Status to 🟢 Complete, bump Current Version, add Revision History entry
+- [ ] Update `MASTER-synesthesiapay-bridge.md`: change this feature's status in the Feature Catalog table
+- [ ] Update `IMPLEMENTATION-GUIDE.md`: note progress in any relevant phase tracking
+- [ ] Commit documentation changes separately from code: `docs: mark threat-detection-engine as complete`
+
 ---
 
 ## Related Features
@@ -459,8 +465,8 @@ export function ThreeScene() {
 - `THREAT-001`: Asteroid Threats (spawned by this engine)
 - `THREAT-002`: Ion Storm Threats (spawned by this engine)
 - `THREAT-004`: Black Hole Threats (spawned by this engine)
-- `BACKEND-002`: VISA API Integration (provides transaction data)
-- `BACKEND-003`: AI Analysis Pipeline (Pydantic AI infrastructure)
+- VISA API Integration (provides transaction data)
+- AI Analysis Pipeline via Pydantic AI + Bedrock (Claude Sonnet 4.5)
 
 ---
 
@@ -479,6 +485,18 @@ export function ThreeScene() {
 - Batch processing: Reduce token usage 30% = $0.52/user/month
 
 **Optimized Total: ~$1.40/user/month**
+
+---
+
+## Completion Protocol
+
+When this feature's implementation is finished and all acceptance criteria pass, the implementing agent **must** update the following documents before considering the work done:
+
+1. **This feature spec** — Set `Status` to 🟢 Complete (or 🔵 Needs Polish if partially done), update `Current Version`, and add a row to the Revision History table.
+2. **Master Document** (`docs/plans/MASTER-synesthesiapay-bridge.md`) — Update this feature's row in the Feature Catalog to reflect the new status.
+3. **Implementation Guide** (`docs/plans/IMPLEMENTATION-GUIDE.md`) — Record any learnings, update phase progress tracking, and note actual vs estimated time if a build guide was created.
+
+These documentation updates should be committed separately from code changes. See the Implementation Guide's [Status Updates](../IMPLEMENTATION-GUIDE.md#status-updates) section for detailed instructions.
 
 ---
 

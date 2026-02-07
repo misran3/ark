@@ -1,7 +1,7 @@
 # SynesthesiaPay Bridge - Master Design Document
 
-**Version:** 1.0
-**Last Updated:** 2026-02-06
+**Version:** 1.4
+**Last Updated:** 2026-02-07
 **Status:** Living Document
 
 ---
@@ -14,7 +14,8 @@
 4. [Technical Architecture](#technical-architecture)
 5. [Constraints & Requirements](#constraints--requirements)
 6. [Feature Catalog](#feature-catalog)
-7. [Implementation Strategy](#implementation-strategy)
+7. [Hackathon Demo Strategy](#hackathon-demo-strategy)
+8. [Implementation Strategy](#implementation-strategy)
 
 ---
 
@@ -359,10 +360,10 @@ Lambda Functions
 
 | Feature | Status | Priority | Doc Link | Dependencies |
 |---------|--------|----------|----------|--------------|
-| Cold Boot Sequence | 🔴 Not Started | P0 | - | None |
-| Viewport Reveal Animation | 🔴 Not Started | P0 | - | Cold Boot |
+| Cold Boot Sequence | 🟢 Complete | P0 | [features/cold-boot-sequence.md](./features/cold-boot-sequence.md) | None |
+| Viewport Reveal Animation | 🟢 Complete | P0 | - | Cold Boot |
 | Starfield Initialization | 🟢 Complete | P0 | - | None |
-| Bridge Frame Materialization | 🔴 Not Started | P0 | - | Viewport Reveal |
+| Bridge Frame Materialization | 🟢 Complete | P0 | - | Viewport Reveal |
 | Captain Nova Spawn Animation | 🔴 Not Started | P0 | [features/captain-nova-hologram.md](./features/captain-nova-hologram.md) | Viewport Reveal |
 
 ---
@@ -387,15 +388,16 @@ Lambda Functions
 | Feature | Status | Priority | Doc Link | Dependencies |
 |---------|--------|----------|----------|--------------|
 | Asteroid Threats | 🔵 Needs Polish | P0 | [features/asteroid-threat.md](./features/asteroid-threat.md) | Threat Detection |
-| Ion Storm Threats | 🔵 Needs Polish | P0 | - | Threat Detection |
-| Solar Flare Threats | 🔵 Needs Polish | P0 | - | Threat Detection |
-| Black Hole Threats | 🔴 Not Started | P0 | - | Threat Detection |
-| Wormhole Threats | 🔴 Not Started | P1 | - | Threat Detection |
-| Enemy Cruiser Threats | 🔴 Not Started | P1 | - | Threat Detection |
-| Threat Detection Engine | 🔴 Not Started | P0 | - | Backend AI, Transaction Data |
+| Ion Storm Threats | 🔵 Needs Polish | P0 | [features/ion-storm-threat.md](./features/ion-storm-threat.md) | Threat Detection |
+| Solar Flare Threats | 🔵 Needs Polish | P0 | [features/solar-flare-threat.md](./features/solar-flare-threat.md) | Threat Detection |
+| Black Hole Threats | 🔵 Needs Polish | P0 | [features/black-hole-threat.md](./features/black-hole-threat.md) | Threat Detection |
+| Wormhole Threats | 🔵 Needs Polish | P1 | [features/wormhole-threat.md](./features/wormhole-threat.md) | Threat Detection |
+| Enemy Cruiser Threats | 🔵 Needs Polish | P1 | [features/enemy-cruiser-threat.md](./features/enemy-cruiser-threat.md) | Threat Detection |
+| Threat Detection Engine | 🔴 Not Started | P0 | [features/threat-detection-engine.md](./features/threat-detection-engine.md) | Backend AI, Transaction Data |
 | Targeting System | 🟡 In Progress | P0 | - | None |
 | Deflection Mechanics | 🟡 In Progress | P0 | [features/asteroid-threat.md](./features/asteroid-threat.md) | Threat objects |
-| Impact Consequences | 🔴 Not Started | P0 | - | Shield System |
+| Shield System | 🔴 Not Started | P0 | [features/shield-system.md](./features/shield-system.md) | Financial Data |
+| Impact Consequences | 🔴 Not Started | P0 | [features/shield-system.md](./features/shield-system.md) | Shield System |
 
 ---
 
@@ -414,16 +416,17 @@ Lambda Functions
 
 | Feature | Status | Priority | Doc Link | Dependencies |
 |---------|--------|----------|----------|--------------|
-| Command Bridge Main View | 🔵 Needs Polish | P0 | - | None |
-| Overview Tab | 🟡 In Progress | P0 | - | Financial Data |
-| Budget Analysis Tab | 🟡 In Progress | P0 | - | Financial Data |
-| Fleet Management Tab | 🔴 Not Started | P1 | - | Card Data |
-| Threats Tab | 🔴 Not Started | P0 | - | Threat Detection |
-| Travel / Goals Tab | 🔴 Not Started | P1 | - | None |
-| Shield Status Panels | 🔵 Needs Polish | P0 | - | Financial Data |
+| Command Bridge Main View | 🔵 Needs Polish | P0 | [features/command-bridge-main-view.md](./features/command-bridge-main-view.md) | None |
+| Overview Tab | 🟡 In Progress | P0 | [features/command-center-tabs.md](./features/command-center-tabs.md) | Financial Data |
+| Budget Analysis Tab | 🟡 In Progress | P0 | [features/command-center-tabs.md](./features/command-center-tabs.md) | Financial Data |
+| Fleet Management Tab | 🔴 Not Started | P1 | [features/command-center-tabs.md](./features/command-center-tabs.md) | Card Data |
+| Threats Tab | 🔴 Not Started | P0 | [features/command-center-tabs.md](./features/command-center-tabs.md) | Threat Detection |
+| Travel / Goals Tab | 🔴 Not Started | P1 | [features/command-center-tabs.md](./features/command-center-tabs.md) | None |
+| Shield Status Panels | 🔵 Needs Polish | P0 | [features/shield-system.md](./features/shield-system.md) | Financial Data |
 | Transaction Log | 🔵 Needs Polish | P0 | - | Transaction Data |
+| Transaction Detail Modal | 🔴 Not Started | P1 | [features/transaction-detail-modal.md](./features/transaction-detail-modal.md) | Transaction Data |
 | Metric Cards | 🟡 In Progress | P0 | - | Financial Data |
-| Glassmorphism Panels | 🔴 Not Started | P0 | - | None |
+| Glassmorphism Panels | 🟢 Complete | P0 | [features/glassmorphism-panels.md](./features/glassmorphism-panels.md) | None |
 
 ---
 
@@ -431,7 +434,7 @@ Lambda Functions
 
 | Feature | Status | Priority | Doc Link | Dependencies |
 |---------|--------|----------|----------|--------------|
-| Credit Card Intelligence | 🔴 Not Started | P0 | - | VISA API, AI Analysis |
+| Credit Card Intelligence | 🔴 Not Started | P0 | [features/credit-card-intelligence.md](./features/credit-card-intelligence.md) | VISA API, AI Analysis |
 | Smart Spend Recommendations | 🔴 Not Started | P0 | - | AI Analysis, Card Rules |
 | Transaction Categorization | 🔴 Not Started | P0 | - | AI Analysis |
 | Budget Health Monitoring | 🔴 Not Started | P0 | - | Transaction Data |
@@ -449,7 +452,16 @@ Lambda Functions
 | Financial Snapshot API | 🔴 Not Started | P0 | - | DynamoDB, Lambda |
 | AI Analysis Pipeline | 🔴 Not Started | P0 | - | Pydantic AI, Bedrock |
 | Transaction Processing | 🔴 Not Started | P0 | - | VISA API, DynamoDB |
+| VISA Controls API | 🔴 Not Started | P0 | - | VISA API, Lambda |
 | Real-time Data Sync | 🔴 Not Started | P1 | - | WebSocket or Polling |
+
+---
+
+### 🛠️ Developer Experience
+
+| Feature | Status | Priority | Doc Link | Dependencies |
+|---------|--------|----------|----------|--------------|
+| Dev Dashboard | 🔴 Not Started | P0 | [features/dev-dashboard.md](./features/dev-dashboard.md) | Foundation only |
 
 ---
 
@@ -460,13 +472,198 @@ Lambda Functions
 | Advanced Particle Systems | 🔴 Not Started | P1 | - | Three.js |
 | Sound Design | 🔴 Not Started | P1 | - | Web Audio API |
 | Post-Processing Effects | 🔴 Not Started | P2 | - | Three.js postprocessing |
-| Loading States | 🔴 Not Started | P0 | - | None |
-| Error States | 🔴 Not Started | P0 | - | None |
-| Empty States | 🔴 Not Started | P0 | - | None |
+| Loading States | 🔴 Not Started | P0 | [features/error-loading-empty-states.md](./features/error-loading-empty-states.md) | None |
+| Error States | 🔴 Not Started | P0 | [features/error-loading-empty-states.md](./features/error-loading-empty-states.md) | None |
+| Empty States | 🔴 Not Started | P0 | [features/error-loading-empty-states.md](./features/error-loading-empty-states.md) | None |
+
+---
+
+## Hackathon Demo Strategy
+
+### What's Actually Built (as of 2026-02-07, Wave 1 Complete)
+
+**Working implementations:**
+- 3D starfield with 5,000 instanced stars and aurora color cycling (60s)
+- Captain Nova hologram with custom shader (scanlines, chromatic aberration, fresnel glow, glitch)
+- **6 threat types**: Asteroid, Ion Storm, Solar Flare, **Black Hole** (lensing + accretion disk), **Wormhole** (portal shader + rim particles), **Enemy Cruiser** (procedural ship + engine trails)
+- Bridge layout with shield panels, command center preview, transaction log
+- Command Center with 2 working tabs (Overview, Budget) + 3 placeholders
+- Voice synthesis with typewriter text and word highlighting
+- Seamless GSAP zoom transition between Bridge and Command Center
+- Zustand stores for threats, transitions, **and boot state**
+- React Query hooks with mock data fallback
+- Aurora gradient CSS system with CSS variable integration
+- **Cold Boot Sequence** (8s abbreviated GSAP-choreographed intro with eyelid reveal, progress bar, HUD materialization, skip-to-end)
+- **Glassmorphism component library** (GlassPanel with 4 depth levels + 4 variants, MetricCard, InfoPanel)
+- **Glassmorphism applied** to Bridge page (Shield, Command Center, Transaction Log panels) and Command Center (all tabs, metrics, threat/shield panels)
+- **All 6 threats wired** into Threats.tsx orchestrator with mock data (debt spiral, savings portal, fraud alert)
+- **Ion Storm polished**: 350 vortex particles with purple-to-pink vertex colors, 6 animated lightning arcs, outer glow, targeting brackets
+- **Solar Flare polished**: 120 corona particles with white-gold-orange gradient, expanding countdown rings, animated rays, targeting brackets
+- All core npm dependencies installed (@react-three/fiber, @react-three/drei, three, zustand, @tanstack/react-query, gsap)
+
+**Not built yet (mock/placeholder only):**
+- Particle explosion effects on deflection
+- Any real backend integration (all mock data)
+- Sound design (completely silent)
+- Captain Nova 3D model (currently capsule+sphere primitives)
+- Captain Nova hologram shader polish
+- Zoom transition polish
+- Command Bridge Main View polish
+
+### Demo-Critical Priorities
+
+For maximum hackathon impact, focus on features that create the biggest visual impression with the least implementation effort:
+
+1. **Cold Boot Sequence (abbreviated to 8s)** — First impressions win hackathons
+2. **Glassmorphism Panel System** — Transforms existing UI from "prototype" to "polished"
+3. **Threat Deflection Polish** — Particle explosions, shield bar animations, Captain Nova reactions
+4. **Black Hole Threat** — Gravitational lensing is a showstopper visual
+5. **Demo Data Set** — Curated mock data that showcases every feature perfectly
+
+### Known Technical Debt
+
+- Missing dependencies in package.json (@react-three/fiber, three, zustand, @tanstack/react-query, gsap)
+- CSS @import parsing (TailwindCSS v4 syntax, needs correct PostCSS config)
+- Captain Nova is primitive geometry, not a real rigged model (blocks morph targets, gestures)
+- Hardcoded mock data in threat-store.ts and api-client.ts
+- No error boundaries anywhere in the component tree
 
 ---
 
 ## Implementation Strategy
+
+### Parallelism Map — What Can Be Built Simultaneously
+
+This is the most important section for team coordination. Features are grouped into **parallel lanes** — work items within different lanes have **zero dependency overlap** and can be developed by separate engineers or agents simultaneously.
+
+#### Dependency Graph (Simplified)
+
+```
+                         ┌─────────────────┐
+                         │  FOUNDATION      │
+                         │  (already built) │
+                         │  Three.js Scene  │
+                         │  Zustand Stores  │
+                         │  React Query     │
+                         │  Aurora Colors   │
+                         └────────┬────────┘
+                                  │
+          ┌───────────────────────┼────────────────────────┐
+          │                       │                        │
+    ┌─────▼──────┐         ┌─────▼──────┐          ┌──────▼──────┐
+    │  LANE A    │         │  LANE B    │          │  LANE C     │
+    │  3D Threats│         │  UI Panels │          │  Infra/DX   │
+    └─────┬──────┘         └─────┬──────┘          └──────┬──────┘
+          │                      │                        │
+          ▼                      ▼                        ▼
+    Each threat type       Glassmorphism            Dev Dashboard
+    is independent!        Shield System            Error States
+    ────────────────       Cmd Center Tabs          Cold Boot
+    Asteroid polish        Transaction Modal        Sound Design
+    Ion Storm polish       ────────────────         ────────────
+    Solar Flare polish     Budget Tab depends       All independent
+    Black Hole (new)       on Shield System         of Lanes A & B
+    Wormhole (new)
+    Enemy Cruiser (new)
+    ────────────────
+    All 6 are independent
+    of each other!
+```
+
+#### Lane A: 3D Threat Visuals (6 parallel streams)
+
+**Every threat type is 100% independent of every other threat type.** They share the same rendering pipeline (`Threats.tsx` orchestrator) but each is a self-contained Three.js component with its own geometry, shaders, animations, and interactions.
+
+| Work Item | Depends On | Can Parallelize With | Est. Complexity |
+|---|---|---|---|
+| Asteroid Polish | Foundation only | ALL other threats | Medium |
+| Ion Storm Polish | Foundation only | ALL other threats | Medium |
+| Solar Flare Polish | Foundation only | ALL other threats | Medium |
+| **Black Hole (new)** | Foundation only | ALL other threats | High (lensing shader) |
+| **Wormhole (new)** | Foundation only | ALL other threats | High (portal shader) |
+| **Enemy Cruiser (new)** | Foundation only | ALL other threats | High (3D model) |
+
+**Key insight:** You could have 6 separate agents/engineers each building a threat type simultaneously. They only merge at `Threats.tsx` (trivial — just add a `case` to the `switch`).
+
+#### Lane B: UI Systems (partially sequential)
+
+Some UI features depend on each other. Here's the ordering:
+
+```
+Glassmorphism Panels ──┐
+(no dependencies)      │
+                       ├──→ Shield System ──→ Command Center Tabs (Budget, Overview)
+                       │    (needs glass      (needs shield bars)
+                       │     panels)
+                       │
+                       └──→ Command Bridge Main View polish
+                            (needs glass panels)
+
+Transaction Detail Modal ← independent of above (just needs Transaction type)
+```
+
+| Work Item | Depends On | Can Parallelize With | Notes |
+|---|---|---|---|
+| Glassmorphism Panels | Foundation only | Everything in Lane A + C | **Start first** — other UI depends on it |
+| Shield System | Glassmorphism Panels | Lane A, Lane C, Transaction Modal | Build after glass panels exist |
+| Cmd Center Overview Tab | Shield System | Lane A, Lane C | Needs shield bars |
+| Cmd Center Budget Tab | Shield System | Lane A, Lane C | Needs shield + budget data |
+| Cmd Center Threats Tab | Threat Store | Lane C, Shield System | Reads from existing store |
+| Cmd Center Fleet Tab | Mock data only | Everything | No real dependencies |
+| Cmd Center Travel Tab | Mock data only | Everything | No real dependencies |
+| Transaction Detail Modal | Foundation only | Everything | Fully independent |
+
+#### Lane C: Infrastructure & Developer Experience
+
+All items in this lane are independent of Lanes A and B:
+
+| Work Item | Depends On | Can Parallelize With | Notes |
+|---|---|---|---|
+| **Dev Dashboard** | Foundation only | Everything | **Build early** — accelerates all other testing |
+| Error/Loading/Empty States | Foundation only | Everything | Foundational UI patterns |
+| Cold Boot Sequence | Foundation only | Everything except opening | Standalone animation |
+| Sound Design | Foundation only | Everything | Audio layer, no code deps |
+
+#### Lane D: Backend (separate team/session)
+
+Entirely decoupled from frontend Lanes A-C. Backend can be built simultaneously:
+
+| Work Item | Depends On | Can Parallelize With |
+|---|---|---|
+| Financial Snapshot API | DynamoDB, Lambda | ALL frontend work |
+| VISA API Integration | Lambda, Secrets Manager | ALL frontend work |
+| AI Analysis Pipeline | Pydantic AI, Bedrock | ALL frontend work |
+| Threat Detection Engine | AI Pipeline | ALL frontend work |
+| VISA Controls API | VISA API | ALL frontend work |
+
+#### Maximum Parallelism Summary
+
+**At peak, you could run up to 12 independent work streams simultaneously:**
+
+```
+Lane A:  [Asteroid] [Ion Storm] [Solar Flare] [Black Hole] [Wormhole] [Enemy Cruiser]
+Lane B:  [Glassmorphism] → [Shield System] → [Cmd Center Tabs]
+         [Transaction Modal]
+Lane C:  [Dev Dashboard] [Error States] [Cold Boot]
+Lane D:  [Backend APIs]
+```
+
+**Minimum sequential chains (longest path):**
+- Glassmorphism → Shield System → Budget/Overview Tabs (3 steps)
+- Everything else is 1-2 steps max
+
+### Dev Dashboard for Testing
+
+**Feature Spec:** [features/dev-dashboard.md](./features/dev-dashboard.md)
+
+A full developer dashboard toggled via `Ctrl+Shift+D` that provides:
+- **Threat Spawner:** Toggle each of the 6 threat types on/off individually, adjust position/size, trigger deflection animations
+- **Shield Controls:** Manually set shield percentages, trigger damage/gain events
+- **Mock Data Switcher:** Swap between financial scenarios (healthy, struggling, critical)
+- **Animation Controls:** Speed multiplier, pause all animations, step through timelines
+- **Performance Overlay:** FPS counter, draw calls, memory usage
+
+This panel is **critical for development velocity** — build it early (Lane C) so all other lanes can use it for testing their features in isolation.
 
 ### Phase-Based Approach
 
@@ -476,11 +673,13 @@ We'll work feature-by-feature, but group features into logical phases for cohere
 - Focus: Make it breathtaking
 - Features: Opening sequence, hologram refinement, threat polish, glassmorphism
 - Goal: Nail the "Whoa" factor
+- **Parallel strategy:** Dev Dashboard + Glassmorphism + all 6 threats in parallel
 
 **Phase 2: Functional Core (Weeks 3-4)**
 - Focus: Make it real
 - Features: VISA integration, transaction processing, AI analysis
 - Goal: Connect to actual financial data
+- **Parallel strategy:** Backend APIs (Lane D) + Shield System + Command Center tabs
 
 **Phase 3: Intelligence Layer (Weeks 5-6)**
 - Focus: Make it smart
@@ -494,11 +693,11 @@ We'll work feature-by-feature, but group features into logical phases for cohere
 
 ### Development Workflow
 
-1. **Pick a feature** from the catalog
+1. **Pick a feature** from the catalog (check the parallelism map for what's unblocked)
 2. **Read the feature spec** (design doc)
-3. **Create build guide** for that feature
-4. **Implement** following the guide
-5. **Test & iterate** until acceptance criteria met
+3. **Use Dev Dashboard** to test the feature in isolation
+4. **Implement** following the spec
+5. **Test & iterate** until acceptance criteria met (use Dev Dashboard threat toggles for visual QA)
 6. **Update master catalog** (mark as complete)
 7. **Commit & document** changes
 8. **Move to next feature**
@@ -513,6 +712,7 @@ Before marking a feature "Complete":
 - ✅ Responsive behavior verified
 - ✅ Code reviewed against patterns
 - ✅ No console errors/warnings
+- ✅ Testable via Dev Dashboard (threat features must be spawnable/toggleable)
 
 ---
 
@@ -520,6 +720,10 @@ Before marking a feature "Complete":
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 1.4 | 2026-02-07 | Wave 2 complete: All 6 threats wired into orchestrator; GlassPanel applied to Bridge + Command Center; Ion Storm + Solar Flare visually polished with particles, arcs, brackets | Claude + User |
+| 1.3 | 2026-02-07 | Wave 1 complete: Black Hole, Wormhole, Enemy Cruiser threats implemented; Glassmorphism panel library created; Cold Boot Sequence built; all deps installed | Claude + User |
+| 1.2 | 2026-02-07 | Added parallelism map to Implementation Strategy, Dev Dashboard feature spec, dependency graph, parallel lanes analysis | Claude + User |
+| 1.1 | 2026-02-07 | Reconciled feature IDs, updated statuses, added hackathon demo strategy, brainstormed enhancements for all 6 threat specs | Claude + User |
 | 1.0 | 2026-02-06 | Initial master document created | Claude + User |
 
 ---

@@ -5,6 +5,7 @@ import { Suspense, useEffect } from 'react';
 import Starfield from './Starfield';
 import CaptainNova from './CaptainNova';
 import Threats from './Threats';
+import PostProcessingPipeline from './PostProcessingPipeline';
 import { useTransitionStore } from '@/lib/stores/transition-store';
 import gsap from 'gsap';
 
@@ -48,6 +49,7 @@ export default function ThreeScene() {
           <Starfield />
           <CaptainNova />
           <Threats />
+          <PostProcessingPipeline />
         </Suspense>
       </Canvas>
     </div>

@@ -380,6 +380,7 @@ QUICK ACTIONS
 - `useFinancialStore` - Snapshot, budget, shields
 - `useThreatStore` - Active threats
 - `useTransactionStore` - Transaction history
+- `useTransitionStore` - Camera position, starfield opacity, transition state
 
 ---
 
@@ -424,6 +425,66 @@ QUICK ACTIONS
 - `NOVA-001`: Captain Nova Hologram (left panel)
 - `UI-006`: Glassmorphism Panels (all panels)
 - `BACKEND-001`: Threat Detection Engine (populates viewport)
+
+---
+
+## Implementation Checklist
+
+### Phase 1: Layout Foundation
+- [ ] Set up Next.js page structure (app/dashboard)
+- [ ] Create CSS Grid layout for 5-region design (top, left, viewport, right, bottom)
+- [ ] Build Top Bar component with Stardate, user name, shield status, alerts, menu
+- [ ] Implement Left Panel container with placeholder for Nova
+- [ ] Implement Right Panel container with Transaction Log skeleton
+- [ ] Implement Bottom Console with 3-column layout (Shield/Command/Actions)
+
+### Phase 2: Captain Nova Integration
+- [ ] Integrate CaptainNovaUI component (see captain-nova-hologram.md)
+- [ ] Create circular frame with Aurora border
+- [ ] Implement speech bubble component with dynamic height
+- [ ] Add 3 quick action buttons below portrait
+- [ ] Wire Nova to respond to button clicks
+
+### Phase 3: 3D Viewport
+- [ ] Set up Three.js scene with starfield background
+- [ ] Create 5,000 instanced stars with Aurora twinkling
+- [ ] Integrate threat rendering system (Threats.tsx)
+- [ ] Add HUD overlays (corner brackets, zone indicators)
+- [ ] Implement camera control from transition system
+
+### Phase 4: Transaction Log & Glassmorphism
+- [ ] Build transaction list with virtual scrolling
+- [ ] Create transaction card components with icons
+- [ ] Implement filter/search UI
+- [ ] Apply glassmorphism styling to all panels
+- [ ] Test contrast and readability
+
+### Phase 5: Animation Choreography
+- [ ] Implement page load sequence (0-2000ms timeline)
+- [ ] Starfield fade-in (0-500ms)
+- [ ] HUD materialization (500-800ms)
+- [ ] Panel slides (800-1100ms, with stagger)
+- [ ] Nova spawn sequence (1100-1400ms)
+- [ ] Content population (1400-1700ms)
+- [ ] First speech trigger (1700ms)
+
+### Phase 6: Documentation & Cleanup
+- [ ] Update this feature spec: set Status to 🟢 Complete, bump Current Version, add Revision History entry
+- [ ] Update `MASTER-synesthesiapay-bridge.md`: change this feature's status in the Feature Catalog table
+- [ ] Update `IMPLEMENTATION-GUIDE.md`: note progress in any relevant phase tracking
+- [ ] Commit documentation changes separately from code: `docs: mark Command Bridge Main View as complete`
+
+---
+
+## Completion Protocol
+
+When this feature's implementation is finished and all acceptance criteria pass, the implementing agent **must** update the following documents before considering the work done:
+
+1. **This feature spec** — Set `Status` to 🟢 Complete (or 🔵 Needs Polish if partially done), update `Current Version`, and add a row to the Revision History table.
+2. **Master Document** (`docs/plans/MASTER-synesthesiapay-bridge.md`) — Update this feature's row in the Feature Catalog to reflect the new status.
+3. **Implementation Guide** (`docs/plans/IMPLEMENTATION-GUIDE.md`) — Record any learnings, update phase progress tracking, and note actual vs estimated time if a build guide was created.
+
+These documentation updates should be committed separately from code changes. See the Implementation Guide's [Status Updates](../IMPLEMENTATION-GUIDE.md#status-updates) section for detailed instructions.
 
 ---
 

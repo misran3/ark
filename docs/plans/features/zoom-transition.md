@@ -389,14 +389,32 @@ useFrame(() => {
 - [ ] Accessibility audit
 - [ ] Edge case testing
 
+### Phase 6: Documentation & Cleanup
+- [ ] Update this feature spec: set Status to 🟢 Complete, bump Current Version, add Revision History entry
+- [ ] Update `MASTER-synesthesiapay-bridge.md`: change this feature's status in the Feature Catalog table
+- [ ] Update `IMPLEMENTATION-GUIDE.md`: note progress in any relevant phase tracking
+- [ ] Commit documentation changes separately from code: `docs: mark zoom-transition as complete`
+
 ---
 
 ## Related Features
 
 - `NAV-002`: Back to Bridge Animation (reverse transition)
 - `UI-001`: Command Bridge Main View (source view)
-- `UI-002`: Command Center Overview Tab (destination view)
-- `NOVA-003`: Captain Nova Reposition (during transition)
+- `UI-001`: Command Bridge Main View -> Command Center (destination view)
+- `NOVA-001`: Captain Nova Hologram (repositions during transition)
+
+---
+
+## Completion Protocol
+
+When this feature's implementation is finished and all acceptance criteria pass, the implementing agent **must** update the following documents before considering the work done:
+
+1. **This feature spec** — Set `Status` to 🟢 Complete (or 🔵 Needs Polish if partially done), update `Current Version`, and add a row to the Revision History table.
+2. **Master Document** (`docs/plans/MASTER-synesthesiapay-bridge.md`) — Update this feature's row in the Feature Catalog to reflect the new status.
+3. **Implementation Guide** (`docs/plans/IMPLEMENTATION-GUIDE.md`) — Record any learnings, update phase progress tracking, and note actual vs estimated time if a build guide was created.
+
+These documentation updates should be committed separately from code changes. See the Implementation Guide's [Status Updates](../IMPLEMENTATION-GUIDE.md#status-updates) section for detailed instructions.
 
 ---
 

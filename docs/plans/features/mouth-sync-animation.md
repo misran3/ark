@@ -409,6 +409,12 @@ const analyzeAudio = (audioContext: AudioContext, source: MediaStreamAudioSource
 - [ ] Adjust timing values based on feedback
 - [ ] Test across different voices/browsers
 
+### Phase 7: Documentation & Cleanup
+- [ ] Update this feature spec: set Status to 🟢 Complete, bump Current Version, add Revision History entry
+- [ ] Update `MASTER-synesthesiapay-bridge.md`: change this feature's status in the Feature Catalog table
+- [ ] Update `IMPLEMENTATION-GUIDE.md`: note progress in any relevant phase tracking
+- [ ] Commit documentation changes separately from code: `docs: mark mouth-sync-animation as complete`
+
 ---
 
 ## Related Features
@@ -416,7 +422,7 @@ const analyzeAudio = (audioContext: AudioContext, source: MediaStreamAudioSource
 - `NOVA-002`: Text-to-Speech Engine (provides character callbacks)
 - `NOVA-001`: Captain Nova Hologram (mesh with morph targets)
 - `NOVA-004`: Eye Tracking System (eyes + mouth = full facial animation)
-- `NOVA-008`: Emotion States (could modulate mouth resting position)
+- `NOVA-005`: Emotion States (could modulate mouth resting position)
 
 ---
 
@@ -455,6 +461,18 @@ mouth_smile:
 - All weights should range 0.0 (no influence) to 1.0 (full influence)
 - Multiple targets can be active simultaneously (blend)
 - Sum of weights doesn't need to equal 1.0
+
+---
+
+## Completion Protocol
+
+When this feature's implementation is finished and all acceptance criteria pass, the implementing agent **must** update the following documents before considering the work done:
+
+1. **This feature spec** — Set `Status` to 🟢 Complete (or 🔵 Needs Polish if partially done), update `Current Version`, and add a row to the Revision History table.
+2. **Master Document** (`docs/plans/MASTER-synesthesiapay-bridge.md`) — Update this feature's row in the Feature Catalog to reflect the new status.
+3. **Implementation Guide** (`docs/plans/IMPLEMENTATION-GUIDE.md`) — Record any learnings, update phase progress tracking, and note actual vs estimated time if a build guide was created.
+
+These documentation updates should be committed separately from code changes. See the Implementation Guide's [Status Updates](../IMPLEMENTATION-GUIDE.md#status-updates) section for detailed instructions.
 
 ---
 

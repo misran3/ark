@@ -497,15 +497,65 @@ function BlackHole({ position, radius }: { position: Vector3; radius: number }) 
 - [ ] Test impact sequence (screen crush effect)
 - [ ] Optimize shader performance
 
+### Phase 7: Documentation & Cleanup
+- [ ] Update this feature spec: set Status to 🟢 Complete, bump Current Version, add Revision History entry
+- [ ] Update `MASTER-synesthesiapay-bridge.md`: change this feature's status in the Feature Catalog table
+- [ ] Update `IMPLEMENTATION-GUIDE.md`: note progress in any relevant phase tracking
+- [ ] Commit documentation changes separately from code: `docs: mark black-hole-threat as complete`
+
+---
+
+## Brainstormed Enhancements
+
+### Visual Enhancements
+
+**1. UI Gravitational Distortion**
+The black hole doesn't just bend light in the 3D scene — it warps the 2D UI elements too. Nearby panel text stretches, numbers distort, borders warp toward the singularity. The closer it gets, the more the entire interface feels like it's being pulled apart. This makes the threat feel inescapable and all-consuming.
+
+**2. Timeline Accretion Disk**
+The accretion disk isn't just swirling particles — it's made of your actual transaction history. Small text fragments of past debt-related transactions orbit the black hole: "$450 minimum payment", "23.99% APR", "Balance: $12,847". Your financial history literally spiraling into the void.
+
+**3. Light Consumption**
+As the black hole approaches, it begins to visibly consume the aurora color cycling. The ambient colors dim and shift toward deep purple/black near the hole. The starfield goes dark in its vicinity. The black hole is literally eating the beauty of your financial dashboard.
+
+**4. Hawking Radiation Hope**
+Tiny bright particles occasionally escape the event horizon — "Hawking radiation" representing small wins against debt (minimum payments, balance reductions). These particles are gold/green and drift toward the shield panels. Even in the darkest threat, there are signs of hope.
+
+### Interaction Enhancements
+
+**5. Escape Velocity Indicator**
+When hovering, a dynamic "ESCAPE VELOCITY" meter appears showing how much monthly payment is needed to actually reduce the debt (vs just covering interest). The meter has a clear threshold line — payments below it mean the black hole grows, above it means it shrinks. Makes the math visceral.
+
+**6. Binary Black Holes**
+If a user has two or more high-interest debts, they appear as binary black holes orbiting each other. They're gravitationally linked and influence each other's trajectory. Neutralizing one causes the other to become MORE aggressive (debt consolidation dynamics). The interaction teaches users about debt interdependencies.
+
+**7. Spaghettification Preview**
+As the black hole enters Zone 4, the user's financial summary "spaghettifies" — numbers stretch vertically, text elongates, panels deform toward the singularity. It's a preview of what happens to your finances if you don't act. Visually dramatic, scientifically inspired.
+
+**8. Neutron Star Remnant**
+After successfully neutralizing a black hole (setting up a payoff plan), it doesn't just disappear. It collapses into a small, dense, bright "neutron star" — a persistent reminder that stays in your viewport showing the active payoff plan. It pulses with the payment schedule and slowly shrinks as payments are made.
+
 ---
 
 ## Related Features
 
 - `THREAT-001`: Asteroid Threats (contrast: simple vs complex)
 - `THREAT-002`: Ion Storm Threats (different energy aesthetic)
-- `THREAT-006`: Threat Detection Engine (spawns black holes from debt data)
+- `BACKEND-001`: Threat Detection Engine (spawns black holes from debt data)
 - `BACKEND-005`: Debt Analysis API (calculates payoff strategies)
 - `UI-005`: Debt Payoff Tracker (new UI component)
+
+---
+
+## Completion Protocol
+
+When this feature's implementation is finished and all acceptance criteria pass, the implementing agent **must** update the following documents before considering the work done:
+
+1. **This feature spec** — Set `Status` to 🟢 Complete (or 🔵 Needs Polish if partially done), update `Current Version`, and add a row to the Revision History table.
+2. **Master Document** (`docs/plans/MASTER-synesthesiapay-bridge.md`) — Update this feature's row in the Feature Catalog to reflect the new status.
+3. **Implementation Guide** (`docs/plans/IMPLEMENTATION-GUIDE.md`) — Record any learnings, update phase progress tracking, and note actual vs estimated time if a build guide was created.
+
+These documentation updates should be committed separately from code changes. See the Implementation Guide's [Status Updates](../IMPLEMENTATION-GUIDE.md#status-updates) section for detailed instructions.
 
 ---
 

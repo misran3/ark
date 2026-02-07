@@ -358,6 +358,9 @@ const hologramMaterial = new THREE.ShaderMaterial({
 - ⚠️ Q: Does she need facial expressions (smile, frown)?
   - A: Nice-to-have, but jaw movement (mouth sync) is priority
 
+- ⚠️ Q: Where does the 3D model come from? Current code uses primitive geometry (capsule + sphere).
+  - A: Need to source or commission a GLTF model. Until then, shader work and animation specs are blocked on model acquisition. Consider a stylized low-poly approach that doesn't require a professional character artist.
+
 ---
 
 ## Implementation Checklist
@@ -404,6 +407,12 @@ const hologramMaterial = new THREE.ShaderMaterial({
 - [ ] Test during zoom transitions
 - [ ] Accessibility review (not critical for decorative element)
 
+### Phase 7: Documentation & Cleanup
+- [ ] Update this feature spec: set Status to 🟢 Complete, bump Current Version, add Revision History entry
+- [ ] Update `MASTER-synesthesiapay-bridge.md`: change this feature's status in the Feature Catalog table
+- [ ] Update `IMPLEMENTATION-GUIDE.md`: note progress in any relevant phase tracking
+- [ ] Commit documentation changes separately from code: `docs: mark captain-nova-hologram as complete`
+
 ---
 
 ## Related Features
@@ -426,6 +435,18 @@ const hologramMaterial = new THREE.ShaderMaterial({
 
 **Key Difference:**
 We're combining the best of all these — translucent but detailed, glitchy but stable, futuristic but warm (aurora colors vs cold blue).
+
+---
+
+## Completion Protocol
+
+When this feature's implementation is finished and all acceptance criteria pass, the implementing agent **must** update the following documents before considering the work done:
+
+1. **This feature spec** — Set `Status` to 🟢 Complete (or 🔵 Needs Polish if partially done), update `Current Version`, and add a row to the Revision History table.
+2. **Master Document** (`docs/plans/MASTER-synesthesiapay-bridge.md`) — Update this feature's row in the Feature Catalog to reflect the new status.
+3. **Implementation Guide** (`docs/plans/IMPLEMENTATION-GUIDE.md`) — Record any learnings, update phase progress tracking, and note actual vs estimated time if a build guide was created.
+
+These documentation updates should be committed separately from code changes. See the Implementation Guide's [Status Updates](../IMPLEMENTATION-GUIDE.md#status-updates) section for detailed instructions.
 
 ---
 

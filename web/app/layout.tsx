@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import ThreeScene from "@/components/three/ThreeScene";
 import CaptainNovaUI from "@/components/ui/CaptainNovaUI";
+import ColdBootSequence from "@/components/ui/ColdBootSequence";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
@@ -24,11 +25,11 @@ export default function RootLayout({
           {/* Captain Nova UI persists across all routes */}
           <CaptainNovaUI />
 
+          {/* Cold boot sequence overlay */}
+          <ColdBootSequence />
+
           {/* Scanline overlay */}
           <div className="scanlines" />
-
-          {/* Vignette overlay */}
-          <div className="vignette" />
 
           {/* Page content */}
           {children}

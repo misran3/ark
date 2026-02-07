@@ -11,7 +11,7 @@ export default function CaptainNovaUI() {
   const [isTyping, setIsTyping] = useState(false);
   const [highlightedWordIndex, setHighlightedWordIndex] = useState(-1);
   const { speak, cancel, isSpeaking } = useVoiceSynthesis();
-  const typewriterTimeoutRef = useRef<NodeJS.Timeout>();
+  const typewriterTimeoutRef = useRef<NodeJS.Timeout>(undefined);
 
   useEffect(() => {
     // Auto-speak initial message on mount (with delay)
