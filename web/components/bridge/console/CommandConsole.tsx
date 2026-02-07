@@ -4,10 +4,12 @@ import { ConsolePanel } from './ConsolePanel';
 import { DashboardMicroCreaks } from './DashboardMicroCreaks';
 import { useShieldStore } from '@/lib/stores/shield-store';
 import { useConsoleStore, type PanelType } from '@/lib/stores/console-store';
+import { useBootStore } from '@/lib/stores/boot-store';
 
 export function CommandConsole() {
   // v2.0: BridgeLayout controls brightness via consoleIntensity
-  const isPoweringOn = false;
+  const phase = useBootStore((s) => s.phase);
+  const isPoweringOn = phase !== 'complete';
   const shieldsMap = useShieldStore((state) => state.shields);
   const recDeck = shieldsMap['recreation-deck'];
   const isRecWarning = recDeck && (recDeck.status === 'warning' || recDeck.status === 'critical' || recDeck.status === 'breached');

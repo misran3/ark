@@ -4,6 +4,7 @@ import { useConsoleStore, type PanelType } from '@/lib/stores/console-store';
 import { useAlertStore, ALERT_COLORS } from '@/lib/stores/alert-store';
 import { useState, useEffect } from 'react';
 import { ShieldGaugeFace, NetWorthManifestFace, TransactionLogFace, CardStatusFace } from './faces';
+import { useBootActivation } from '@/hooks/useBootActivation';
 
 interface ConsolePanelProps {
   type: PanelType;
@@ -52,14 +53,18 @@ export function ConsolePanel({
     ? ALERT_COLORS[alertLevel].glow
     : backlightTint;
 
+  // Wait until console-glow phase before starting power-on sequence
+  const bootReady = useBootActivation('console-glow', 0);
+
   useEffect(() => {
+    if (!bootReady) return; // Stay dark until console-glow
     if (isPoweringOn) {
       const timer = setTimeout(() => setIsPowered(true), powerOnDelay);
       return () => clearTimeout(timer);
     } else {
-      setIsPowered(true);
+      setIsPowered(true); // Returning users: instant power
     }
-  }, [isPoweringOn, powerOnDelay]);
+  }, [bootReady, isPoweringOn, powerOnDelay]);
 
   // Brief static burst on power-on
   useEffect(() => {
