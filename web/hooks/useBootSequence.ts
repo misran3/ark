@@ -1,170 +1,157 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
-import { useBootStore, type BootPhase } from '@/lib/stores/boot-store';
+import { useEffect, useRef } from 'react';
+import { useBootStore } from '@/lib/stores/boot-store';
 import { storage } from '@/lib/utils/storage';
 
-const PHASE_DURATIONS_FIRST_VISIT: Record<string, number> = {
-  black: 1500,           // 1.5s
-  emergency: 2000,       // 2s
-  'power-surge': 1000,   // 1s (includes 400-500ms breath)
-  'viewport-awake': 2000, // 2s
-  'console-boot': 1500,  // 1.5s
-  'hud-rise': 1000,      // 1s
-  settling: 500,         // 0.5s
+const PHASE_DURATIONS: Record<string, number> = {
+  'name-exit': 600,
+  'darkness': 500,
+  'console-glow': 1500,
+  'power-surge': 1000,
+  'full-power': 1000,
 };
-
-const PHASE_DURATIONS_REPEAT_VISIT: Record<string, number> = {
-  black: 500,           // Compressed
-  emergency: 0,         // Skip
-  'power-surge': 300,   // Quick surge
-  'viewport-awake': 1000, // No calibration fumble
-  'console-boot': 1000, // No hesitation
-  'hud-rise': 500,      // Snap-in
-  settling: 300,
-};
-
-const PHASES: BootPhase[] = [
-  'black',
-  'emergency',
-  'power-surge',
-  'viewport-awake',
-  'console-boot',
-  'hud-rise',
-  'settling',
-  'complete',
-];
 
 /**
- * Orchestrates the multi-phase boot sequence
- *
- * Phases: black → emergency → power-surge → viewport-awake → console-boot → hud-rise → settling → complete
- *
- * Features:
- * - First visit: full 9.5s cinematic sequence
- * - Repeat visits: 2x speed (halved durations)
- * - Click/tap to skip: instantly jumps to complete
- * - Phase-based timing (defined in PHASE_DURATIONS)
- * - Automatic phase transitions
- * - Progress tracking (0-100% per phase)
- * - Global intensity reduction during settling phase
+ * Orchestrates the boot sequence with automatic phase transitions
+ * and console intensity control
  */
 export function useBootSequence() {
   const phase = useBootStore((s) => s.phase);
-  const progress = useBootStore((s) => s.progress);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const isRepeatVisitRef = useRef(false);
+  const consoleIntensity = useBootStore((s) => s.consoleIntensity);
+  const hasSeenBoot = useBootStore((s) => s.hasSeenBoot);
 
   const setPhase = useBootStore.getState().setPhase;
-  const setProgress = useBootStore.getState().setProgress;
+  const setConsoleIntensity = useBootStore.getState().setConsoleIntensity;
+  const setHasSeenBoot = useBootStore.getState().setHasSeenBoot;
+  const skipBoot = useBootStore.getState().skipBoot;
+  const startBoot = useBootStore.getState().startBoot;
 
-  // Detect repeat visit on mount
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Check localStorage on mount
   useEffect(() => {
-    const bootCount = parseInt(storage.getItem('bootCount') ?? '0', 10);
-    isRepeatVisitRef.current = bootCount > 0;
+    const hasSeenBootStorage = storage.getItem('synesthesiapay:hasSeenBoot');
+    if (hasSeenBootStorage === 'true') {
+      setHasSeenBoot(true);
+      skipBoot(); // Skip directly to complete
+    }
   }, []);
 
-  // Phase progression with compressed timing on repeat visits
+  // Save to localStorage when hasSeenBoot changes
   useEffect(() => {
-    if (phase === 'complete') return;
+    if (hasSeenBoot) {
+      storage.setItem('synesthesiapay:hasSeenBoot', 'true');
+    }
+  }, [hasSeenBoot]);
 
-    const baseDuration = isRepeatVisitRef.current
-      ? PHASE_DURATIONS_REPEAT_VISIT[phase]
-      : PHASE_DURATIONS_FIRST_VISIT[phase];
+  // Phase progression
+  useEffect(() => {
+    if (phase === 'start-screen' || phase === 'complete') {
+      return; // Don't auto-advance from these phases
+    }
 
-    if (!baseDuration || baseDuration === 0) {
-      // Skip this phase for repeat visits
-      const currentIndex = PHASES.indexOf(phase);
-      const nextPhase = PHASES[currentIndex + 1];
-      if (nextPhase) {
-        setPhase(nextPhase);
-      }
+    const duration = PHASE_DURATIONS[phase];
+    if (!duration) {
+      console.warn(`No duration defined for phase: ${phase}`);
       return;
     }
 
-    const duration = baseDuration;
-    const startTime = Date.now();
-
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
+    // Clear any existing timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
     }
 
-    intervalRef.current = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      const phaseProgress = Math.min((elapsed / duration) * 100, 100);
-      setProgress(phaseProgress);
+    // Animate console intensity based on phase
+    animateConsoleIntensity(phase, duration, setConsoleIntensity);
 
-      if (phaseProgress >= 100) {
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-          intervalRef.current = null;
-        }
-        const currentIndex = PHASES.indexOf(phase);
-        const nextPhase = PHASES[currentIndex + 1];
-        if (nextPhase) {
-          setPhase(nextPhase);
-        }
+    // Schedule next phase
+    timeoutRef.current = setTimeout(() => {
+      const nextPhase = getNextPhase(phase);
+      if (nextPhase) {
+        setPhase(nextPhase);
       }
-    }, 16);
+    }, duration);
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
       }
     };
   }, [phase]);
 
-  // Beat 6: The Settle - global intensity reduction
+  // Sync consoleIntensity to CSS variable
   useEffect(() => {
-    if (phase === 'settling') {
-      const setGlobalIntensity = useBootStore.getState().setGlobalIntensity;
+    document.documentElement.style.setProperty(
+      '--console-intensity',
+      String(consoleIntensity)
+    );
+  }, [consoleIntensity]);
 
-      // Animate from 1.0 to 0.96 over 400ms
-      const startTime = Date.now();
-      const duration = 400;
-      const startIntensity = 1.0;
-      const endIntensity = 0.96;
+  return {
+    phase,
+    consoleIntensity,
+    hasSeenBoot,
+    startBoot,
+    skipBoot,
+  };
+}
 
-      const intervalId = setInterval(() => {
-        const elapsed = Date.now() - startTime;
-        const progress = Math.min(elapsed / duration, 1);
+function getNextPhase(current: string): string | null {
+  const sequence: Record<string, string> = {
+    'name-exit': 'darkness',
+    'darkness': 'console-glow',
+    'console-glow': 'power-surge',
+    'power-surge': 'full-power',
+    'full-power': 'complete',
+  };
+  return sequence[current] || null;
+}
 
-        // Ease-out curve
-        const eased = 1 - Math.pow(1 - progress, 3);
-        const currentIntensity = startIntensity + (endIntensity - startIntensity) * eased;
+function animateConsoleIntensity(
+  phase: string,
+  duration: number,
+  setIntensity: (val: number) => void
+) {
+  const startTime = Date.now();
 
-        setGlobalIntensity(currentIntensity);
-
-        if (progress >= 1) {
-          clearInterval(intervalId);
-        }
-      }, 16);
-
-      return () => clearInterval(intervalId);
-    }
-  }, [phase]);
-
-  // Increment boot count on completion
-  useEffect(() => {
-    if (phase === 'complete') {
-      const bootCount = parseInt(storage.getItem('bootCount') ?? '0', 10);
-      storage.setItem('bootCount', String(bootCount + 1));
-    }
-  }, [phase]);
-
-  // Click/tap to skip handler
-  const skipBoot = useCallback(() => {
-    if (phase !== 'complete') {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
+  // Define intensity curves for each phase
+  const curves: Record<string, (progress: number) => number> = {
+    'name-exit': () => 0, // Stay dark
+    'darkness': () => 0, // Stay dark
+    'console-glow': (p) => p * 0.3, // 0 → 0.3
+    'power-surge': (p) => {
+      // 0.3 → 0.8 with flicker at 30%
+      if (p < 0.3) {
+        return 0.3 + (p / 0.3) * 0.2; // Rise to 0.5
+      } else if (p < 0.35) {
+        return 0.5 - 0.2; // Flicker down to 0.3
+      } else {
+        return 0.3 + ((p - 0.35) / 0.65) * 0.5; // Rise to 0.8
       }
-      // Fast-forward: transition all remaining effects to completion
-      setPhase('complete');
-      useBootStore.getState().setGlobalIntensity(0.96);
-    }
-  }, [phase]);
+    },
+    'full-power': (p) => {
+      // 0.8 → 1.0 → 0.96 (overshoot and settle)
+      if (p < 0.6) {
+        return 0.8 + (p / 0.6) * 0.2; // Rise to 1.0
+      } else {
+        return 1.0 - ((p - 0.6) / 0.4) * 0.04; // Settle to 0.96
+      }
+    },
+  };
 
-  return { phase, progress, skipBoot, isRepeatVisit: isRepeatVisitRef.current };
+  const curve = curves[phase];
+  if (!curve) return;
+
+  const intervalId = setInterval(() => {
+    const elapsed = Date.now() - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+
+    setIntensity(curve(progress));
+
+    if (progress >= 1) {
+      clearInterval(intervalId);
+    }
+  }, 16); // ~60fps
 }
