@@ -26,6 +26,11 @@ const CAM_DRIFT = new Vector3(0, 0.1, 4.75);
 const REVEAL_DURATION = 600; // ms — total iris reveal time
 const DISMISS_DURATION = 300; // ms — collapse time (faster out than in)
 
+/** Ease-out cubic: fast start, smooth settle */
+function easeOutCubic(t: number): number {
+  return 1 - Math.pow(1 - t, 3);
+}
+
 interface HologramOverlayProps {
   children?: React.ReactNode;
 }
@@ -104,12 +109,12 @@ export function HologramOverlay({ children }: HologramOverlayProps) {
 
     // --- Reveal progress (iris animation) ---
     if (activationPhase === 'beat1' || activationPhase === 'active') {
-      const progress = Math.min(1, t / REVEAL_DURATION);
-      setRevealProgress(progress);
+      const rawProgress = Math.min(1, t / REVEAL_DURATION);
+      setRevealProgress(easeOutCubic(rawProgress));
     } else if (activationPhase === 'dismissing') {
-      // Reverse reveal on dismiss
-      const progress = Math.max(0, 1 - t / DISMISS_DURATION);
-      setRevealProgress(progress);
+      // Reverse reveal on dismiss (ease-in quadratic)
+      const rawProgress = Math.max(0, 1 - t / DISMISS_DURATION);
+      setRevealProgress(rawProgress * rawProgress);
     }
 
     // --- Glow cast light ---
