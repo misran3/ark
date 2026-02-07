@@ -3,6 +3,10 @@
 import { useConsoleStore, type PanelType } from '@/lib/stores/console-store';
 import { useAlertStore, ALERT_COLORS } from '@/lib/stores/alert-store';
 import { useState, useEffect } from 'react';
+import { ShieldGaugeFace } from './faces/ShieldGaugeFace';
+import { NetWorthManifestFace } from './faces/NetWorthManifestFace';
+import { TransactionLogFace } from './faces/TransactionLogFace';
+import { CardStatusFace } from './faces/CardStatusFace';
 
 interface ConsolePanelProps {
   type: PanelType;
@@ -16,6 +20,15 @@ interface ConsolePanelProps {
   isWarning?: boolean;
   /** Per-panel backlight color tint — ±2-3 RGB for aged bulb variation */
   backlightTint?: string;
+}
+
+function FaceContent({ type }: { type: PanelType }) {
+  switch (type) {
+    case 'shields': return <ShieldGaugeFace />;
+    case 'networth': return <NetWorthManifestFace />;
+    case 'transactions': return <TransactionLogFace />;
+    case 'cards': return <CardStatusFace />;
+  }
 }
 
 export function ConsolePanel({
@@ -232,8 +245,10 @@ export function ConsolePanel({
               </div>
             </div>
 
-            {/* Panel content — placeholder until face designs are finalized */}
-            <div className="relative flex-1 flex items-center justify-center px-3 pb-2" />
+            {/* Panel face content */}
+            <div className="relative flex-1 flex items-center justify-center pb-1">
+              <FaceContent type={type} />
+            </div>
 
             {/* Revision stamp */}
             <div className="absolute bottom-1 right-2 hull-stencil" style={{ fontSize: '5px', color: 'rgba(255,255,255,0.06)' }}>
