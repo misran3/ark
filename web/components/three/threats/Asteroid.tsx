@@ -279,6 +279,35 @@ export default function Asteroid({
       );
     }
 
+    // ---- Passive debris shedding when field is highly unstable ----
+    if (fieldInstability >= 0.6) {
+      // Only at 60%+ instability (2+ rocks destroyed)
+      const shedInterval = 2.5;
+      const lastShedKey = `lastShed_${position.join(',')}`;
+
+      if (!(window as any)[lastShedKey] || time - (window as any)[lastShedKey] > shedInterval) {
+        (window as any)[lastShedKey] = time;
+
+        // Spawn 1-2 small debris chunks
+        const newChunks = Array.from({ length: 1 + Math.floor(Math.random() * 2) }, () => {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 0.1 + Math.random() * 0.2;
+          return {
+            position: new Vector3(0, 0, 0),
+            velocity: new Vector3(
+              Math.cos(angle) * speed,
+              Math.sin(angle) * speed,
+              (Math.random() - 0.5) * 0.1
+            ),
+            lifetime: 3 + Math.random() * 2,
+            startTime: time,
+          };
+        });
+
+        setChunkParticles((prev) => [...prev, ...newChunks]);
+      }
+    }
+
     // ---- Layer 1: Heat Haze atmosphere ----
     if (hazeRef.current) {
       hazeRef.current.time = time;
@@ -295,7 +324,20 @@ export default function Asteroid({
       meshRef.current.rotation.y += angularVelocity[1] * delta;
       meshRef.current.rotation.z += angularVelocity[2] * delta;
 
-      const targetScale = hovered ? 1.1 : 1.0;
+      // Surface pulse when field is unstable
+      let scaleFactor = 1.0;
+      if (fieldInstability > 0.3) {
+        // Pulse frequency increases with instability (1-4 Hz)
+        const pulseFreq = 1 + fieldInstability * 3;
+        const pulsePhase = Math.sin(time * pulseFreq * Math.PI * 2);
+
+        // Scale pulse amplitude: 2-5% based on instability
+        const pulseAmplitude = 0.02 + fieldInstability * 0.03;
+        scaleFactor = 1 + pulsePhase * pulseAmplitude;
+      }
+
+      // Apply hover scale on top of instability pulse
+      const targetScale = hovered ? 1.1 * scaleFactor : scaleFactor;
       meshRef.current.scale.lerp(
         new THREE.Vector3(targetScale, targetScale, targetScale),
         delta * 5
@@ -311,7 +353,16 @@ export default function Asteroid({
 
       if (!isCollapsingRef.current) {
         materialRef.current.heatIntensity = hovered ? 1.5 : 1.0;
-        materialRef.current.emissiveStrength = hovered ? 3.5 : 3.0;
+
+        // Boost emissive when unstable (in addition to sympatheticGlow uniform)
+        let baseEmissive = hovered ? 3.5 : 3.0;
+        if (sympatheticGlow > 0) {
+          const pulse = Math.sin(time * (1 + sympatheticGlow * 3) * Math.PI * 2);
+          // Emissive boost: 0-2x based on sympatheticGlow and pulse
+          const emissiveBoost = 1.0 + sympatheticGlow * (1.0 + pulse * 0.5);
+          baseEmissive *= emissiveBoost;
+        }
+        materialRef.current.emissiveStrength = baseEmissive;
       }
     }
 
