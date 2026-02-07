@@ -1,14 +1,14 @@
 /**
- * Captain Nova Hologram Shader Materials
+ * Captain Nova v3 Hologram Shader Materials
  *
- * Advanced holographic shader system with 7 visual effects:
- * 1. Fresnel Edge Glow - Bright rim lighting on silhouette
+ * Unified holographic shader with 7 visual effects:
+ * 1. Fresnel Edge Glow - Per-face normals with flatShading
  * 2. Animated Scanlines - Horizontal lines scrolling upward
  * 3. Aurora Gradient Flow - Shifting colors synced with global theme
  * 4. Glitch Effect - Random horizontal displacement
- * 5. Chromatic Aberration - RGB split on edges
+ * 5. Chromatic Aberration - Fake RGB split via color-offset fresnel
  * 6. Particle Noise - Flickering internal pixels
- * 7. Dynamic Transparency - Modulated by scanlines and fresnel
+ * 7. Gradient Fade - Smooth opacity falloff from chest to waist
  */
 
 import * as THREE from 'three';
@@ -17,43 +17,24 @@ import * as THREE from 'three';
 // VERTEX SHADER
 // ============================================================================
 
-export const hologramVertexShader = `
-  varying vec2 vUv;
+const hologramVertexShader = `
   varying vec3 vNormal;
+  varying vec3 vViewPosition;
   varying vec3 vWorldPosition;
-  varying vec3 vViewDirection;
 
   void main() {
-    vUv = uv;
+    // Transform normal to world space for fresnel
     vNormal = normalize(normalMatrix * normal);
 
-    vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-    vWorldPosition = worldPosition.xyz;
-    vViewDirection = normalize(cameraPosition - worldPosition.xyz);
+    // World position for scanlines and fade
+    vec4 worldPos = modelMatrix * vec4(position, 1.0);
+    vWorldPosition = worldPos.xyz;
 
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
+    // View position for fresnel
+    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+    vViewPosition = -mvPosition.xyz;
 
-// ============================================================================
-// NOISE FUNCTION (Embedded in Fragment Shader)
-// ============================================================================
-
-const noiseFunction = `
-  // Simple noise function for procedural effects
-  float random(vec2 st) {
-    return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
-  }
-
-  float noise(vec2 st) {
-    vec2 i = floor(st);
-    vec2 f = fract(st);
-    float a = random(i);
-    float b = random(i + vec2(1.0, 0.0));
-    float c = random(i + vec2(0.0, 1.0));
-    float d = random(i + vec2(1.0, 1.0));
-    vec2 u = f * f * (3.0 - 2.0 * f);
-    return mix(a, b, u.x) + (c - a)* u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+    gl_Position = projectionMatrix * mvPosition;
   }
 `;
 
@@ -61,71 +42,86 @@ const noiseFunction = `
 // FRAGMENT SHADER
 // ============================================================================
 
-export const hologramFragmentShader = `
+const hologramFragmentShader = `
   uniform float uTime;
   uniform vec3 uAuroraColor1;
   uniform vec3 uAuroraColor2;
   uniform float uGlitchIntensity;
-  uniform float uOpacity;
+  uniform float uFadeStart;
+  uniform float uFadeEnd;
 
-  varying vec2 vUv;
   varying vec3 vNormal;
+  varying vec3 vViewPosition;
   varying vec3 vWorldPosition;
-  varying vec3 vViewDirection;
 
-  ${noiseFunction}
+  // Hash-based noise (cheap, no texture lookups)
+  float hash(vec2 p) {
+    p = fract(p * vec2(123.34, 456.21));
+    p += dot(p, p + 45.32);
+    return fract(p.x * p.y);
+  }
+
+  float noise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+
+    float a = hash(i);
+    float b = hash(i + vec2(1.0, 0.0));
+    float c = hash(i + vec2(0.0, 1.0));
+    float d = hash(i + vec2(1.0, 1.0));
+
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+  }
 
   void main() {
-    // 1. FRESNEL EFFECT (Edge glow)
-    float fresnel = 1.0 - dot(normalize(vNormal), normalize(vViewDirection));
-    fresnel = pow(fresnel, 2.5); // Sharpen edge falloff
+    // Base color
+    vec3 baseColor = vec3(0.8, 0.9, 1.0);
 
-    // 2. SCANLINE EFFECT (Horizontal lines scrolling upward)
-    float scanlineSpeed = 0.5;
+    // 1. Fresnel Edge Glow (per-face with flatShading)
+    vec3 viewDir = normalize(vViewPosition);
+    float fresnel = 1.0 - abs(dot(viewDir, vNormal));
+    fresnel = pow(fresnel, 2.5);
+
+    // 5. Fake chromatic aberration (color-offset fresnel)
+    float fresnelSide = dot(viewDir, vNormal) > 0.0 ? 1.0 : 0.0;
+    vec3 edgeColor = mix(vec3(1.0, 0.3, 0.3), vec3(0.3, 0.5, 1.0), fresnelSide);
+    vec3 fresnelGlow = edgeColor * fresnel * 1.5;
+
+    // 2. Scanlines (horizontal, scrolling upward)
     float scanlineFrequency = 80.0;
-    float scanline = sin(vUv.y * scanlineFrequency + uTime * scanlineSpeed);
-    scanline = smoothstep(0.3, 0.7, scanline); // Sharpen lines
+    float scanlineSpeed = 0.5;
+    float scanline = sin(vWorldPosition.y * scanlineFrequency + uTime * scanlineSpeed);
+    scanline = smoothstep(0.3, 0.7, scanline);
+    float scanlineAlpha = mix(0.85, 1.0, scanline);
 
-    // 3. AURORA GRADIENT FLOW (Shifting colors)
-    float flowNoise = noise(vUv * 3.0 + uTime * 0.2);
+    // 3. Aurora Gradient Flow
+    float flowNoise = noise(vWorldPosition.xy * 3.0 + uTime * 0.2);
     vec3 auroraGradient = mix(uAuroraColor1, uAuroraColor2, flowNoise);
+    baseColor = mix(baseColor, auroraGradient, 0.12);
 
-    // 4. GLITCH EFFECT (Horizontal displacement)
-    float glitchOffset = noise(floor(vUv.y * 20.0) + uTime * 10.0) * uGlitchIntensity;
-    vec2 glitchedUV = vUv + vec2(glitchOffset * 0.05, 0.0);
-    float useGlitch = step(0.98, random(vec2(uTime, 0.0)));
-    vec2 finalUV = mix(vUv, glitchedUV, useGlitch);
-
-    // 5. CHROMATIC ABERRATION (RGB split on edges)
-    vec3 chromatic = auroraGradient;
-    if (fresnel > 0.3) {
-      vec3 rColor = auroraGradient * vec3(1.2, 0.9, 0.9);
-      vec3 bColor = auroraGradient * vec3(0.9, 0.9, 1.2);
-      chromatic = mix(auroraGradient, rColor, fresnel * 0.3);
-      chromatic = mix(chromatic, bColor, fresnel * 0.2);
+    // 4. Glitch Effect (horizontal displacement)
+    if (uGlitchIntensity > 0.01) {
+      float glitchRow = floor(vWorldPosition.y * 20.0);
+      float glitchNoise = hash(vec2(glitchRow, floor(uTime * 10.0)));
+      // Color distortion during glitch
+      baseColor += vec3(glitchNoise * 0.2) * uGlitchIntensity;
     }
 
-    // 6. PARTICLE NOISE (Internal flickering pixels)
-    float particleNoise = noise(finalUV * 100.0 + uTime * 2.0);
-    particleNoise = step(0.98, particleNoise); // Only brightest 2%
+    // 6. Particle Noise (internal flickering)
+    float particleNoise = noise(vWorldPosition.xz * 100.0 + uTime * 2.0);
+    particleNoise = step(0.98, particleNoise);
+    baseColor += vec3(particleNoise * 0.5);
 
-    // 7. COMBINE ALL EFFECTS
-    vec3 finalColor = chromatic * scanline;
+    // Combine fresnel glow with aurora tint
+    vec3 glowColor = mix(fresnelGlow, auroraGradient * fresnel, 0.5);
+    vec3 finalColor = baseColor + glowColor * 0.3;
 
-    // Add fresnel glow
-    finalColor += auroraGradient * fresnel * 0.3;
+    // 7. Gradient Fade (waist to transparent)
+    float fadeAlpha = smoothstep(uFadeEnd, uFadeStart, vWorldPosition.y);
 
-    // Add particle noise
-    finalColor += vec3(particleNoise * 0.5);
-
-    // Blend with aurora gradient (subtle, 12% strength)
-    finalColor = mix(finalColor, auroraGradient, 0.12);
-
-    // 8. CALCULATE FINAL ALPHA
-    float baseAlpha = uOpacity * 0.8; // 80% base transparency
-    float scanlineAlpha = mix(0.85, 1.0, scanline);
-    float fresnelAlpha = 0.6 + fresnel * 0.4;
-    float alpha = baseAlpha * scanlineAlpha * fresnelAlpha;
+    // Base transparency + scanline modulation + fade
+    float alpha = 0.8 * scanlineAlpha * fadeAlpha;
 
     gl_FragColor = vec4(finalColor, alpha);
   }
@@ -140,40 +136,33 @@ export interface HologramUniforms {
   uAuroraColor1: { value: THREE.Color };
   uAuroraColor2: { value: THREE.Color };
   uGlitchIntensity: { value: number };
-  uOpacity: { value: number };
+  uFadeStart: { value: number };
+  uFadeEnd: { value: number };
 }
 
 // ============================================================================
 // MATERIAL CREATION
 // ============================================================================
 
-/**
- * Creates a holographic shader material for Captain Nova
- *
- * @param auroraColor1 - First aurora color (hex string or THREE.Color)
- * @param auroraColor2 - Second aurora color (hex string or THREE.Color)
- * @returns Configured THREE.ShaderMaterial with hologram shader
- */
 export function createHologramMaterial(
-  auroraColor1: string | THREE.Color = '#a855f7',
-  auroraColor2: string | THREE.Color = '#06b6d4'
+  auroraColor1: string | THREE.Color = '#00ffff',
+  auroraColor2: string | THREE.Color = '#ff00ff'
 ): THREE.ShaderMaterial {
-  const uniforms = {
-    uTime: { value: 0 },
-    uAuroraColor1: { value: new THREE.Color(auroraColor1) },
-    uAuroraColor2: { value: new THREE.Color(auroraColor2) },
-    uGlitchIntensity: { value: 0 },
-    uOpacity: { value: 1 },
-  };
-
   return new THREE.ShaderMaterial({
-    uniforms,
+    uniforms: {
+      uTime: { value: 0 },
+      uAuroraColor1: { value: new THREE.Color(auroraColor1) },
+      uAuroraColor2: { value: new THREE.Color(auroraColor2) },
+      uGlitchIntensity: { value: 0.0 },
+      uFadeStart: { value: -0.3 }, // Start fade at waist
+      uFadeEnd: { value: -0.6 }, // Fully transparent below
+    },
     vertexShader: hologramVertexShader,
     fragmentShader: hologramFragmentShader,
     transparent: true,
-    side: THREE.DoubleSide,
+    side: THREE.FrontSide,
     depthWrite: false,
-    toneMapped: false,
+    flatShading: true, // Per-face normals for geometric aesthetic
   });
 }
 
@@ -181,12 +170,6 @@ export function createHologramMaterial(
 // UNIFORM UPDATES
 // ============================================================================
 
-/**
- * Updates hologram shader uniforms (call every frame in useFrame)
- *
- * @param material - The hologram shader material to update
- * @param updates - Object containing optional uniform updates
- */
 export function updateHologramUniforms(
   material: THREE.ShaderMaterial,
   updates: {
@@ -194,24 +177,18 @@ export function updateHologramUniforms(
     auroraColor1?: string;
     auroraColor2?: string;
     glitchIntensity?: number;
-    opacity?: number;
   }
 ): void {
-  const uniforms = material.uniforms as unknown as HologramUniforms;
-
   if (updates.time !== undefined) {
-    uniforms.uTime.value = updates.time;
+    material.uniforms.uTime.value = updates.time;
   }
   if (updates.auroraColor1) {
-    uniforms.uAuroraColor1.value.set(updates.auroraColor1);
+    material.uniforms.uAuroraColor1.value.set(updates.auroraColor1);
   }
   if (updates.auroraColor2) {
-    uniforms.uAuroraColor2.value.set(updates.auroraColor2);
+    material.uniforms.uAuroraColor2.value.set(updates.auroraColor2);
   }
   if (updates.glitchIntensity !== undefined) {
-    uniforms.uGlitchIntensity.value = updates.glitchIntensity;
-  }
-  if (updates.opacity !== undefined) {
-    uniforms.uOpacity.value = updates.opacity;
+    material.uniforms.uGlitchIntensity.value = updates.glitchIntensity;
   }
 }
