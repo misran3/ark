@@ -12,8 +12,6 @@ interface BootSequenceProps {
 export function BootSequence({ children }: BootSequenceProps) {
   const { phase, progress, skipBoot } = useBootSequence();
 
-  console.log(`[BOOT-RENDER] Phase: ${phase}, Progress: ${progress.toFixed(1)}%`);
-
   const isBootComplete = phase === 'complete';
   const showBootOverlay = !isBootComplete;
 

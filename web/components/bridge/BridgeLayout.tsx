@@ -13,6 +13,7 @@ import { LeftDataStrip } from './cockpit/LeftDataStrip';
 import { Viewport3D } from '../viewport/Viewport3D';
 import { ViewportGlass } from './cockpit/ViewportGlass';
 import { EnvironmentalCohesion } from './cockpit/EnvironmentalCohesion';
+import { DashboardProjection } from './cockpit/DashboardProjection';
 import { PerfMonitor } from './cockpit/PerfMonitor';
 
 export function BridgeLayout() {
@@ -20,8 +21,6 @@ export function BridgeLayout() {
   const showHUD = phase === 'hud-rise' || phase === 'complete';
   const showConsole = phase === 'console-boot' || phase === 'hud-rise' || phase === 'complete';
   const showFrame = phase === 'console-boot' || phase === 'hud-rise' || phase === 'complete';
-
-  console.log(`[BRIDGE] Render - phase: ${phase}, showFrame: ${showFrame}, showConsole: ${showConsole}, showHUD: ${showHUD}`);
 
   // Trigger power lifecycle cold start when console-boot phase begins
   const coldStartTriggered = useRef(false);
@@ -62,6 +61,16 @@ export function BridgeLayout() {
         }}
       >
         <ViewportGlass />
+      </div>
+
+      {/* Dashboard projection: top surface + shadow gap (z-9, between glass and frame) */}
+      <div
+        style={{
+          opacity: showFrame ? 1 : 0,
+          transition: 'opacity 0.8s ease-out',
+        }}
+      >
+        <DashboardProjection />
       </div>
 
       {/* Layer 2: Cockpit frame (structural hull overlay) */}
