@@ -34,7 +34,7 @@ export function ConsolePanel({
   isWarning = false,
   backlightTint = 'rgba(0, 240, 255, 0.03)',
 }: ConsolePanelProps) {
-  const { setOpenPanel } = useConsoleStore();
+  const { expandPanel } = useConsoleStore();
   const alertLevel = useAlertStore((state) => state.level);
   const cascadeStage = useAlertStore((state) => state.cascadeStage);
   const [isPowered, setIsPowered] = useState(false);
@@ -72,7 +72,7 @@ export function ConsolePanel({
         style={{
           // 4B: Backlight spill — colored glow onto surrounding dashboard surface
           boxShadow: isPowered
-            ? `0 0 20px ${alertBacklight}, 0 0 40px rgba(0, 242, 253, 0.02)`
+            ? `0 0 25px ${alertBacklight}, 0 0 50px rgba(0, 242, 253, 0.04), 0 -3px 15px rgba(0, 242, 253, 0.03)`
             : 'none',
           transition: 'box-shadow 0.5s ease-out',
         }}
@@ -197,7 +197,7 @@ export function ConsolePanel({
 
           {/* CRT Screen area (clickable) */}
           <button
-            onClick={() => setOpenPanel(type)}
+            onClick={() => expandPanel(type)}
             className="relative w-full h-full crt-screen cursor-pointer group"
             style={{
               opacity: isPowered ? 1 : 0,
