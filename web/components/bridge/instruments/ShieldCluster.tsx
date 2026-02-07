@@ -1,11 +1,8 @@
 'use client';
 
-import { Suspense } from 'react';
 import { useShieldStore } from '@/lib/stores/shield-store';
 import { useInstrumentPower } from '@/hooks/useInstrumentPower';
-import { useWebGLAvailable } from '@/hooks/useWebGLAvailable';
-import { ShieldGauge3D } from './ShieldGauge3D';
-import { CircularGaugeFallback } from './fallbacks';
+import { ShieldGaugeSVG } from './ShieldGaugeSVG';
 import { InstrumentMalfunction } from './InstrumentMalfunction';
 
 /**
@@ -21,7 +18,6 @@ import { InstrumentMalfunction } from './InstrumentMalfunction';
 export function ShieldCluster() {
   const overallPercent = useShieldStore((s) => s.overallPercent);
   const shields = useShieldStore((s) => s.shields);
-  const canvasReady = useWebGLAvailable();
   const { isRunning, isOff, hasError } = useInstrumentPower('inst-01');
 
   // When off or error, show 0 values; spring physics create natural sweep on transition
@@ -55,21 +51,9 @@ export function ShieldCluster() {
             }. ${isDanger ? 'Warning: shield integrity critical.' : ''}`
         }
       </span>
-      {/* Primary: Circular dial gauge — fixed height prevents resize loop under CSS perspective */}
+      {/* Primary: Circular dial gauge */}
       <div className="relative" style={{ height: '90px' }}>
-        {canvasReady ? (
-          <Suspense fallback={
-            <div className="flex items-center justify-center h-full">
-              <CircularGaugeFallback value={displayPercent} label={`${Math.round(displayPercent)}%`} />
-            </div>
-          }>
-            <ShieldGauge3D value={displayPercent} />
-          </Suspense>
-        ) : (
-          <div className="flex items-center justify-center h-full">
-            <CircularGaugeFallback value={overallPercent} label={`${Math.round(overallPercent)}%`} />
-          </div>
-        )}
+        <ShieldGaugeSVG value={displayPercent} />
       </div>
 
       {/* Secondary: Three tube gauges */}
