@@ -689,6 +689,12 @@ body {
   100% { opacity: 0.6; transform: translateY(0); }
 }
 
+/* Status lamp warning pulse */
+@keyframes lamp-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
 /* Hull brushed-metal texture (horizontal) */
 .hull-metal-h {
   background:
