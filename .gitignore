@@ -11,3 +11,7 @@ docs/plans/*
 
 # Git worktrees
 .worktrees
+.idea
+
+# Env vars
+export_env_vars.sh

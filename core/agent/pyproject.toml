@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "AI Agent module for core functionalities"
 requires-python = ">=3.12"
 dependencies = [
+    "aws-lambda-powertools>=3.24.0",
     "boto3>=1.42.43",
     "botocore>=1.42.43",
     "pydantic-ai-slim[bedrock,logfire]>=1.56.0",
@@ -13,6 +14,8 @@ dependencies = [
 dev = [
     "boto3-stubs>=1.42.43",
     "botocore-stubs>=1.42.41",
+    "fastapi>=0.128.4",
+    "uvicorn>=0.40.0",
 ]
 
 [tool.uv.sources]

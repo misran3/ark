@@ -2,14 +2,15 @@ from typing import Any
 from aws_lambda_powertools import Logger, Tracer
 from aws_lambda_powertools.utilities.typing import LambdaContext
 from aws_lambda_powertools.logging import correlation_paths
-from aws_lambda_powertools.event_handler import APIGatewayRestResolver
+from aws_lambda_powertools.event_handler import APIGatewayRestResolver, CORSConfig
 
 # Initialize Logger and Tracer
 logger = Logger(service="UserLambdaHandler")
 tracer = Tracer()
 
 # Intialize REST API resolver
-app = APIGatewayRestResolver()
+cors_config = CORSConfig(allow_origin="*", max_age=300)
+app = APIGatewayRestResolver(cors=cors_config)
 
 @app.get("/users/health")
 @tracer.capture_method

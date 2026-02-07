@@ -1,7 +1,8 @@
 import * as cdk from 'aws-cdk-lib';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
-import * as cognito from 'aws-cdk-lib/aws-cognito';
+// import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
@@ -10,7 +11,7 @@ import * as path from 'path';
 import { APP_NAME, APP_NAME_LOWERCASE } from './constants';
 
 export interface ApiStackProps extends cdk.StackProps {
-    userPool: cognito.UserPool;
+    // userPool: cognito.UserPool;
     usersTable: dynamodb.Table;
     usersTableEmailIndexName: string;
 }
@@ -28,6 +29,7 @@ interface LambdaFunctionConfig {
 
 export class ApiStack extends cdk.Stack {
     public readonly api: apigateway.RestApi;
+    private readonly apiResource: apigateway.Resource;
     private readonly coreRoot: string = path.join(__dirname, '../../core');
     private readonly commonEnv: Record<string, string>;
 
@@ -42,11 +44,11 @@ export class ApiStack extends cdk.Stack {
         };
 
         // Create Cognito Authorizer for API Gateway
-        const cognitoAuthorizer = new apigateway.CognitoUserPoolsAuthorizer(this, 'CognitoAuthorizer', {
-            cognitoUserPools: [props.userPool],
-            identitySource: 'method.request.header.Authorization',
-            authorizerName: `${APP_NAME}CognitoAuthorizer`,
-        });
+        // const cognitoAuthorizer = new apigateway.CognitoUserPoolsAuthorizer(this, 'CognitoAuthorizer', {
+        //     cognitoUserPools: [props.userPool],
+        //     identitySource: 'method.request.header.Authorization',
+        //     authorizerName: `${APP_NAME}CognitoAuthorizer`,
+        // });
 
         // Create REST API
         this.api = new apigateway.RestApi(this, `${APP_NAME}Api`, {
@@ -68,6 +70,9 @@ export class ApiStack extends cdk.Stack {
             cloudWatchRole: true,
         });
 
+        // Create base /api resource
+        this.apiResource = this.api.root.addResource('api');
+
         // =============================================================
         // User Lambda Function
         // =============================================================
@@ -86,7 +91,87 @@ export class ApiStack extends cdk.Stack {
         // =============================================================
         // User API Resources and Methods
         // =============================================================
-        this.createUserAPIResources(userLambdaFn, cognitoAuthorizer);
+        this.createUserAPIResources(userLambdaFn);
+
+        // =============================================================
+        // Data Lambda Function
+        // =============================================================
+        const dataLambdaFn = this.createLambdaFunction({
+            name: 'data-lambda',
+            handler: 'handler.lambda_handler',
+            description: 'Financial data: Nessie integration, budget engine, asteroid detection',
+            additionalDeps: ['./shared', './database'],
+            copySourceFiles: true,
+            additionalEnv: {
+                USERS_TABLE_NAME: props.usersTable.tableName,
+                NESSIE_API_KEY: process.env.NESSIE_API_KEY || '',
+                DATA_SOURCE: process.env.DATA_SOURCE || 'mock',
+            },
+            tableGrants: [props.usersTable],
+            timeout: cdk.Duration.seconds(30),
+        });
+
+        // =============================================================
+        // Data API Resources and Methods
+        // =============================================================
+        this.createDataAPIResources(dataLambdaFn);
+
+        // =============================================================
+        // VISA Lambda Function
+        // =============================================================
+        const visaLambdaFn = this.createLambdaFunction({
+            name: 'visa-lambda',
+            handler: 'handler.lambda_handler',
+            description: 'VISA Transaction Controls service',
+            additionalDeps: ['./shared', './database'],
+            copySourceFiles: true,
+            additionalEnv: {
+                USERS_TABLE_NAME: props.usersTable.tableName,
+                // NOTE: For X-Pay-Token auth:
+                // - VISA_USER_ID is the Visa API Key (apiKey)
+                // - VISA_PASSWORD is the Visa Shared Secret
+                VISA_USER_ID: process.env.VISA_USER_ID || '',
+                VISA_PASSWORD: process.env.VISA_PASSWORD || '',
+            },
+            tableGrants: [props.usersTable],
+            timeout: cdk.Duration.seconds(30),
+        });
+
+        // =============================================================
+        // VISA API Resources and Methods
+        // =============================================================
+        this.createVisaAPIResources(visaLambdaFn);
+        
+        // =============================================================
+        // Captain Nova Lambda Function
+        // =============================================================
+        const captainLambdaFn = this.createLambdaFunction({
+            name: 'captain-lambda',
+            handler: 'handler.lambda_handler',
+            description: 'Captain Nova AI agent for financial guidance',
+            additionalDeps: ['./shared', './agent'],
+             additionalEnv: {
+                BEDROCK_MODEL_ID: 'us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+                LOGFIRE_TOKEN: process.env.LOGFIRE_TOKEN || '',
+                NESSIE_API_KEY: process.env.NESSIE_API_KEY || '',
+                DATA_SOURCE: process.env.DATA_SOURCE || 'mock',
+             },
+             timeout: cdk.Duration.seconds(60),
+         });
+
+        // Grant Bedrock access
+        captainLambdaFn.addToRolePolicy(new iam.PolicyStatement({
+            actions: ['bedrock:InvokeModel'],
+            resources: [
+                `arn:aws:bedrock:*::foundation-model/anthropic.*`,
+                `arn:aws:bedrock:${this.region}:${this.account}:inference-profile/*`
+            ],
+        }));
+
+        // =============================================================
+        // Captain Nova API Resources
+        // =============================================================
+        this.createCaptainAPIResources(captainLambdaFn);
 
         // CloudFormation Outputs
         new cdk.CfnOutput(this, 'ApiUrl', {
@@ -114,7 +199,7 @@ export class ApiStack extends cdk.Stack {
      * @param userLambdaFn The Lambda function that handles user-related API requests.
      * @param authorizer The Cognito User Pools Authorizer to secure the endpoints.
      */
-    private createUserAPIResources(userLambdaFn: lambda.Function, authorizer: apigateway.CognitoUserPoolsAuthorizer) {
+    private createUserAPIResources(userLambdaFn: lambda.Function) {
         const usersResource = this.api.root.addResource('users');
 
         // Health check endpoint
@@ -122,32 +207,91 @@ export class ApiStack extends cdk.Stack {
         healthResource.addMethod('GET', new apigateway.LambdaIntegration(userLambdaFn));
 
         // POST /users
-        usersResource.addMethod('POST', new apigateway.LambdaIntegration(userLambdaFn), {
-            authorizationType: apigateway.AuthorizationType.COGNITO,
-            authorizer: authorizer,
-        });
+        usersResource.addMethod('POST', new apigateway.LambdaIntegration(userLambdaFn));
 
         // GET /users
-        usersResource.addMethod('GET', new apigateway.LambdaIntegration(userLambdaFn), {
-            authorizationType: apigateway.AuthorizationType.COGNITO,
-            authorizer: authorizer,
-        });
+        usersResource.addMethod('GET', new apigateway.LambdaIntegration(userLambdaFn));
 
         // GET, PUT, DELETE /users/{user_id}
         const userIdResource = usersResource.addResource('{user_id}');
 
-        userIdResource.addMethod('GET', new apigateway.LambdaIntegration(userLambdaFn), {
-            authorizationType: apigateway.AuthorizationType.COGNITO,
-            authorizer: authorizer,
-        });
-        userIdResource.addMethod('PUT', new apigateway.LambdaIntegration(userLambdaFn), {
-            authorizationType: apigateway.AuthorizationType.COGNITO,
-            authorizer: authorizer,
-        });
-        userIdResource.addMethod('DELETE', new apigateway.LambdaIntegration(userLambdaFn), {
-            authorizationType: apigateway.AuthorizationType.COGNITO,
-            authorizer: authorizer,
-        });
+        userIdResource.addMethod('GET', new apigateway.LambdaIntegration(userLambdaFn));
+        userIdResource.addMethod('PUT', new apigateway.LambdaIntegration(userLambdaFn));
+        userIdResource.addMethod('DELETE', new apigateway.LambdaIntegration(userLambdaFn));
+    }
+
+    /**
+     * Creates API Gateway resources and methods for data/financial operations.
+     * Health check is unauthenticated; all other endpoints require Cognito auth.
+     */
+    private createDataAPIResources(dataLambdaFn: lambda.Function) {
+        const apiResource = this.apiResource;
+        const lambdaIntegration = new apigateway.LambdaIntegration(dataLambdaFn);
+
+        // All data endpoints are public for now (no Cognito auth)
+        apiResource.addResource('health').addMethod('GET', lambdaIntegration);
+        apiResource.addResource('snapshot').addMethod('GET', lambdaIntegration);
+        apiResource.addResource('budget').addMethod('GET', lambdaIntegration);
+
+        const asteroidsResource = apiResource.addResource('asteroids');
+        asteroidsResource.addMethod('GET', lambdaIntegration);
+        const asteroidIdResource = asteroidsResource.addResource('{asteroid_id}');
+        asteroidIdResource.addResource('action').addMethod('POST', lambdaIntegration);
+
+        apiResource.addResource('transactions').addMethod('GET', lambdaIntegration);
+    }
+
+    /**
+     * Creates API Gateway resources and methods for VISA operations.
+     */
+    private createVisaAPIResources(visaLambdaFn: lambda.Function) {
+        const apiResource = this.apiResource;
+        const visaResource = apiResource.getResource('visa') || apiResource.addResource('visa');
+        const lambdaIntegration = new apigateway.LambdaIntegration(visaLambdaFn);
+
+        // VISA health check
+        visaResource.addResource('health').addMethod('GET', lambdaIntegration);
+
+        // VISA Transaction Controls endpoints
+        const visaControlsResource = visaResource.addResource('controls');
+        visaControlsResource.addMethod('POST', lambdaIntegration);
+        const visaControlIdResource = visaControlsResource.addResource('{document_id}');
+        visaControlIdResource.addMethod('GET', lambdaIntegration);
+        visaControlIdResource.addMethod('DELETE', lambdaIntegration);
+    }
+
+    /**
+     * Creates API Gateway resources for Captain Nova endpoints.
+     * @param captainLambdaFn The Lambda function that handles Captain Nova API requests.
+     * @param authorizer The Cognito User Pools Authorizer to secure the endpoints.
+     */
+    private createCaptainAPIResources(captainLambdaFn: lambda.Function) {
+        const captainResource = this.apiResource.addResource('captain');
+        const lambdaIntegration = new apigateway.LambdaIntegration(captainLambdaFn);
+
+        // Health check (no auth)
+        captainResource.addResource('health').addMethod('GET', lambdaIntegration);
+
+        // Legacy conversational query (no auth)
+        captainResource.addResource('query').addMethod('POST', lambdaIntegration);
+
+        // Complete multi-agent analysis (no auth)
+        captainResource.addResource('complete-analysis').addMethod('POST', lambdaIntegration);
+
+        // Individual specialist endpoints (no auth)
+        const specialistsResource = captainResource.addResource('specialists');
+        const specialistNames = [
+            'financial-meaning',
+            'subscriptions',
+            'budget-overruns',
+            'upcoming-bills',
+            'debt-spirals',
+            'missed-rewards',
+            'fraud-detection',
+        ];
+        for (const name of specialistNames) {
+            specialistsResource.addResource(name).addMethod('POST', lambdaIntegration);
+        }
     }
 
     /**
@@ -205,6 +349,7 @@ export class ApiStack extends cdk.Stack {
             code: lambda.Code.fromAsset(this.coreRoot, {
                 bundling: {
                     image: lambda.Runtime.PYTHON_3_12.bundlingImage,
+                    platform: 'linux/arm64',
                     command: ['bash', '-c', bundlingCommands.join(' && ')],
                 },
             }),

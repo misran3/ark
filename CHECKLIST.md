@@ -23,21 +23,24 @@
 | [ ] | Captain Nova panel UI |
 | [ ] | Shield bars component |
 | [ ] | Cognito auth integration |
-| [ ] | Balance HUD component |
-| [ ] | Bottom metrics bar |
-| [ ] | Transaction log component |
-| [ ] | Asteroid UI component |
+| [x] | Balance HUD component |
+| [x] | Bottom metrics bar |
+| [x] | Transaction log component |
+| [x] | Asteroid UI component |
+| [x] | Create web/public/mocks/ with official shared data |
+| [x] | Implement type-safe API hooks (useFinance, useSecurity, useAI) |
+| [x] | Isolation test page (/test/bridge-data) |
 | [ ] | Frontend → API Gateway integration |
 | [ ] | Captain Nova tools → real endpoints |
-| [ ] | VISA sandbox authentication (mTLS) |
-| [ ] | VISA Transaction Controls API integration |
-| [ ] | VISA controls Lambda endpoints |
+| [x] | VISA sandbox authentication (X-Pay-Token) |
+| [x] | VISA Transaction Controls API integration |
+| [x] | VISA controls Lambda endpoints (Isolated in visa-lambda) |
 | [ ] | Wire VISA tools into Captain Nova |
 | [ ] | VISA shield activation UI |
 | [ ] | VISA controls display (stretch) |
 | [ ] | Mobile responsiveness pass |
-| [ ] | Loading states + error handling |
-| [ ] | Animation polish |
+| [x] | Loading states + error handling |
+| [x] | Animation polish |
 | [ ] | Captain Nova prompt tuning |
 | [ ] | Demo rehearsal #1 |
 | [ ] | Pitch deck (5-6 slides) |
@@ -85,3 +88,63 @@
 6. **Regenerate types** after any Pydantic model changes by running `./scripts/generate-types.sh`
 7. **Captain Nova** must return `CaptainResponse` format with optional `suggested_visa_controls`
 8. **VISA Integration** must use `VisaControlRule` and `VisaAlert` schemas
+
+---
+
+### Module 6: Bridge UI Data Implementation
+
+**What was added:**
+- **Dumb Components (Presentational):**
+  - `BalanceHUD.tsx`: Orbital net worth display with animated rings and account breakdown.
+  - `TransactionLog.tsx`: Categorized list of recent transmissions with bucket color-coding.
+  - `BottomMetricsBar.tsx`: 4-card grid for Income, Spending, Savings Rate, and Net Worth Delta.
+  - `AsteroidCard.tsx`: Expandable threat cards with severity-based glow and action buttons.
+- **Smart Components (Containers):**
+  - `BridgeDataContainer.tsx`: Orchestrates HUD, Metrics, and Transactions.
+  - `AsteroidsContainer.tsx`: Manages threat list and removal animations.
+  - `VisaShieldsContainer.tsx`: Displays active VISA transaction controls.
+- **Isolation Test Page:**
+  - Accessible at `/test/bridge-data` for rapid UI development and testing.
+- **Official Mock Sync:**
+  - Synced `web/public/mocks/` with `core/shared/src/shared/mocks/` to ensure frontend/backend data alignment.
+
+### API Hooks & Integration Layer
+
+**What was added:**
+- **Centralized Axios Client:** `web/src/lib/api.ts` configured with base URLs and ready for Cognito JWT injection.
+- **Feature-specific Hooks:**
+  - `useFinance.ts`: `useFinancialSnapshot()`, `useTransactions()`
+  - `useSecurity.ts`: `useAsteroids()`, `useVisaControls()`
+  - `useAI.ts`: `useCaptainNova()`
+
+**How the Hooks Work:**
+- **Dual-Mode Logic:** Every hook contains both "Mock Mode" (active) using local JSON files and "Production Mode" (commented out) using Axios.
+- **Type Safety:** Hooks are strictly typed using the generated `web/src/types/api.ts` interfaces.
+- **Abstraction:** Containers now consume data through hooks rather than direct `fetch` calls, making the eventual swap to real APIs a single-line change per hook.
+- **Documentation:** Added `web/src/hooks/README.md` for developer guidance.
+
+---
+
+### Module 2: VISA Integration Implementation (Isolated)
+
+**What was added:**
+- **VISA Lambda:** `core/lambda/visa-lambda/`
+  - Dedicated Lambda function for all VISA-related operations.
+  - **Handler:** `handler.py` exposes `/api/visa/health`, `/api/visa/controls`.
+  - **Service:** `services/visa_service.py` handles X-Pay-Token signing (API key + shared secret).
+- **Separation of Concerns:**
+  - Removed VISA logic from `data-lambda` to keep it focused on financial data processing.
+  - VISA operations now have their own independent deployment and scaling.
+- **Infrastructure Updates:** `infrastructure/lib/api-stack.ts`
+  - Defined `visa-lambda` function.
+  - Configured API Gateway to route `/api/visa/*` to the new `visa-lambda`.
+  - Set environment variables: `VISA_USER_ID`, `VISA_PASSWORD`.
+
+**Auth Setup (X-Pay-Token):**
+- `VISA_USER_ID` = VISA API key (apiKey)
+- `VISA_PASSWORD` = VISA shared secret
+
+**Next Steps for VISA:**
+1. Set `VISA_USER_ID` and `VISA_PASSWORD` environment variables.
+2. Deploy updated stack: `cd infrastructure && bunx cdk deploy --all`.
+3. Test VISA endpoints using the frontend hooks.

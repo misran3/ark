@@ -2,7 +2,7 @@
 import * as cdk from 'aws-cdk-lib/core';
 import { AmplifyStack } from '../lib/amplify-stack';
 import { ApiStack } from '../lib/api-stack';
-import { AuthStack } from '../lib/auth-stack';
+// import { AuthStack } from '../lib/auth-stack';
 import { StorageStack } from '../lib/storage-stack';
 import { APP_NAME } from '../lib/constants';
 
@@ -24,25 +24,25 @@ const storageStack = new StorageStack(app, `${APP_NAME}StorageStack`, {
   description: `${APP_NAME} Storage Stack - Manages DynamoDB tables and secrets for the application`,
 });
 
-const authStack = new AuthStack(app, `${APP_NAME}AuthStack`, {
-  env,
-  description: `${APP_NAME} Auth Stack - Manages user authentication with Cognito`,
-  amplifyApp: amplifyStack.amplifyApp,
-  amplifyBranch: amplifyStack.amplifyBranch,
-});
+// const authStack = new AuthStack(app, `${APP_NAME}AuthStack`, {
+//   env,
+//   description: `${APP_NAME} Auth Stack - Manages user authentication with Cognito`,
+//   amplifyApp: amplifyStack.amplifyApp,
+//   amplifyBranch: amplifyStack.amplifyBranch,
+// });
 
-authStack.addDependency(amplifyStack);
+// authStack.addDependency(amplifyStack);
 
 const apiStack = new ApiStack(app, `${APP_NAME}ApiStack`, {
   env,
   description: `${APP_NAME} API Stack - Manages API Gateway, Lambda functions, and integrates with Cognito and DynamoDB`,
-  userPool: authStack.userPool,
+  // userPool: authStack.userPool,
   usersTable: storageStack.usersTable,
   usersTableEmailIndexName: storageStack.usersTableEmailIndexName,
 });
 
-apiStack.addDependency(amplifyStack);
-apiStack.addDependency(authStack);
+// apiStack.addDependency(amplifyStack);
+// apiStack.addDependency(authStack);
 apiStack.addDependency(storageStack);
 
 

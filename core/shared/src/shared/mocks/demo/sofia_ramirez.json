@@ -1,0 +1,99 @@
+{
+  "user_id": "user_sofia_ramirez",
+  "display_name": "Sofia Ramirez",
+  "email": "sofia.ramirez@email.com",
+  "persona": "good",
+  "monthly_income": 9200.00,
+  "profile": {
+    "budget_plan": {
+      "needs_pct": 0.45,
+      "wants_pct": 0.25,
+      "savings_pct": 0.30,
+      "category_limits": {
+        "childcare": 800.00
+      },
+      "custom_categories": {
+        "childcare": "needs"
+      }
+    },
+    "alert_preferences": {
+      "debt_spirals": "critical",
+      "wasteful_subscriptions": "monthly",
+      "fraud_detection": "all",
+      "budget_overruns": "off"
+    }
+  },
+  "accounts": [
+    {
+      "id": "acc_sofia_checking",
+      "type": "Checking",
+      "nickname": "Family Checking",
+      "balance": 6840.00,
+      "rewards": 0,
+      "card_number": null
+    },
+    {
+      "id": "acc_sofia_savings",
+      "type": "Savings",
+      "nickname": "Emergency Fund",
+      "balance": 32000.00,
+      "rewards": 0,
+      "card_number": null
+    },
+    {
+      "id": "acc_sofia_savorone",
+      "type": "Credit Card",
+      "nickname": "SavorOne",
+      "balance": 890.00,
+      "rewards": 2450,
+      "credit_limit": 15000,
+      "card_number": "5278643019827291",
+      "reward_rate": {"dining": 3.0, "entertainment": 3.0, "groceries": 3.0, "default": 1.0}
+    },
+    {
+      "id": "acc_sofia_venture",
+      "type": "Credit Card",
+      "nickname": "Venture",
+      "balance": 1245.00,
+      "rewards": 48000,
+      "credit_limit": 20000,
+      "card_number": "4257893042115508",
+      "reward_rate": {"default": 2.0}
+    },
+    {
+      "id": "acc_sofia_quicksilver",
+      "type": "Credit Card",
+      "nickname": "Quicksilver",
+      "balance": 0.00,
+      "rewards": 150,
+      "credit_limit": 12000,
+      "card_number": "4147201085634832",
+      "reward_rate": {"default": 1.5}
+    }
+  ],
+  "recurring_charges": [
+    {"merchant": "Netflix", "amount": 22.99, "day_of_month": 8, "account": "acc_sofia_savorone"},
+    {"merchant": "Spotify", "amount": 16.99, "day_of_month": 12, "account": "acc_sofia_savorone"},
+    {"merchant": "Disney Plus", "amount": 13.99, "day_of_month": 15, "account": "acc_sofia_savorone"},
+    {"merchant": "YouTube Premium", "amount": 13.99, "day_of_month": 18, "account": "acc_sofia_savorone"},
+    {"merchant": "Amazon Prime", "amount": 14.99, "day_of_month": 5, "account": "acc_sofia_venture"},
+    {"merchant": "Home Mortgage Co", "amount": 2400.00, "day_of_month": 1, "account": "acc_sofia_checking"},
+    {"merchant": "Electric Company", "amount": 185.00, "day_of_month": 12, "account": "acc_sofia_checking"},
+    {"merchant": "Water Utility", "amount": 65.00, "day_of_month": 15, "account": "acc_sofia_checking"},
+    {"merchant": "Comcast Xfinity", "amount": 129.00, "day_of_month": 20, "account": "acc_sofia_checking"},
+    {"merchant": "Verizon", "amount": 180.00, "day_of_month": 22, "account": "acc_sofia_checking"},
+    {"merchant": "State Farm", "amount": 145.00, "day_of_month": 10, "account": "acc_sofia_checking"},
+    {"merchant": "GEICO", "amount": 145.00, "day_of_month": 20, "account": "acc_sofia_checking"}
+  ],
+  "spending_patterns": {
+    "dining_monthly": 380.00,
+    "groceries_monthly": 850.00,
+    "shopping_monthly": 300.00,
+    "transportation_monthly": 250.00,
+    "entertainment_monthly": 150.00,
+    "travel_monthly": 400.00,
+    "childcare_monthly": 800.00
+  },
+  "fraud_transactions": [],
+  "card_misuse": []
+}

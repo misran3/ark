@@ -107,29 +107,29 @@ export class AuthStack extends cdk.Stack {
       },
     });
 
-    // CloudFormation Outputs
+    // CloudFormation Outputs (exportName removed to avoid cross-stack dependencies)
     new cdk.CfnOutput(this, 'UserPoolId', {
       value: this.userPool.userPoolId,
       description: 'Cognito User Pool ID',
-      exportName: `${APP_NAME}UserPoolId`,
+      // exportName: `${APP_NAME}UserPoolId`,  // Removed for prototype (no cross-stack refs)
     });
 
     new cdk.CfnOutput(this, 'UserPoolClientId', {
       value: this.userPoolClient.userPoolClientId,
       description: 'Cognito User Pool Client ID',
-      exportName: `${APP_NAME}UserPoolClientId`,
+      // exportName: `${APP_NAME}UserPoolClientId`,  // Removed for prototype
     });
 
     new cdk.CfnOutput(this, 'UserPoolDomain', {
       value: userPoolDomain.domainName,
       description: 'Cognito User Pool Domain',
-      exportName: `${APP_NAME}UserPoolDomain`,
+      // exportName: `${APP_NAME}UserPoolDomain`,  // Removed for prototype
     });
 
     new cdk.CfnOutput(this, 'UserPoolArn', {
       value: this.userPool.userPoolArn,
       description: 'Cognito User Pool ARN',
-      exportName: `${APP_NAME}UserPoolArn`,
+      // exportName: `${APP_NAME}UserPoolArn`,  // Removed for prototype
     });
 
     // SSM Parameters for Amplify build
