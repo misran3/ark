@@ -1,5 +1,7 @@
 # Ark
 
+## Won 2nd Best AI for Decision Support, recognized by [Conway](https://conway.ai)
+
 > Your financial starship bridge, commanded by AI.
 
 **Captain Nova leads a crew of 7 specialized AI agents**, each targeting a specific financial threat: fraud detection, debt spirals, budget overruns, wasteful subscriptions, missed rewards, and more. Threats appear as space hazards on your bridge — and Visa Transaction Controls let you deploy shields instantly.
