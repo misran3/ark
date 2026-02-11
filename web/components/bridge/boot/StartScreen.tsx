@@ -1,22 +1,54 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 interface StartScreenProps {
   onStart: () => void;
 }
 
+type ScreenPhase = 'waiting' | 'title' | 'ready' | 'exiting' | 'scanline' | 'done';
+
 export function StartScreen({ onStart }: StartScreenProps) {
-  const [phase, setPhase] = useState<'waiting' | 'title' | 'ready'>('waiting');
+  const [phase, setPhase] = useState<ScreenPhase>('waiting');
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase('title'), 400);
-    const t2 = setTimeout(() => setPhase('ready'), 1600);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
+    timersRef.current.push(setTimeout(() => setPhase('title'), 400));
+    timersRef.current.push(setTimeout(() => setPhase('ready'), 1600));
+    return () => timersRef.current.forEach(clearTimeout);
   }, []);
+
+  const handleStart = useCallback(() => {
+    if (phase !== 'ready') return;
+    setPhase('exiting');
+    // Beat 2: scanline collapse -> fade (after 900ms glitch-out)
+    timersRef.current.push(setTimeout(() => setPhase('scanline'), 900));
+    // Beat 3: done -- trigger boot (after 300ms scanline fade)
+    timersRef.current.push(setTimeout(() => {
+      setPhase('done');
+      onStart();
+    }, 1200));
+  }, [phase, onStart]);
+
+  const getTitleAnimation = (): string | undefined => {
+    switch (phase) {
+      case 'waiting':
+      case 'done':
+        return undefined;
+      case 'title':
+      case 'ready':
+        // Entrance glitch, then chain into idle flicker loop after 1.2s
+        return 'title-glitch-in 1s ease-out forwards, title-idle-glitch 4s ease-in-out 1.2s infinite';
+      case 'exiting':
+        return 'title-glitch-out 900ms ease-in forwards';
+      case 'scanline':
+        return 'scanline-fade 300ms ease-in forwards';
+    }
+  };
+
+  if (phase === 'done') return null;
+
+  const isExiting = phase === 'exiting' || phase === 'scanline';
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center">
@@ -28,10 +60,7 @@ export function StartScreen({ onStart }: StartScreenProps) {
           lineHeight: 1,
           color: 'rgba(0, 240, 255, 0.9)',
           opacity: phase === 'waiting' ? 0 : undefined,
-          animation:
-            phase !== 'waiting'
-              ? 'title-glitch-in 1s ease-out forwards'
-              : undefined,
+          animation: getTitleAnimation(),
           textShadow:
             '0 0 30px rgba(0, 240, 255, 0.5), 0 0 60px rgba(0, 240, 255, 0.25), 0 0 120px rgba(0, 240, 255, 0.1)',
         }}
@@ -39,9 +68,9 @@ export function StartScreen({ onStart }: StartScreenProps) {
         ARK
       </h1>
 
-      {/* Initialize button */}
+      {/* Initialize button -- hidden during exit */}
       <button
-        onClick={onStart}
+        onClick={handleStart}
         className="relative px-10 py-4 font-mono text-sm tracking-[0.25em] uppercase
                    border rounded-sm cursor-pointer
                    hover:bg-cyan-400/10 hover:border-cyan-300 transition-colors duration-300"
