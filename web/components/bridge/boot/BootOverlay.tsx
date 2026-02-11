@@ -9,7 +9,7 @@ interface BootOverlayProps {
 
 export function BootOverlay({ phase, onSkip }: BootOverlayProps) {
   // Only render for active boot phases
-  if (phase === 'start-screen' || phase === 'name-exit' || phase === 'complete') {
+  if (phase === 'start-screen' || phase === 'complete') {
     return null;
   }
 
@@ -22,7 +22,7 @@ export function BootOverlay({ phase, onSkip }: BootOverlayProps) {
       style={{
         // Darkness phase: solid black
         // Other phases: transparent (let console brightness show through)
-        backgroundColor: phase === 'darkness' ? '#000' : 'transparent',
+        backgroundColor: phase === 'darkness' || phase === 'name-exit' ? '#000' : 'transparent',
         pointerEvents: 'auto',
       }}
     >

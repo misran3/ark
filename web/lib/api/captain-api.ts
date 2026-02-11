@@ -8,6 +8,7 @@ import type {
   FraudAlertScan,
   AllScansResult,
 } from './captain-types';
+import { DEMO_SCANS } from './demo-scans';
 
 // Direct to deployed API Gateway — CORS is enabled (Access-Control-Allow-Origin: *)
 export const CAPTAIN_API_BASE =
@@ -35,6 +36,11 @@ async function fetchEndpoint<T>(path: string): Promise<T | null> {
 
 /** 7 parallel calls — each stays under API Gateway's 29s timeout independently */
 export async function fetchAllScans(): Promise<AllScansResult> {
+  if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+    console.log('[CaptainAPI] Demo mode — using hardcoded scans');
+    return DEMO_SCANS;
+  }
+
   const [
     financialMeaning,
     subscriptions,

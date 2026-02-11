@@ -2,7 +2,6 @@
 
 import { useBootSequence } from '@/hooks/useBootSequence';
 import { StartScreen } from './boot/StartScreen';
-import { NameExitAnimation } from './boot/NameExitAnimation';
 import { BootOverlay } from './boot/BootOverlay';
 import { BootReadout } from './boot/BootReadout';
 
@@ -18,24 +17,18 @@ export function BootSequence({ children }: BootSequenceProps) {
       {/* Start screen - first visit only */}
       {phase === 'start-screen' && <StartScreen onStart={startBoot} />}
 
-      {/* Name exit animation */}
-      {phase === 'name-exit' && <NameExitAnimation />}
-
-      {/* Boot overlay - darkness through full-power */}
-      {phase !== 'complete' && phase !== 'start-screen' && phase !== 'name-exit' && (
+      {/* Boot overlay - name-exit through full-power */}
+      {phase !== 'complete' && phase !== 'start-screen' && (
         <BootOverlay phase={phase} onSkip={skipBoot} />
       )}
 
       {/* Boot readout text — scrolling terminal messages */}
       <BootReadout />
 
-      {/* Bridge content - always mounted after name exits */}
+      {/* Bridge content - always mounted after start screen */}
       <div
         style={{
-          visibility:
-            phase === 'start-screen' || phase === 'name-exit'
-              ? 'hidden'
-              : 'visible',
+          visibility: phase === 'start-screen' ? 'hidden' : 'visible',
         }}
       >
         {children}
