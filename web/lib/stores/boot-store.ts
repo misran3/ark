@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 export type BootPhase =
   | 'start-screen'    // First visit only: name + Start button
-  | 'name-exit'       // Name dropping off screen (0.6s)
+  | 'name-exit'       // Transition buffer after start screen exit (50ms)
   | 'darkness'        // Brief beat after name exits (0.5s)
   | 'console-glow'    // Consoles begin glowing (1.5s)
   | 'power-surge'     // Console lights surge bright (1s)
