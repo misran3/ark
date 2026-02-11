@@ -5,8 +5,8 @@ import { useBootStore } from '@/lib/stores/boot-store';
 import { storage } from '@/lib/utils/storage';
 
 const PHASE_DURATIONS: Record<string, number> = {
-  'name-exit': 600,
-  'darkness': 500,
+  'name-exit': 50,
+  'darkness': 1500,
   'console-glow': 1500,
   'power-surge': 1000,
   'full-power': 1000,
