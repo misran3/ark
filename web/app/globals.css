@@ -52,7 +52,6 @@
   --animate-reduce-blur: reduceBlur 0.5s ease-out forwards;
   --animate-quick-blink: quickBlink 0.5s ease-in-out;
   --animate-lift-up: liftUp 0.3s ease-out;
-  --animate-name-exit: name-exit 600ms ease-in forwards;
 }
 
 @keyframes pulse-slow {
@@ -159,13 +158,117 @@
   }
 }
 
-@keyframes name-exit {
+/* Start screen: idle hologram flicker — subtle periodic glitch after title appears */
+@keyframes title-idle-glitch {
+  0%, 72% {
+    transform: translateX(0);
+    filter: brightness(1);
+    clip-path: inset(0);
+  }
+  74% {
+    transform: translateX(-2px);
+    filter: brightness(1.6);
+    clip-path: inset(30% 0 40% 0);
+  }
+  76% {
+    transform: translateX(3px);
+    filter: brightness(1.8);
+    clip-path: inset(0);
+  }
+  78%, 92% {
+    transform: translateX(0);
+    filter: brightness(1);
+    clip-path: inset(0);
+  }
+  94% {
+    transform: translateX(-1px);
+    filter: brightness(1.4);
+    clip-path: inset(60% 0 20% 0);
+  }
+  96%, 100% {
+    transform: translateX(0);
+    filter: brightness(1);
+    clip-path: inset(0);
+  }
+}
+
+/* Start screen: title glitch-out — hologram destabilizes then collapses to scanline */
+@keyframes title-glitch-out {
   0% {
-    transform: translate(-50%, -50%) rotate(0deg);
+    transform: translateX(0) scaleY(1) skewX(0deg);
+    filter: brightness(1);
+    clip-path: inset(0);
     opacity: 1;
   }
+  10% {
+    transform: translateX(-8px) scaleY(1) skewX(-3deg);
+    filter: brightness(2.2);
+    clip-path: inset(15% 0 35% 0);
+  }
+  15% {
+    transform: translateX(10px) scaleY(1) skewX(0deg);
+    filter: brightness(2.5);
+    clip-path: inset(50% 0 10% 0);
+  }
+  20% {
+    transform: translateX(-5px) scaleY(1) skewX(0deg);
+    filter: brightness(1.8);
+    clip-path: inset(0);
+  }
+  25% {
+    transform: translateX(7px) scaleY(1) skewX(2deg);
+    filter: brightness(2.5);
+    clip-path: inset(20% 0 50% 0);
+  }
+  30% {
+    transform: translateX(-3px) scaleY(1) skewX(0deg);
+    filter: brightness(2);
+    clip-path: inset(0);
+  }
+  35% {
+    transform: translateX(5px) scaleY(1) skewX(0deg);
+    filter: brightness(2.3);
+    clip-path: inset(40% 0 25% 0);
+  }
+  44% {
+    transform: translateX(0) scaleY(1) skewX(0deg);
+    filter: brightness(3);
+    clip-path: inset(0);
+    opacity: 1;
+  }
+  60% {
+    transform: translateX(0) scaleY(0.4) skewX(0deg);
+    filter: brightness(2.5);
+    clip-path: inset(35% 0 35% 0);
+  }
+  80% {
+    transform: translateX(0) scaleY(0.05) skewX(0deg);
+    filter: brightness(3);
+    clip-path: inset(48% 0 48% 0);
+  }
   100% {
-    transform: translate(50vw, 70vh) rotate(10deg);
+    transform: translateX(0) scaleY(0) skewX(0deg);
+    filter: brightness(3);
+    clip-path: inset(49.5% 0 49.5% 0);
+    opacity: 1;
+  }
+}
+
+/* Start screen: scanline fade — thin line shrinks and disappears */
+@keyframes scanline-fade {
+  0% {
+    transform: scaleX(1) scaleY(0.01);
+    filter: brightness(3);
+    opacity: 1;
+  }
+  40% {
+    transform: scaleX(0.7) scaleY(0.01);
+    filter: brightness(2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scaleX(0) scaleY(0.01);
+    filter: brightness(1);
     opacity: 0;
   }
 }
@@ -241,11 +344,6 @@
   }
 }
 
-/* Name exit: container fades to black */
-@keyframes fadeToBlack {
-  from { background-color: transparent; }
-  to { background-color: black; }
-}
 
 * {
   margin: 0;
