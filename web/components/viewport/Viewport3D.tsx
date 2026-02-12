@@ -37,7 +37,7 @@ export function Viewport3D() {
           near: CAMERA.near,
           far: CAMERA.far,
         }}
-        dpr={[1, 1.5]}
+        dpr={[1, 1]}
         gl={{
           antialias: false,
           alpha: true,

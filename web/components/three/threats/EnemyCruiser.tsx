@@ -555,13 +555,13 @@ export default function EnemyCruiser({
         {/* Exhaust particles */}
         <group position={[0, 0, -size * 0.2]}>
           <InstancedParticleSystem
-            count={150}
+            count={75}
             color="#dc2626"
             colorEnd="#1a1a1a"
             velocityMin={[-0.15, -0.15, -0.8]}
             velocityMax={[0.15, 0.15, -1.5]}
             lifespan={[0.5, 1.5]}
-            emitRate={100}
+            emitRate={50}
             size={size * 0.04}
             spawnRadius={size * 0.08}
             loop
@@ -605,13 +605,13 @@ export default function EnemyCruiser({
         </mesh>
         <group position={[0, 0, -size * 0.2]}>
           <InstancedParticleSystem
-            count={150}
+            count={75}
             color="#dc2626"
             colorEnd="#1a1a1a"
             velocityMin={[-0.15, -0.15, -0.8]}
             velocityMax={[0.15, 0.15, -1.5]}
             lifespan={[0.5, 1.5]}
-            emitRate={100}
+            emitRate={50}
             size={size * 0.04}
             spawnRadius={size * 0.08}
             loop

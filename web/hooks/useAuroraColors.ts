@@ -71,8 +71,8 @@ export function useAuroraColors() {
       }
     };
 
-    // Update every 100ms for smooth transitions
-    const interval = setInterval(updateColors, 100);
+    // Update every 1000ms — the 60s color cycle doesn't need 10fps granularity
+    const interval = setInterval(updateColors, 1000);
 
     // Initial update
     updateColors();

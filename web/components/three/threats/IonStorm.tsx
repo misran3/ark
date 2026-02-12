@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useMemo, useCallback, useEffect, useState } from 'react';
+import { useRef, useMemo, useCallback, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import '@/lib/materials/VolumetricGlowMaterial';
@@ -73,9 +73,11 @@ export default function IonStorm({
   // Frame counter for arc regeneration
   const frameCountRef = useRef(0);
 
-  // Lightning arc geometries — store TubeGeometry refs for disposal
-  const [outerArcGeos, setOuterArcGeos] = useState<THREE.TubeGeometry[]>([]);
-  const [coreArcGeos, setCoreArcGeos] = useState<THREE.TubeGeometry[]>([]);
+  // Lightning arc geometries — ref-based to avoid setState in render loop
+  const outerArcGeosRef = useRef<(THREE.TubeGeometry | null)[]>(new Array(OUTER_ARC_COUNT).fill(null));
+  const coreArcGeosRef = useRef<(THREE.TubeGeometry | null)[]>(new Array(CORE_ARC_COUNT).fill(null));
+  const outerArcMeshRefs = useRef<(THREE.Mesh | null)[]>([]);
+  const coreArcMeshRefs = useRef<(THREE.Mesh | null)[]>([]);
 
   // Targeting bracket geometry
   const bracketGeometry = useMemo(() => {
@@ -102,10 +104,10 @@ export default function IonStorm({
   useEffect(() => {
     return () => {
       bracketGeometry.dispose();
-      outerArcGeos.forEach(g => g.dispose());
-      coreArcGeos.forEach(g => g.dispose());
+      outerArcGeosRef.current.forEach(g => g?.dispose());
+      coreArcGeosRef.current.forEach(g => g?.dispose());
     };
-  }, [bracketGeometry, outerArcGeos, coreArcGeos]);
+  }, [bracketGeometry]);
 
   const handlePointerOver = useCallback(() => {
     isHoveredRef.current = true;
@@ -239,31 +241,44 @@ export default function IonStorm({
       mat.opacity = hovered ? 0.7 : 0.5;
     }
 
-    // ---- Layer 4: Lightning Arcs — regenerate as TubeGeometry ----
-    const outerRegenRate = hovered ? 12 : 20; // frames between regen (increased to reduce React re-renders)
+    // ---- Layer 4: Lightning Arcs — swap geometry directly on mesh refs ----
+    const outerRegenRate = hovered ? 12 : 20;
     const coreRegenRate = hovered ? 8 : 16;
 
-    if (frameCountRef.current % outerRegenRate === 0 && outerArcsGroupRef.current) {
-      const newGeos: THREE.TubeGeometry[] = [];
-      // Dispose old geometries
-      outerArcGeos.forEach(g => g.dispose());
-
+    if (frameCountRef.current % outerRegenRate === 0) {
       for (let i = 0; i < OUTER_ARC_COUNT; i++) {
-        const geo = generateOuterArc(i, time);
-        newGeos.push(geo);
+        const mesh = outerArcMeshRefs.current[i];
+        if (mesh) {
+          outerArcGeosRef.current[i]?.dispose();
+          const newGeo = generateOuterArc(i, time);
+          outerArcGeosRef.current[i] = newGeo;
+          mesh.geometry = newGeo;
+        }
       }
-      setOuterArcGeos(newGeos);
     }
 
-    if (frameCountRef.current % coreRegenRate === 0 && coreArcsGroupRef.current) {
-      const newGeos: THREE.TubeGeometry[] = [];
-      coreArcGeos.forEach(g => g.dispose());
-
+    if (frameCountRef.current % coreRegenRate === 0) {
       for (let i = 0; i < CORE_ARC_COUNT; i++) {
-        const geo = generateCoreArc(i, time);
-        newGeos.push(geo);
+        const mesh = coreArcMeshRefs.current[i];
+        if (mesh) {
+          coreArcGeosRef.current[i]?.dispose();
+          const newGeo = generateCoreArc(i, time);
+          coreArcGeosRef.current[i] = newGeo;
+          mesh.geometry = newGeo;
+        }
       }
-      setCoreArcGeos(newGeos);
+    }
+
+    // Update arc opacity based on hover state
+    const outerOpacity = hovered ? 0.7 : 0.35;
+    const coreOpacity = hovered ? 0.6 : 0.3;
+    for (let i = 0; i < OUTER_ARC_COUNT; i++) {
+      const mesh = outerArcMeshRefs.current[i];
+      if (mesh?.material) (mesh.material as THREE.MeshBasicMaterial).opacity = outerOpacity;
+    }
+    for (let i = 0; i < CORE_ARC_COUNT; i++) {
+      const mesh = coreArcMeshRefs.current[i];
+      if (mesh?.material) (mesh.material as THREE.MeshBasicMaterial).opacity = coreOpacity;
     }
 
     // ---- Layer 6: Shield Rings ----
@@ -354,7 +369,7 @@ export default function IonStorm({
         onPointerOut={handlePointerOut}
         onClick={handleClick}
       >
-        <sphereGeometry args={[size * 1.6, 24, 24]} />
+        <sphereGeometry args={[size * 1.6, 16, 16]} />
         <volumetricGlowMaterial
           ref={emFieldRef}
           color={color}
@@ -377,7 +392,7 @@ export default function IonStorm({
           key={`cloud-${i}`}
           ref={(el) => { if (el) cloudMeshRefs.current[i] = el; }}
         >
-          <icosahedronGeometry args={[size * (0.5 + i * 0.1), 3]} />
+          <icosahedronGeometry args={[size * (0.5 + i * 0.1), 2]} />
           <volumetricGlowMaterial
             ref={(el: any) => { if (el) cloudRefs.current[i] = el; }}
             color={cfg.color}
@@ -387,7 +402,7 @@ export default function IonStorm({
             glowStrength={0.3}
             opacity={0.12}
             transparent
-            side={THREE.DoubleSide}
+            side={THREE.BackSide}
             depthWrite={false}
             blending={THREE.AdditiveBlending}
             toneMapped={false}
@@ -397,7 +412,7 @@ export default function IonStorm({
 
       {/* ===== Layer 3: Core Energy Sphere ===== */}
       <mesh ref={coreRef}>
-        <sphereGeometry args={[size * 0.35, 24, 24]} />
+        <sphereGeometry args={[size * 0.35, 16, 16]} />
         <meshBasicMaterial
           color="#ffffff"
           transparent
@@ -412,12 +427,15 @@ export default function IonStorm({
 
       {/* Outer arcs (8) — TubeGeometry via generateLightningPath */}
       <group ref={outerArcsGroupRef}>
-        {outerArcGeos.map((geo, i) => (
-          <mesh key={`outer-arc-${i}-${frameCountRef.current}`} geometry={geo}>
+        {Array.from({ length: OUTER_ARC_COUNT }, (_, i) => (
+          <mesh
+            key={`outer-arc-${i}`}
+            ref={(el) => { outerArcMeshRefs.current[i] = el; }}
+          >
             <meshBasicMaterial
               color="#ec4899"
               transparent
-              opacity={isHoveredRef.current ? 0.7 : 0.35}
+              opacity={0.35}
               blending={THREE.AdditiveBlending}
               depthWrite={false}
               toneMapped={false}
@@ -429,12 +447,15 @@ export default function IonStorm({
 
       {/* Core arcs (4) — thicker, white-pink */}
       <group ref={coreArcsGroupRef}>
-        {coreArcGeos.map((geo, i) => (
-          <mesh key={`core-arc-${i}-${frameCountRef.current}`} geometry={geo}>
+        {Array.from({ length: CORE_ARC_COUNT }, (_, i) => (
+          <mesh
+            key={`core-arc-${i}`}
+            ref={(el) => { coreArcMeshRefs.current[i] = el; }}
+          >
             <meshBasicMaterial
               color="#ffffff"
               transparent
-              opacity={isHoveredRef.current ? 0.6 : 0.3}
+              opacity={0.3}
               blending={THREE.AdditiveBlending}
               depthWrite={false}
               toneMapped={false}
@@ -446,29 +467,29 @@ export default function IonStorm({
 
       {/* ===== Layer 5: Vortex Particles + Electric Sparks ===== */}
 
-      {/* Vortex particles — 500 orbiting in vortex pattern */}
+      {/* Vortex particles — orbiting in vortex pattern */}
       <InstancedParticleSystem
-        count={500}
+        count={200}
         color="#a855f7"
         colorEnd="#ec4899"
         size={0.06}
         lifespan={[2.0, 4.0]}
         spawnRadius={size * 0.8}
-        emitRate={120}
+        emitRate={50}
         loop
         onTick={vortexTick}
       />
 
       {/* Electric sparks — rapid pop, white, short lifespan */}
       <InstancedParticleSystem
-        count={60}
+        count={30}
         color="#ffffff"
         size={0.04}
         lifespan={[0.1, 0.3]}
         velocityMin={[-2, -2, -2]}
         velocityMax={[2, 2, 2]}
         spawnRadius={size * 0.5}
-        emitRate={20}
+        emitRate={10}
         loop
       />
 

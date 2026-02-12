@@ -140,6 +140,7 @@ export function StarChart() {
     phaseTimer: 0,
     podProgress: 0,
   });
+  const lastSyncedPhaseRef = useRef<DispatchPhase>('idle');
   const lastDispatchTimeRef = useRef(0);
   const dispatchCountRef = useRef(0);
 
@@ -272,8 +273,11 @@ export function StarChart() {
           break;
       }
 
-      // Sync render state (throttled)
-      setDispatchRender({ ...d });
+      // Only sync React state on phase transitions (not every frame)
+      if (d.phase !== lastSyncedPhaseRef.current) {
+        lastSyncedPhaseRef.current = d.phase;
+        setDispatchRender({ ...d });
+      }
     }
   });
 
@@ -348,7 +352,7 @@ export function StarChart() {
           from={podFrom as [number, number, number]}
           to={podTo as [number, number, number]}
           color={systemColor}
-          progress={dispatchRender.podProgress}
+          duration={DISPATCH_TRAVEL_DURATION}
           isIncome={activeStation.isIncome}
         />
       )}

@@ -61,9 +61,9 @@ export default function BlackHole({
 
   // Per-particle orbit data for the accretion disk (Keplerian spiral)
   const diskOrbits = useMemo(() => {
-    const angles = new Float32Array(1000);
-    const radii = new Float32Array(1000);
-    for (let i = 0; i < 1000; i++) {
+    const angles = new Float32Array(400);
+    const radii = new Float32Array(400);
+    for (let i = 0; i < 400; i++) {
       angles[i] = Math.random() * Math.PI * 2;
       radii[i] =
         eventHorizonRadius * 1.1 +
@@ -72,11 +72,11 @@ export default function BlackHole({
     return { angles, radii };
   }, [eventHorizonRadius, diskOuterRadius]);
 
-  // Trail disk orbit data (500 particles, slightly behind main disk)
+  // Trail disk orbit data (slightly behind main disk)
   const trailOrbits = useMemo(() => {
-    const angles = new Float32Array(500);
-    const radii = new Float32Array(500);
-    for (let i = 0; i < 500; i++) {
+    const angles = new Float32Array(200);
+    const radii = new Float32Array(200);
+    for (let i = 0; i < 200; i++) {
       angles[i] = Math.random() * Math.PI * 2;
       radii[i] =
         eventHorizonRadius * 1.1 +
@@ -348,7 +348,7 @@ export default function BlackHole({
         onPointerOut={handlePointerOut}
         onClick={handleClick}
       >
-        <sphereGeometry args={[eventHorizonRadius * 2.0, 32, 32]} />
+        <sphereGeometry args={[eventHorizonRadius * 2.0, 24, 24]} />
         <gravitationalLensingMaterial
           ref={lensingRef}
           blackHoleRadius={eventHorizonRadius}
@@ -364,7 +364,7 @@ export default function BlackHole({
 
       {/* ===== Layer 2: Hawking Radiation Glow ===== */}
       <mesh>
-        <sphereGeometry args={[eventHorizonRadius * 1.3, 24, 24]} />
+        <sphereGeometry args={[eventHorizonRadius * 1.3, 16, 16]} />
         <volumetricGlowMaterial
           ref={hawkingRef}
           color="#3b82f6"
@@ -383,32 +383,32 @@ export default function BlackHole({
 
       {/* ===== Layer 3: Accretion Disk ===== */}
 
-      {/* Main disk — 1000 Keplerian spiral particles */}
+      {/* Main disk — Keplerian spiral particles */}
       <InstancedParticleSystem
-        count={1000}
+        count={400}
         color="#7c3aed"
         colorEnd="#93c5fd"
         velocityMin={[0, 0, 0]}
         velocityMax={[0, 0, 0]}
         gravity={[0, 0, 0]}
         lifespan={[5.0, 10.0]}
-        emitRate={200}
+        emitRate={80}
         size={eventHorizonRadius * 0.08}
         spawnRadius={diskOuterRadius}
         loop
         onTick={accretionDiskTick}
       />
 
-      {/* Trail disk — 500 smaller particles, motion blur feel */}
+      {/* Trail disk — smaller particles, motion blur feel */}
       <InstancedParticleSystem
-        count={500}
+        count={200}
         color="#4c1d95"
         colorEnd="#7c3aed"
         velocityMin={[0, 0, 0]}
         velocityMax={[0, 0, 0]}
         gravity={[0, 0, 0]}
         lifespan={[5.0, 10.0]}
-        emitRate={100}
+        emitRate={40}
         size={eventHorizonRadius * 0.05}
         spawnRadius={diskOuterRadius}
         loop
@@ -417,7 +417,7 @@ export default function BlackHole({
 
       {/* ===== Layer 4: Event Horizon (void) ===== */}
       <mesh ref={eventHorizonRef}>
-        <sphereGeometry args={[eventHorizonRadius, 32, 32]} />
+        <sphereGeometry args={[eventHorizonRadius, 24, 24]} />
         <meshBasicMaterial color="#000000" side={THREE.BackSide} toneMapped={false} />
       </mesh>
 
@@ -497,13 +497,13 @@ export default function BlackHole({
       {/* Top jet particles */}
       <group position={[0, eventHorizonRadius * 0.5, 0]}>
         <InstancedParticleSystem
-          count={50}
+          count={25}
           color="#93c5fd"
           colorEnd="#3b82f6"
           velocityMin={[-0.05, 1.5, -0.05]}
           velocityMax={[0.05, 3.0, 0.05]}
           lifespan={[0.5, 1.5]}
-          emitRate={40}
+          emitRate={20}
           size={eventHorizonRadius * 0.04}
           spawnRadius={eventHorizonRadius * 0.15}
           loop
@@ -513,13 +513,13 @@ export default function BlackHole({
       {/* Bottom jet particles */}
       <group position={[0, -eventHorizonRadius * 0.5, 0]}>
         <InstancedParticleSystem
-          count={50}
+          count={25}
           color="#93c5fd"
           colorEnd="#3b82f6"
           velocityMin={[-0.05, -3.0, -0.05]}
           velocityMax={[0.05, -1.5, 0.05]}
           lifespan={[0.5, 1.5]}
-          emitRate={40}
+          emitRate={20}
           size={eventHorizonRadius * 0.04}
           spawnRadius={eventHorizonRadius * 0.15}
           loop

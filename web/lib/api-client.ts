@@ -5,11 +5,13 @@ import { DEMO_SNAPSHOT } from '@/lib/data/demo-financial-data';
 export interface FinancialSnapshot {
   accounts: Array<{
     account_id: string;
-    type: 'checking' | 'savings' | 'credit_card';
+    type: 'checking' | 'savings' | 'credit_card' | 'real-estate' | 'investment' | 'vehicle' | 'crypto' | 'liability';
     balance: number;
     nickname: string;
   }>;
   total_net_worth: number;
+  gross_assets?: number;
+  total_liabilities?: number;
   monthly_income: number;
   monthly_spending: number;
   snapshot_timestamp: string;

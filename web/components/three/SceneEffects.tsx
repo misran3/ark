@@ -27,7 +27,7 @@ interface SceneEffectsProps {
 
 export default function SceneEffects({
   bloomIntensity = 1.5,
-  bloomRadius = 0.85,
+  bloomRadius = 0.6,
   chromaticOffset = 0.0004,
   vignetteDarkness = 0.45,
 }: SceneEffectsProps) {
@@ -41,7 +41,7 @@ export default function SceneEffects({
         luminanceSmoothing={0.9}
         radius={bloomRadius}
         mipmapBlur
-        levels={5}
+        levels={3}
         blendFunction={BlendFunction.ADD}
       />
       <ChromaticAberration

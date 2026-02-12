@@ -143,7 +143,8 @@ export default function SolarFlare({
 
   // Prominence arc tube geometries — regenerate periodically
   const arcTimerRef = useRef(0);
-  const [arcGeos, setArcGeos] = useState<THREE.TubeGeometry[]>([]);
+  const arcGeosRef = useRef<THREE.TubeGeometry[]>([]);
+  const [arcVersion, setArcVersion] = useState(0);
   const arcEnergyRefs = useRef<any[]>([]);
 
   const ARC_COUNT = 7;
@@ -196,9 +197,9 @@ export default function SolarFlare({
   useEffect(() => {
     return () => {
       bracketGeometry.dispose();
-      arcGeos.forEach(g => g.dispose());
+      arcGeosRef.current.forEach(g => g.dispose());
     };
-  }, [bracketGeometry, arcGeos]);
+  }, [bracketGeometry]);
 
   const handlePointerOver = useCallback(() => {
     isHoveredRef.current = true;
@@ -245,12 +246,13 @@ export default function SolarFlare({
       surfaceRef.current.emissiveIntensity = hovered ? 6.5 : 5.0;
     }
 
-    // ---- Layer 4: Prominence arcs — regenerate every 8 seconds (reduced from 4s for perf) ----
+    // ---- Layer 4: Prominence arcs — regenerate every 8 seconds ----
     arcTimerRef.current += delta;
     if (arcTimerRef.current > 8.0) {
       arcTimerRef.current = 0;
-      arcGeos.forEach(g => g.dispose());
-      setArcGeos(regenerateArcs());
+      arcGeosRef.current.forEach(g => g.dispose());
+      arcGeosRef.current = regenerateArcs();
+      setArcVersion((v) => v + 1);
     }
 
     // Update arc energy flow materials
@@ -340,7 +342,7 @@ export default function SolarFlare({
     <group ref={groupRef} position={position}>
       {/* ===== Layer 1: Outer Corona ===== */}
       <mesh>
-        <sphereGeometry args={[size * 2.0, 24, 24]} />
+        <sphereGeometry args={[size * 2.0, 16, 16]} />
         <volumetricGlowMaterial
           ref={outerCoronaRef}
           color="#fbbf24"
@@ -359,7 +361,7 @@ export default function SolarFlare({
 
       {/* ===== Layer 2: Mid Corona ===== */}
       <mesh>
-        <sphereGeometry args={[size * 1.4, 24, 24]} />
+        <sphereGeometry args={[size * 1.4, 16, 16]} />
         <volumetricGlowMaterial
           ref={midCoronaRef}
           color="#f97316"
@@ -392,8 +394,8 @@ export default function SolarFlare({
       </mesh>
 
       {/* ===== Layer 4: Magnetic Field Loop Arcs (prominences) ===== */}
-      {arcGeos.map((geo, i) => (
-        <mesh key={`arc-${i}`} geometry={geo}>
+      {arcGeosRef.current.map((geo, i) => (
+        <mesh key={`arc-${i}-${arcVersion}`} geometry={geo}>
           <energyFlowMaterial
             ref={(el: any) => { if (el) arcEnergyRefs.current[i] = el; }}
             color1="#fbbf24"
@@ -412,7 +414,7 @@ export default function SolarFlare({
 
       {/* ===== Layer 5: Corona Particles ===== */}
       <InstancedParticleSystem
-        count={250}
+        count={120}
         color="#fef3c7"
         colorEnd="#f97316"
         size={0.08}
@@ -420,7 +422,7 @@ export default function SolarFlare({
         velocityMin={[-0.3, -0.3, -0.3]}
         velocityMax={[0.3, 0.3, 0.3]}
         spawnRadius={solarRadius * 1.2}
-        emitRate={100}
+        emitRate={50}
         loop
       />
 

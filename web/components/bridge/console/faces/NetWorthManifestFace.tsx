@@ -1,24 +1,28 @@
 'use client';
 
-/** Net Worth panel face — CRT phosphor terminal readout with credit breakdown + sparkline */
+/** Net Worth panel face — CRT phosphor terminal readout with asset breakdown + sparkline */
 export function NetWorthManifestFace() {
-  // Hardcoded data matching the ship's credit system
-  const netWorth = 1_247_830;
+  // Hardcoded data matching the orrery's new portfolio
+  const netWorth = 395_000;
   const breakdown = [
-    { label: 'HULL & MODULES', value: 620_000 },
-    { label: 'CARGO HOLD', value: 412_830 },
-    { label: 'LIQUID CREDITS', value: 315_000 },
-    { label: 'LIABILITIES', value: -100_000 },
+    { label: 'HOME', value: 520_000 },
+    { label: 'INVESTMENTS', value: 180_000 },
+    { label: 'EMERGENCY FUND', value: 25_000 },
+    { label: 'VEHICLE — SUV', value: 35_000 },
+    { label: 'VEHICLE — SEDAN', value: 22_000 },
+    { label: 'CRYPTO', value: 8_000 },
+    { label: 'MORTGAGE', value: -380_000 },
+    { label: 'AUTO LOAN', value: -15_000 },
   ];
   const trendPct = 4.2;
 
   // Hardcoded upward sparkline points (normalized 0-1)
   const sparkline = [0.3, 0.28, 0.35, 0.33, 0.4, 0.38, 0.45, 0.5, 0.48, 0.55, 0.6, 0.65, 0.62, 0.7, 0.75, 0.8];
 
-  const formatCredits = (n: number) => {
+  const formatDollars = (n: number) => {
     const abs = Math.abs(n);
     const formatted = abs.toLocaleString('en-US');
-    return n < 0 ? `-₡ ${formatted}` : `₡ ${formatted}`;
+    return n < 0 ? `-$ ${formatted}` : `$ ${formatted}`;
   };
 
   const padLabel = (label: string, maxLen: number) => {
@@ -62,7 +66,7 @@ export function NetWorthManifestFace() {
           textShadow: '0 0 10px rgba(255, 180, 40, 0.4), 0 0 20px rgba(255, 160, 30, 0.15)',
         }}
       >
-        ₡ {netWorth.toLocaleString('en-US')}
+        $ {netWorth.toLocaleString('en-US')}
       </div>
 
       {/* Breakdown rows */}
@@ -71,7 +75,7 @@ export function NetWorthManifestFace() {
           <div key={row.label} className="flex justify-between">
             <span>{padLabel(row.label, 18)}</span>
             <span style={{ color: row.value < 0 ? 'rgba(239, 68, 68, 0.8)' : undefined }}>
-              {formatCredits(row.value)}
+              {formatDollars(row.value)}
             </span>
           </div>
         ))}

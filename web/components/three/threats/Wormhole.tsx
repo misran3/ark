@@ -123,10 +123,10 @@ export default function Wormhole({
   const isCollapsingRef = useRef(false);
   const collapseStartRef = useRef(0);
 
-  // Electrical rim arc geometries (regenerate periodically, ref-based to avoid setState in useFrame)
+  // Electrical rim arc geometries (regenerate periodically)
   const frameCountRef = useRef(0);
   const arcGeometriesRef = useRef<THREE.TubeGeometry[]>([]);
-  const [arcGeometries, setArcGeometries] = useState<THREE.TubeGeometry[]>([]);
+  const [arcVersion, setArcVersion] = useState(0);
 
   const outerRadius = 2.5 * size;
 
@@ -156,12 +156,12 @@ export default function Wormhole({
     return arcs;
   }, [outerRadius, size]);
 
-  // Dispose old arcs when new ones are generated
+  // Dispose old arcs on unmount
   useEffect(() => {
     return () => {
-      arcGeometries.forEach((g) => g.dispose());
+      arcGeometriesRef.current.forEach((g) => g.dispose());
     };
-  }, [arcGeometries]);
+  }, []);
 
   // Targeting bracket geometry
   const bracketGeometry = useMemo(() => {
@@ -325,13 +325,12 @@ export default function Wormhole({
       }
     }
 
-    // ---- Layer 4: Regenerate rim arcs (ref-based to avoid React re-render in useFrame) ----
+    // ---- Layer 4: Regenerate rim arcs ----
     frameCountRef.current++;
     if (frameCountRef.current % 40 === 0) {
       arcGeometriesRef.current.forEach((g) => g.dispose());
-      const newArcs = generateArcs();
-      arcGeometriesRef.current = newArcs;
-      setArcGeometries(newArcs);
+      arcGeometriesRef.current = generateArcs();
+      setArcVersion((v) => v + 1);
     }
 
     // ---- Layer 6: Through-portal icon ----
@@ -478,8 +477,8 @@ export default function Wormhole({
       ))}
 
       {/* ===== Layer 4: Electrical Rim Arcs ===== */}
-      {arcGeometries.map((geo, i) => (
-        <mesh key={`arc-${i}-${frameCountRef.current}`} geometry={geo}>
+      {arcGeometriesRef.current.map((geo, i) => (
+        <mesh key={`arc-${i}-${arcVersion}`} geometry={geo}>
           <meshBasicMaterial
             color="#ffffff"
             transparent
@@ -493,14 +492,14 @@ export default function Wormhole({
 
       {/* ===== Layer 5: Edge Ripple Particles ===== */}
       <InstancedParticleSystem
-        count={80}
+        count={40}
         color="#ffffff"
         size={0.08 * size}
         velocityMin={[0, 0, 0]}
         velocityMax={[0, 0, 0]}
         gravity={[0, 0, 0]}
         lifespan={[5.0, 10.0]}
-        emitRate={20}
+        emitRate={10}
         spawnRadius={outerRadius}
         loop
         onTick={edgeRippleTick}
@@ -555,7 +554,7 @@ export default function Wormhole({
 
       {/* ===== Layer 7: Inflow Particle Streams ===== */}
       <InstancedParticleSystem
-        count={40}
+        count={20}
         color="#a5c5e8"
         colorEnd="#60a5fa"
         size={0.04 * size}
@@ -563,7 +562,7 @@ export default function Wormhole({
         velocityMax={[0, 0, 0]}
         gravity={[0, 0, 0]}
         lifespan={[3.0, 6.0]}
-        emitRate={10}
+        emitRate={5}
         spawnRadius={outerRadius}
         loop
         onTick={inflowTick}

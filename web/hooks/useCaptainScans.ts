@@ -41,7 +41,7 @@ export function useCaptainScans() {
       });
       scansRef.current = scans;
 
-      const threats = mapScansToThreats(scans);
+      const threats = mapScansToThreats(scans).filter(t => t.type === 'asteroid');
       threatsRef.current = threats;
       console.log('[CaptainScans] Mapped threats:', threats.length, threats.map(t => `${t.type}:${t.id}`));
 

@@ -17,7 +17,6 @@ interface DebtDebrisRingProps {
   beltRadius?: number;
   beltWidth?: number;
   count?: number;
-  tilt: number;
 }
 
 const vertexShader = /* glsl */ `
@@ -45,10 +44,9 @@ const fragmentShader = /* glsl */ `
 
 export function DebtDebrisRing({
   color,
-  beltRadius = 3.5,
+  beltRadius = 5.0, // Between ring 2 (4.2) and ring 3 (5.8)
   beltWidth = 0.5,
   count = 80,
-  tilt,
 }: DebtDebrisRingProps) {
   const groupRef = useRef<Group>(null);
   const meshRef = useRef<InstancedMesh>(null);
@@ -115,7 +113,7 @@ export function DebtDebrisRing({
   });
 
   return (
-    <group ref={groupRef} rotation-x={tilt}>
+    <group ref={groupRef}>
       <instancedMesh ref={meshRef} args={[undefined, undefined, count]} geometry={geo} material={mat} />
     </group>
   );

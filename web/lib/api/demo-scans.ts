@@ -13,10 +13,35 @@ export const DEMO_SCANS: AllScansResult = {
     status: 'critical',
   },
   subscriptions: {
-    subscriptions: [],
-    total_annual_waste: 0.0,
+    subscriptions: [
+      {
+        name: 'Gym Membership',
+        monthly_cost: 49.99,
+        last_used_days_ago: 47,
+        verdict: 'Zero usage for 47 days — renews in 5d. Recommend immediate cancellation.',
+      },
+      {
+        name: 'Netflix',
+        monthly_cost: 15.99,
+        last_used_days_ago: 3,
+        verdict: 'Active usage detected — maintain current subscription.',
+      },
+      {
+        name: 'Hulu',
+        monthly_cost: 17.99,
+        last_used_days_ago: 38,
+        verdict: 'No usage in over a month — consider cancellation to recover fuel reserves.',
+      },
+      {
+        name: 'Cloud Storage',
+        monthly_cost: 9.99,
+        last_used_days_ago: 60,
+        verdict: 'Dormant storage module — 2.1 GB of 200 GB used. Downgrade or eliminate.',
+      },
+    ],
+    total_annual_waste: 935.64,
     verdict:
-      'Asteroid field clear — no debris threatening fuel reserves.',
+      'Asteroid field detected — 3 dormant subscriptions draining $78/mo in fuel reserves.',
   },
   budgetOverruns: {
     overruns: [

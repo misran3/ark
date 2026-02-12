@@ -7,7 +7,6 @@ interface OrbitPathProps {
   radius: number;
   color: Color;
   opacity?: number;
-  tilt: number; // radians to tilt on X axis
 }
 
 const vertexShader = /* glsl */ `
@@ -44,7 +43,7 @@ const fragmentShader = /* glsl */ `
   }
 `;
 
-export function OrbitPath({ radius, color, opacity = 0.2, tilt }: OrbitPathProps) {
+export function OrbitPath({ radius, color, opacity = 0.2 }: OrbitPathProps) {
   const material = useMemo(
     () =>
       new ShaderMaterial({
@@ -65,7 +64,7 @@ export function OrbitPath({ radius, color, opacity = 0.2, tilt }: OrbitPathProps
   const planeSize = radius * 2.1;
 
   return (
-    <mesh rotation-x={-Math.PI / 2 + tilt} material={material}>
+    <mesh rotation-x={-Math.PI / 2} material={material}>
       <planeGeometry args={[planeSize, planeSize]} />
     </mesh>
   );

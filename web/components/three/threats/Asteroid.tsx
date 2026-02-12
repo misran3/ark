@@ -97,10 +97,13 @@ export default function Asteroid({
   // Track previous collapsed prop to detect transitions
   const prevCollapsedRef = useRef(false);
 
-  // Chunk debris particles spawned on hit
-  const [chunkParticles, setChunkParticles] = useState<
+  // Chunk debris particles — ref-based to avoid setState in render loop
+  const chunkParticlesRef = useRef<
     Array<{ position: Vector3; velocity: Vector3; lifetime: number; startTime: number }>
   >([]);
+  const [, forceChunkRender] = useState(0);
+  const chunkCleanupTimerRef = useRef(0);
+  const lastShedTimeRef = useRef(0);
 
   // Compute damage level from HP
   const isFieldMode = hp !== undefined && maxHp !== undefined;
@@ -229,7 +232,8 @@ export default function Asteroid({
         };
       });
 
-      setChunkParticles((prev) => [...prev, ...newChunks]);
+      chunkParticlesRef.current = [...chunkParticlesRef.current, ...newChunks];
+      forceChunkRender(v => v + 1);
     } else {
       // Standalone mode: trigger collapse directly
       isCollapsingRef.current = true;
@@ -273,24 +277,26 @@ export default function Asteroid({
       }
     }
 
-    // ---- Animate and cull chunk particles ----
-    if (chunkParticles.length > 0) {
-      setChunkParticles((prev) =>
-        prev.filter((chunk) => {
-          const age = time - chunk.startTime;
-          return age <= chunk.lifetime; // Cull expired chunks
-        })
-      );
+    // ---- Periodic chunk cleanup (every ~1s instead of every frame) ----
+    if (chunkParticlesRef.current.length > 0) {
+      chunkCleanupTimerRef.current += delta;
+      if (chunkCleanupTimerRef.current > 1.0) {
+        chunkCleanupTimerRef.current = 0;
+        const prevLen = chunkParticlesRef.current.length;
+        chunkParticlesRef.current = chunkParticlesRef.current.filter(
+          (chunk) => time - chunk.startTime <= chunk.lifetime
+        );
+        if (chunkParticlesRef.current.length !== prevLen) {
+          forceChunkRender(v => v + 1);
+        }
+      }
     }
 
     // ---- Passive debris shedding when field is highly unstable ----
     if (fieldInstability >= 0.6) {
-      // Only at 60%+ instability (2+ rocks destroyed)
       const shedInterval = 2.5;
-      const lastShedKey = `lastShed_${position.join(',')}`;
-
-      if (!(window as any)[lastShedKey] || time - (window as any)[lastShedKey] > shedInterval) {
-        (window as any)[lastShedKey] = time;
+      if (time - lastShedTimeRef.current > shedInterval) {
+        lastShedTimeRef.current = time;
 
         // Spawn 1-2 small debris chunks
         const newChunks = Array.from({ length: 1 + Math.floor(Math.random() * 2) }, () => {
@@ -308,7 +314,8 @@ export default function Asteroid({
           };
         });
 
-        setChunkParticles((prev) => [...prev, ...newChunks]);
+        chunkParticlesRef.current = [...chunkParticlesRef.current, ...newChunks];
+        forceChunkRender(v => v + 1);
       }
     }
 
@@ -486,7 +493,7 @@ export default function Asteroid({
     <group ref={groupRef} position={position}>
       {/* ===== Layer 1: Outer Heat Haze (atmosphere) ===== */}
       <mesh ref={hazeMeshRef}>
-        <sphereGeometry args={[size * 1.4, 24, 24]} />
+        <sphereGeometry args={[size * 1.4, 16, 16]} />
         <volumetricGlowMaterial
           ref={hazeRef}
           color={color}
@@ -664,7 +671,7 @@ export default function Asteroid({
       </group>
 
       {/* Hit-triggered chunk debris */}
-      {chunkParticles.map((chunk, i) => (
+      {chunkParticlesRef.current.map((chunk, i) => (
         <ChunkDebris
           key={`${chunk.startTime}-${i}`}
           position={position}

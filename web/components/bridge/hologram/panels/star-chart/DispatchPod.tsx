@@ -18,8 +18,8 @@ interface DispatchPodProps {
   from: [number, number, number];
   to: [number, number, number];
   color: Color;
-  /** 0-1 progress along route */
-  progress: number;
+  /** Travel duration in seconds (self-animates progress) */
+  duration: number;
   isIncome: boolean;
 }
 
@@ -44,9 +44,14 @@ const trailFragmentShader = /* glsl */ `
 
 const TRAIL_SEGMENTS = 16;
 
-export function DispatchPod({ from, to, color, progress, isIncome }: DispatchPodProps) {
+// Pre-allocated temp vectors to avoid per-frame allocation
+const _currentPos = new Vector3();
+const _trailPos = new Vector3();
+
+export function DispatchPod({ from, to, color, duration, isIncome }: DispatchPodProps) {
   const groupRef = useRef<Group>(null);
   const trailGeoRef = useRef<BufferGeometry>(null!);
+  const elapsedRef = useRef(0);
 
   const start = useMemo(() => new Vector3(...from), [from]);
   const end = useMemo(() => new Vector3(...to), [to]);
@@ -107,12 +112,16 @@ export function DispatchPod({ from, to, color, progress, isIncome }: DispatchPod
     return { trailGeometry: geo, trailLine: line };
   }, [trailMaterial]);
 
-  useFrame(() => {
+  useFrame((_, delta) => {
     if (!groupRef.current) return;
 
-    // Position pod along route
-    const currentPos = start.clone().lerp(end, progress);
-    groupRef.current.position.copy(currentPos);
+    // Self-animate progress
+    elapsedRef.current += delta;
+    const progress = Math.min(1, elapsedRef.current / duration);
+
+    // Position pod along route using pre-allocated temp
+    _currentPos.copy(start).lerp(end, progress);
+    groupRef.current.position.copy(_currentPos);
 
     // Update trail behind the pod
     const posAttr = trailGeometry.attributes.position;
@@ -122,18 +131,16 @@ export function DispatchPod({ from, to, color, progress, isIncome }: DispatchPod
 
     for (let i = 0; i <= TRAIL_SEGMENTS; i++) {
       const trailT = Math.max(0, progress - (i / TRAIL_SEGMENTS) * 0.15);
-      const trailPos = start.clone().lerp(end, trailT);
-      positions[i * 3] = trailPos.x;
-      positions[i * 3 + 1] = trailPos.y;
-      positions[i * 3 + 2] = trailPos.z;
+      _trailPos.copy(start).lerp(end, trailT);
+      positions[i * 3] = _trailPos.x;
+      positions[i * 3 + 1] = _trailPos.y;
+      positions[i * 3 + 2] = _trailPos.z;
       alphas[i] = 1 - i / TRAIL_SEGMENTS;
     }
 
     posAttr.needsUpdate = true;
     alphaAttr.needsUpdate = true;
   });
-
-  if (progress <= 0 || progress > 1) return null;
 
   return (
     <>

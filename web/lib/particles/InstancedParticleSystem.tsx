@@ -31,7 +31,7 @@ export interface InstancedParticleSystemProps extends ParticleConfig {
   colorEnd?: THREE.ColorRepresentation;
   /** THREE.Blending mode */
   blending?: THREE.Blending;
-  /** Custom per-frame updater — mutate matrices directly */
+  /** Custom per-frame updater — mutate positions/velocities directly */
   onTick?: (data: ParticleState, delta: number, elapsed: number) => void;
 }
 
@@ -41,13 +41,42 @@ export interface ParticleState {
   lifetimes: Float32Array;
   maxLifetimes: Float32Array;
   count: number;
-  mesh: THREE.InstancedMesh;
+  /** @deprecated Use positions/velocities arrays directly */
+  mesh: THREE.Points;
 }
 
-const _matrix = new THREE.Matrix4();
+// Vertex shader: GPU-side size attenuation (replaces CPU lookAt billboarding)
+const particleVertexShader = /* glsl */ `
+  attribute float aSize;
+  attribute vec3 aColor;
+  attribute float aOpacity;
+
+  varying vec3 vColor;
+  varying float vOpacity;
+
+  void main() {
+    vColor = aColor;
+    vOpacity = aOpacity;
+    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+    gl_PointSize = aSize * (300.0 / -mvPosition.z);
+    gl_Position = projectionMatrix * mvPosition;
+  }
+`;
+
+// Fragment shader: soft circle particle
+const particleFragmentShader = /* glsl */ `
+  varying vec3 vColor;
+  varying float vOpacity;
+
+  void main() {
+    float d = length(gl_PointCoord - vec2(0.5));
+    if (d > 0.5) discard;
+    float alpha = smoothstep(0.5, 0.15, d) * vOpacity;
+    gl_FragColor = vec4(vColor, alpha);
+  }
+`;
+
 const _color = new THREE.Color();
-const _position = new THREE.Vector3();
-const _scale = new THREE.Vector3();
 
 export default function InstancedParticleSystem({
   count,
@@ -64,7 +93,7 @@ export default function InstancedParticleSystem({
   blending = THREE.AdditiveBlending,
   onTick,
 }: InstancedParticleSystemProps) {
-  const meshRef = useRef<THREE.InstancedMesh>(null!);
+  const pointsRef = useRef<THREE.Points>(null!);
   const emitAccRef = useRef(0);
 
   const state = useMemo(() => {
@@ -74,11 +103,9 @@ export default function InstancedParticleSystem({
     const maxLifetimes = new Float32Array(count);
 
     for (let i = 0; i < count; i++) {
-      // Stagger spawns so they don't all appear at once
       lifetimes[i] = emitRate > 0 ? -(Math.random() * (count / Math.max(emitRate, 1))) : 0;
       maxLifetimes[i] = lifespan[0] + Math.random() * (lifespan[1] - lifespan[0]);
 
-      // Random position in spawn sphere
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(2 * Math.random() - 1);
       const r = Math.random() * spawnRadius;
@@ -86,7 +113,6 @@ export default function InstancedParticleSystem({
       positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
       positions[i * 3 + 2] = r * Math.cos(phi);
 
-      // Random velocity in range
       velocities[i * 3] = velocityMin[0] + Math.random() * (velocityMax[0] - velocityMin[0]);
       velocities[i * 3 + 1] = velocityMin[1] + Math.random() * (velocityMax[1] - velocityMin[1]);
       velocities[i * 3 + 2] = velocityMin[2] + Math.random() * (velocityMax[2] - velocityMin[2]);
@@ -95,50 +121,77 @@ export default function InstancedParticleSystem({
     return { positions, velocities, lifetimes, maxLifetimes, count } as Omit<ParticleState, 'mesh'>;
   }, [count, lifespan, velocityMin, velocityMax, spawnRadius, emitRate]);
 
-  // Pre-built ParticleState object for onTick — avoids spread operator allocation every frame
+  // Pre-built ParticleState object for onTick — avoids allocation every frame
   const tickStateRef = useRef<ParticleState | null>(null);
 
   const startColor = useMemo(() => new THREE.Color(color), [color]);
   const endColor = useMemo(() => (colorEnd ? new THREE.Color(colorEnd) : null), [colorEnd]);
 
-  // Geometry: small plane quad (billboard-friendly)
-  const geo = useMemo(() => new THREE.PlaneGeometry(size, size), [size]);
-  const mat = useMemo(
+  // Buffer attributes for per-particle size, color, opacity
+  const buffers = useMemo(() => {
+    const sizes = new Float32Array(count);
+    const colors = new Float32Array(count * 3);
+    const opacities = new Float32Array(count);
+    sizes.fill(size);
+    for (let i = 0; i < count; i++) {
+      colors[i * 3] = startColor.r;
+      colors[i * 3 + 1] = startColor.g;
+      colors[i * 3 + 2] = startColor.b;
+      opacities[i] = 1.0;
+    }
+    return { sizes, colors, opacities };
+  }, [count, size, startColor]);
+
+  // Geometry with buffer attributes
+  const geometry = useMemo(() => {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(state.positions, 3));
+    geo.setAttribute('aSize', new THREE.BufferAttribute(buffers.sizes, 1));
+    geo.setAttribute('aColor', new THREE.BufferAttribute(buffers.colors, 3));
+    geo.setAttribute('aOpacity', new THREE.BufferAttribute(buffers.opacities, 1));
+    return geo;
+  }, [state.positions, buffers]);
+
+  const material = useMemo(
     () =>
-      new THREE.MeshBasicMaterial({
-        color: startColor,
+      new THREE.ShaderMaterial({
+        vertexShader: particleVertexShader,
+        fragmentShader: particleFragmentShader,
         transparent: true,
         depthWrite: false,
         blending,
-        side: THREE.DoubleSide,
         toneMapped: false,
       }),
-    [startColor, blending]
+    [blending],
   );
 
   useEffect(() => {
     return () => {
-      geo.dispose();
-      mat.dispose();
+      geometry.dispose();
+      material.dispose();
     };
-  }, [geo, mat]);
+  }, [geometry, material]);
 
-  useFrame(({ clock, camera }, delta) => {
-    const mesh = meshRef.current;
-    if (!mesh) return;
+  useFrame(({ clock }, delta) => {
+    const points = pointsRef.current;
+    if (!points) return;
 
     const elapsed = clock.getElapsedTime();
     const { positions, velocities, lifetimes, maxLifetimes } = state;
 
-    // Let external code do custom work — reuse pre-built object to avoid allocation
+    // Let external code do custom work
     if (onTick) {
       if (!tickStateRef.current) {
-        tickStateRef.current = { ...state, mesh } as ParticleState;
+        tickStateRef.current = { ...state, mesh: points } as ParticleState;
       } else {
-        tickStateRef.current.mesh = mesh;
+        tickStateRef.current.mesh = points;
       }
       onTick(tickStateRef.current, delta, elapsed);
     }
+
+    const sizeArr = buffers.sizes;
+    const colorArr = buffers.colors;
+    const opacityArr = buffers.opacities;
 
     for (let i = 0; i < count; i++) {
       lifetimes[i] += delta;
@@ -146,15 +199,13 @@ export default function InstancedParticleSystem({
       const maxLife = maxLifetimes[i];
 
       if (life < 0) {
-        // Not yet born — hide
-        _matrix.makeScale(0, 0, 0);
-        mesh.setMatrixAt(i, _matrix);
+        // Not yet born — hide via zero size
+        sizeArr[i] = 0;
         continue;
       }
 
       if (life >= maxLife) {
         if (loop) {
-          // Respawn
           lifetimes[i] = 0;
           const theta = Math.random() * Math.PI * 2;
           const phi = Math.acos(2 * Math.random() - 1);
@@ -167,8 +218,7 @@ export default function InstancedParticleSystem({
           velocities[i * 3 + 2] = velocityMin[2] + Math.random() * (velocityMax[2] - velocityMin[2]);
           maxLifetimes[i] = lifespan[0] + Math.random() * (lifespan[1] - lifespan[0]);
         } else {
-          _matrix.makeScale(0, 0, 0);
-          mesh.setMatrixAt(i, _matrix);
+          sizeArr[i] = 0;
           continue;
         }
       }
@@ -183,16 +233,8 @@ export default function InstancedParticleSystem({
       velocities[i * 3 + 1] += gravity[1] * delta;
       velocities[i * 3 + 2] += gravity[2] * delta;
 
-      // Billboard toward camera
-      _position.set(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
-      const scaleFactor = (1.0 - t * 0.6); // Shrink over life
-      _scale.setScalar(scaleFactor);
-
-      _matrix.identity();
-      _matrix.lookAt(_position, camera.position, camera.up);
-      _matrix.setPosition(_position);
-      _matrix.scale(_scale);
-      mesh.setMatrixAt(i, _matrix);
+      // Size: shrink over lifetime
+      sizeArr[i] = size * (1.0 - t * 0.6);
 
       // Color fade
       if (endColor) {
@@ -200,12 +242,20 @@ export default function InstancedParticleSystem({
       } else {
         _color.copy(startColor).multiplyScalar(1.0 - t * 0.5);
       }
-      mesh.setColorAt(i, _color);
+      colorArr[i * 3] = _color.r;
+      colorArr[i * 3 + 1] = _color.g;
+      colorArr[i * 3 + 2] = _color.b;
+
+      // Opacity: fade out near end of life
+      opacityArr[i] = 1.0 - t * t;
     }
 
-    mesh.instanceMatrix.needsUpdate = true;
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    // Mark buffer attributes as needing update
+    geometry.attributes.position.needsUpdate = true;
+    geometry.attributes.aSize.needsUpdate = true;
+    geometry.attributes.aColor.needsUpdate = true;
+    geometry.attributes.aOpacity.needsUpdate = true;
   });
 
-  return <instancedMesh ref={meshRef} args={[geo, mat, count]} frustumCulled={false} />;
+  return <points ref={pointsRef} geometry={geometry} material={material} frustumCulled={false} />;
 }

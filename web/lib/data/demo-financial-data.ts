@@ -92,18 +92,25 @@ export const DEMO_FLEET_STATS = {
 };
 
 // ─── Demo Financial Snapshot ────────────────────────────────────────────────
-// Matches Captain_Analysis.md: Main Checking $4,250, Emergency Fund $12,500,
-// Rewards Card -$1,847, monthly deficit $3,072.13
+// Aspirational mid-career portfolio for orrery visualization
+// Gross: $790K | Liabilities: $395K | Net Worth: $395K
 
 export const DEMO_SNAPSHOT = {
   accounts: [
-    { account_id: '1', type: 'checking' as const, balance: 4250, nickname: 'Main Checking' },
-    { account_id: '2', type: 'savings' as const, balance: 12500, nickname: 'Emergency Fund' },
-    { account_id: '3', type: 'credit_card' as const, balance: -1847, nickname: 'Rewards Card' },
+    { account_id: 'home', type: 'real-estate' as const, balance: 520_000, nickname: 'Home' },
+    { account_id: 'investments', type: 'investment' as const, balance: 180_000, nickname: 'Investment Portfolio' },
+    { account_id: 'emergency-fund', type: 'savings' as const, balance: 25_000, nickname: 'Emergency Fund' },
+    { account_id: 'suv', type: 'vehicle' as const, balance: 35_000, nickname: 'Vehicle — SUV' },
+    { account_id: 'sedan', type: 'vehicle' as const, balance: 22_000, nickname: 'Vehicle — Sedan' },
+    { account_id: 'crypto', type: 'crypto' as const, balance: 8_000, nickname: 'Crypto' },
+    { account_id: 'mortgage', type: 'liability' as const, balance: -380_000, nickname: 'Mortgage' },
+    { account_id: 'auto-loan', type: 'liability' as const, balance: -15_000, nickname: 'Auto Loan' },
   ],
-  total_net_worth: 14903, // 4250 + 12500 - 1847
-  monthly_income: 2400,
-  monthly_spending: 5472, // 2400 + 3072.13 deficit ≈ 5472
+  total_net_worth: 395_000,
+  gross_assets: 790_000,
+  total_liabilities: 395_000,
+  monthly_income: 8_500,
+  monthly_spending: 6_200,
   snapshot_timestamp: new Date().toISOString(),
 };
 

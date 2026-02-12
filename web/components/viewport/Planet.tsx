@@ -45,7 +45,7 @@ const planetFragmentShader = /* glsl */ `
   float fbm(vec2 p) {
     float value = 0.0;
     float amplitude = 0.5;
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {
       value += amplitude * noise(p);
       p *= 2.0;
       amplitude *= 0.5;
@@ -119,7 +119,7 @@ export function Planet({ brightness = 1 }: PlanetProps) {
 
   return (
     <mesh ref={meshRef} position={[850, 500, -2400]}>
-      <sphereGeometry args={[297, 64, 64]} />
+      <sphereGeometry args={[297, 32, 32]} />
       <shaderMaterial
         ref={shaderRef}
         uniforms={uniforms}

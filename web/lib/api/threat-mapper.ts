@@ -1,4 +1,9 @@
 import type { Threat } from '@/lib/stores/threat-store';
+import {
+  generateSpawnPosition,
+  STATIC_THREAT_TYPES,
+  BLACK_HOLE_POSITION,
+} from '@/lib/constants/scene-layout';
 import type {
   AllScansResult,
   BudgetOverrunItem,
@@ -9,7 +14,7 @@ import type {
   FraudAlertItem,
 } from './captain-types';
 
-/** Simple hash for deterministic positioning from a string key */
+/** Simple hash for deterministic seed from a string key */
 function hashCode(str: string): number {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -28,21 +33,13 @@ const THREAT_COLORS: Record<Threat['type'], string> = {
 };
 
 function positionInSector(
-  _type: Threat['type'],
-  index: number,
+  type: Threat['type'],
+  _index: number,
   key: string,
 ): [number, number, number] {
-  const h = Math.abs(hashCode(key));
-  // Spawn all threats in the upper-right, far from camera.
-  // They drift toward center over time (handled by ThreatsLayer).
-  const x = 18 + ((h % 100) / 10) + index * 2;
-  const y = 12 + (((h >> 8) % 80) / 10) + index * 1;
-  const z = -(35 + ((h >> 16) % 15) + index * 3);
-  return [
-    Math.round(x * 10) / 10,
-    Math.round(y * 10) / 10,
-    Math.round(z * 10) / 10,
-  ];
+  const id = `${type}-${key}`;
+  if (STATIC_THREAT_TYPES.has(type)) return BLACK_HOLE_POSITION;
+  return generateSpawnPosition(id, type);
 }
 
 function severityFromPctOver(pct: number): Threat['severity'] {

@@ -83,7 +83,7 @@ export function StarfieldBackground() {
       // Spherical shell distribution for even sky coverage
       // Random direction on hemisphere facing camera (-Z)
       const theta = rand() * Math.PI * 2;              // azimuth: full circle
-      const phi = Math.acos(1 - rand() * 1.2);         // polar: biased forward (0 to ~100°)
+      const phi = Math.acos(1 - rand());                 // polar: forward hemisphere (0 to 90°)
       const r = 900 + rand() * 900;                     // radius: 900 to 1800
 
       positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);      // x
