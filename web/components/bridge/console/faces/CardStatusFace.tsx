@@ -1,15 +1,16 @@
 'use client';
 
+import { ACTIVE_FLEET_CARDS } from '@/lib/data/fleet-cards';
+
 interface CardStatus {
   name: string;
   utilization: number; // 0-100
 }
 
-const MOCK_CARDS: CardStatus[] = [
-  { name: 'SAPPHIRE', utilization: 23 },
-  { name: 'AMEX GOLD', utilization: 67 },
-  { name: 'DISCOVER', utilization: 82 },
-];
+const MOCK_CARDS: CardStatus[] = ACTIVE_FLEET_CARDS.map((c) => ({
+  name: c.name,
+  utilization: c.utilization,
+}));
 
 function getLampColor(util: number): { bg: string; glow: string } {
   if (util < 30) return {

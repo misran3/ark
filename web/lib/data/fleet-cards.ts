@@ -47,3 +47,11 @@ export const FLEET_STATS = {
   totalBalance: FLEET_CARDS.reduce((sum, c) => sum + Math.round(c.limit * (c.utilization / 100)), 0),
   avgUtilization: Math.round(FLEET_CARDS.reduce((sum, c) => sum + c.utilization, 0) / FLEET_CARDS.length),
 };
+
+// Demo mode re-exports — aligned to Captain_Analysis.md
+import { DEMO_FLEET_CARDS, DEMO_FLEET_STATS } from './demo-financial-data';
+
+const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+
+export const ACTIVE_FLEET_CARDS: CreditCardData[] = isDemo ? DEMO_FLEET_CARDS : FLEET_CARDS;
+export const ACTIVE_FLEET_STATS = isDemo ? DEMO_FLEET_STATS : FLEET_STATS;

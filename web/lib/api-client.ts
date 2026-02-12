@@ -1,5 +1,6 @@
 // TODO: Wire up to deployed API when snapshot/budget endpoints exist
 // For now, these functions return mock data directly (no localhost calls)
+import { DEMO_SNAPSHOT } from '@/lib/data/demo-financial-data';
 
 export interface FinancialSnapshot {
   accounts: Array<{
@@ -81,6 +82,7 @@ const MOCK_BUDGET: BudgetReport = {
 
 // API Functions — mock data until deployed endpoints exist
 export async function fetchFinancialSnapshot(): Promise<FinancialSnapshot> {
+  if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') return DEMO_SNAPSHOT;
   return MOCK_SNAPSHOT;
 }
 

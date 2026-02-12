@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { DEMO_TRANSACTION_LOG } from '@/lib/data/demo-financial-data';
 
 interface LogEntry {
   time: string;
@@ -8,7 +9,7 @@ interface LogEntry {
   amount: number;
 }
 
-const MOCK_TRANSACTIONS: LogEntry[] = [
+const SPACE_TRANSACTIONS: LogEntry[] = [
   { time: '14:32', label: 'FUEL DEPOT', amount: -2340 },
   { time: '13:18', label: 'CARGO HAUL PAYOUT', amount: 8500 },
   { time: '12:05', label: 'DOCKING FEE', amount: -450 },
@@ -18,6 +19,9 @@ const MOCK_TRANSACTIONS: LogEntry[] = [
   { time: '07:41', label: 'TRADE LICENSE', amount: -680 },
   { time: '06:30', label: 'SALVAGE SALE', amount: 1850 },
 ];
+
+const MOCK_TRANSACTIONS: LogEntry[] =
+  process.env.NEXT_PUBLIC_DEMO_MODE === 'true' ? DEMO_TRANSACTION_LOG : SPACE_TRANSACTIONS;
 
 const VISIBLE_ROWS = 4;
 
