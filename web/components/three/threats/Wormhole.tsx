@@ -8,6 +8,7 @@ import '@/lib/materials/VolumetricGlowMaterial';
 import '@/lib/materials/EnergyFlowMaterial';
 import { InstancedParticleSystem, type ParticleState } from '@/lib/particles';
 import { generateLightningPath, tubeFromPoints } from '@/lib/utils/geometry';
+import { useConsoleStore } from '@/lib/stores/console-store';
 
 // Pre-allocated reusable temp objects
 const _wormholeLerpTarget = new THREE.Vector3();
@@ -96,7 +97,7 @@ interface WormholeProps {
  * Cinematic wormhole with 7-layer composition:
  * 1. Outer Glow Sphere (VolumetricGlowMaterial)
  * 2. Portal Rim (torus with EnergyFlowMaterial)
- * 3. Portal Surface (4 depth-layered swirl discs — parallax tunnel)
+ * 3. Portal Surface (2 depth-layered swirl discs — parallax tunnel)
  * 4. Electrical Rim Arcs (generateLightningPath TubeGeometry)
  * 5. Edge Ripple Particles (InstancedParticleSystem orbiting rim)
  * 6. Through-Portal Vision (ghostly icon + Billboard text)
@@ -113,7 +114,7 @@ export default function Wormhole({
   const outerGlowRef = useRef<any>(null);
   const rimRef = useRef<any>(null);
   const torusMeshRef = useRef<THREE.Mesh>(null);
-  const portalRefs = useRef<(any | null)[]>([null, null, null, null]);
+  const portalRefs = useRef<(any | null)[]>([null, null]);
   const throughPortalRef = useRef<THREE.Group>(null);
   const ghostIconRef = useRef<THREE.Mesh>(null);
   const ghostHaloRef = useRef<THREE.Mesh>(null);
@@ -122,6 +123,8 @@ export default function Wormhole({
   const isHoveredRef = useRef(false);
   const isCollapsingRef = useRef(false);
   const collapseStartRef = useRef(0);
+
+  const isPanelOpen = useConsoleStore((s) => !!s.expandedPanel);
 
   // Electrical rim arc geometries (regenerate periodically)
   const frameCountRef = useRef(0);
@@ -279,6 +282,7 @@ export default function Wormhole({
 
   useFrame(({ clock }, delta) => {
     if (!groupRef.current) return;
+    if (isPanelOpen && !isCollapsingRef.current) return;
     const time = clock.getElapsedTime();
     const hovered = isHoveredRef.current;
 
@@ -316,7 +320,7 @@ export default function Wormhole({
     }
 
     // ---- Layer 3: Portal Surface Shaders ----
-    for (let layer = 0; layer < 4; layer++) {
+    for (let layer = 0; layer < 2; layer++) {
       const mat = portalRefs.current[layer];
       if (mat) {
         mat.time = time;
@@ -405,8 +409,6 @@ export default function Wormhole({
   const depthLayers = useMemo(
     () => [
       { z: 0, radiusScale: 1.0, depth: 0.0 },
-      { z: -0.1 * size, radiusScale: 0.8, depth: 0.33 },
-      { z: -0.2 * size, radiusScale: 0.6, depth: 0.66 },
       { z: -0.3 * size, radiusScale: 0.4, depth: 1.0 },
     ],
     [size],
@@ -455,7 +457,7 @@ export default function Wormhole({
         />
       </mesh>
 
-      {/* ===== Layer 3: Portal Surface (4 depth-layered swirl discs) ===== */}
+      {/* ===== Layer 3: Portal Surface (2 depth-layered swirl discs) ===== */}
       {depthLayers.map((layer, idx) => (
         <mesh
           key={`portal-layer-${idx}`}
