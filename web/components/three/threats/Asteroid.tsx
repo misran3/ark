@@ -516,7 +516,7 @@ export default function Asteroid({
           key="asteroid-shader"
           seed={seed}
           heatIntensity={1.0}
-          emissiveStrength={3.0}
+          emissiveStrength={1.6}
           damageLevel={damageLevel}
           sympatheticGlow={sympatheticGlow}
           toneMapped={false}
