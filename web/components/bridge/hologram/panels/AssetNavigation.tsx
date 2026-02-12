@@ -128,6 +128,14 @@ export function AssetNavigation() {
 
   useCameraFollow(cameraTarget);
 
+  // Panel position: offset right and up from selected planet
+  const panelPosition = useMemo<[number, number, number]>(() => {
+    if (!selectedAsset) return [3.5, 1.5, 0.3];
+    const x = Math.cos(selectedAsset.fixedAngle) * selectedAsset.orbitRadius;
+    const z = Math.sin(selectedAsset.fixedAngle) * selectedAsset.orbitRadius;
+    return [x + 2.2, 1.2, z + 0.3];
+  }, [selectedAsset]);
+
   return (
     <group scale={0.4}>
       {/* Orrery group — tilted */}
@@ -309,7 +317,7 @@ export function AssetNavigation() {
       {/* === Asset detail panel — tiered reveal === */}
       {selectedAsset && (
         <HologramDetailPanel
-          position={[3.5, 1.5, 0.3]}
+          position={panelPosition}
           color={cssColor}
           glowColor={cssGlow}
           asset={selectedAsset}
