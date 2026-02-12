@@ -7,6 +7,7 @@ import '@/lib/materials/VolumetricGlowMaterial';
 import '@/lib/materials/EnergyFlowMaterial';
 import '@/lib/materials/HolographicMaterial';
 import { InstancedParticleSystem, TrailRibbon } from '@/lib/particles';
+import { useConsoleStore } from '@/lib/stores/console-store';
 
 interface EnemyCruiserProps {
   position: [number, number, number];
@@ -34,7 +35,7 @@ const LIGHT_CONFIGS = [
  * 2. Multi-part Hull (fuselage + armor plates + wing pylons + bridge)
  * 3. Weapon Turrets with EnergyFlowMaterial capacitor rings
  * 4. Engine Section (InstancedParticleSystem + TrailRibbon per engine)
- * 5. Running Lights (sequential blink sweep)
+ * 5. Running Lights (single Points mesh, sequential blink sweep)
  * 6. Shield Effect (HolographicMaterial, hover-only)
  * 7. Targeting Laser (hover-only)
  */
@@ -57,7 +58,8 @@ export default function EnemyCruiser({
   const shieldMeshRef = useRef<THREE.Mesh>(null);
   const laserRef = useRef<THREE.Mesh>(null);
   const auraRef = useRef<any>(null);
-  const lightRefs = useRef<(THREE.Mesh | null)[]>([]);
+  const lightsRef = useRef<THREE.Points>(null);
+  const lightOpacitiesRef = useRef<Float32Array>(new Float32Array(LIGHT_CONFIGS.length));
   const leftEngineGroupRef = useRef<THREE.Group>(null);
   const rightEngineGroupRef = useRef<THREE.Group>(null);
   const isHoveredRef = useRef(false);
@@ -66,6 +68,7 @@ export default function EnemyCruiser({
   const bracketsRef = useRef<THREE.Group>(null);
   const flashSphereRef = useRef<THREE.Mesh>(null);
   const shockwaveRingRef = useRef<THREE.Mesh>(null);
+  const isPanelOpen = useConsoleStore((s) => !!s.expandedPanel);
   // Cached materials for collapse fade — populated once at collapse start to avoid traverse() per frame
   const collapseMaterialsRef = useRef<THREE.Material[]>([]);
 
@@ -99,6 +102,58 @@ export default function EnemyCruiser({
     return () => { bracketGeometry.dispose(); };
   }, [bracketGeometry]);
 
+  // Running lights: single Points mesh instead of 8 individual meshes
+  const { lightsGeo, lightsMat } = useMemo(() => {
+    const positions = new Float32Array(LIGHT_CONFIGS.length * 3);
+    const opacities = new Float32Array(LIGHT_CONFIGS.length);
+    for (let i = 0; i < LIGHT_CONFIGS.length; i++) {
+      positions[i * 3] = LIGHT_CONFIGS[i].pos[0] * size;
+      positions[i * 3 + 1] = LIGHT_CONFIGS[i].pos[1] * size;
+      positions[i * 3 + 2] = LIGHT_CONFIGS[i].pos[2] * size;
+      opacities[i] = 0.15;
+    }
+    lightOpacitiesRef.current = opacities;
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setAttribute('aOpacity', new THREE.Float32BufferAttribute(opacities, 1));
+
+    const mat = new THREE.ShaderMaterial({
+      vertexShader: /* glsl */ `
+        attribute float aOpacity;
+        varying float vOpacity;
+        void main() {
+          vOpacity = aOpacity;
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = ${(size * 3.0).toFixed(1)} * (300.0 / -mvPosition.z);
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: /* glsl */ `
+        varying float vOpacity;
+        void main() {
+          float d = length(gl_PointCoord - vec2(0.5));
+          if (d > 0.5) discard;
+          float falloff = 1.0 - smoothstep(0.0, 0.5, d);
+          gl_FragColor = vec4(0.863, 0.149, 0.149, vOpacity * falloff);
+        }
+      `,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      toneMapped: false,
+    });
+
+    return { lightsGeo: geo, lightsMat: mat };
+  }, [size]);
+
+  useEffect(() => {
+    return () => {
+      lightsGeo.dispose();
+      lightsMat.dispose();
+    };
+  }, [lightsGeo, lightsMat]);
+
   const handlePointerOver = useCallback(() => {
     isHoveredRef.current = true;
     onHover?.(true);
@@ -119,6 +174,7 @@ export default function EnemyCruiser({
 
   useFrame(({ clock, mouse }, delta) => {
     if (!groupRef.current) return;
+    if (isPanelOpen && !isCollapsingRef.current) return;
     const time = clock.getElapsedTime();
     const hovered = isHoveredRef.current;
 
@@ -185,21 +241,21 @@ export default function EnemyCruiser({
     if (leftCapRingRef.current) leftCapRingRef.current.time = time;
     if (rightCapRingRef.current) rightCapRingRef.current.time = time;
 
-    // ---- Layer 5: Running lights ----
+    // ---- Layer 5: Running lights (single Points mesh) ----
     const sweepCycle = (time * 2) % (LIGHT_CONFIGS.length * 0.3);
-    for (let i = 0; i < lightRefs.current.length; i++) {
-      const light = lightRefs.current[i];
-      if (!light) continue;
-      const mat = light.material as THREE.MeshBasicMaterial;
+    const opacities = lightOpacitiesRef.current;
+    for (let i = 0; i < LIGHT_CONFIGS.length; i++) {
       if (hovered) {
-        // Alert mode: all bright
-        mat.opacity = 0.8;
+        opacities[i] = 0.8;
       } else {
-        // Sequential sweep blink
         const lightPhase = LIGHT_CONFIGS[i].phase * LIGHT_CONFIGS.length * 0.3;
         const dist = Math.abs(sweepCycle - lightPhase);
-        mat.opacity = dist < 0.3 ? 0.8 : 0.15;
+        opacities[i] = dist < 0.3 ? 0.8 : 0.15;
       }
+    }
+    if (lightsRef.current) {
+      const attr = lightsRef.current.geometry.getAttribute('aOpacity') as THREE.BufferAttribute;
+      attr.needsUpdate = true;
     }
 
     // ---- Layer 6: Shield effect ----
@@ -628,24 +684,8 @@ export default function EnemyCruiser({
         />
       </group>
 
-      {/* ===== Layer 5: Running Lights ===== */}
-      {LIGHT_CONFIGS.map((cfg, i) => (
-        <mesh
-          key={`light-${i}`}
-          ref={(ref) => { lightRefs.current[i] = ref; }}
-          position={[cfg.pos[0] * size, cfg.pos[1] * size, cfg.pos[2] * size]}
-        >
-          <sphereGeometry args={[size * 0.025, 6, 6]} />
-          <meshBasicMaterial
-            color={cfg.color}
-            transparent
-            opacity={0.15}
-            blending={THREE.AdditiveBlending}
-            depthWrite={false}
-            toneMapped={false}
-          />
-        </mesh>
-      ))}
+      {/* ===== Layer 5: Running Lights (single Points mesh) ===== */}
+      <points ref={lightsRef} geometry={lightsGeo} material={lightsMat} />
 
       {/* ===== Layer 6: Shield Effect (hover-only) ===== */}
       <mesh ref={shieldMeshRef} visible={false} scale={1.15}>
