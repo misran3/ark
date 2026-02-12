@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import {
   Group,
@@ -9,7 +9,7 @@ import {
   OctahedronGeometry,
   ShaderMaterial,
   AdditiveBlending,
-  Object3D,
+  InstancedBufferAttribute,
 } from 'three';
 
 interface DebtDebrisRingProps {
@@ -20,13 +20,42 @@ interface DebtDebrisRingProps {
 }
 
 const vertexShader = /* glsl */ `
+  attribute float aAngle;
+  attribute float aRadius;
+  attribute float aY;
+  attribute float aScale;
+  attribute vec2 aRotSpeed; // x = rotX speed, y = rotY speed
+
+  uniform float uTime;
   varying float vFlicker;
 
+  // Rotation helpers
+  mat3 rotateX(float a) {
+    float s = sin(a), c = cos(a);
+    return mat3(1,0,0, 0,c,-s, 0,s,c);
+  }
+  mat3 rotateY(float a) {
+    float s = sin(a), c = cos(a);
+    return mat3(c,0,s, 0,1,0, -s,0,c);
+  }
+
   void main() {
-    // Use instance matrix position to derive flicker phase
-    vec4 worldPos = modelMatrix * instanceMatrix * vec4(position, 1.0);
+    // Drift angle over time (matches original: s.angle + t * 0.02)
+    float driftAngle = aAngle + uTime * 0.02;
+
+    // Shard self-rotation (matches original: s.rotX + t * 0.5, s.rotY + t * 0.3)
+    mat3 rot = rotateX(aRotSpeed.x * uTime) * rotateY(aRotSpeed.y * uTime);
+    vec3 localPos = rot * (position * aScale);
+
+    // Orbital position
+    float x = cos(driftAngle) * aRadius;
+    float z = sin(driftAngle) * aRadius;
+    vec3 worldPos = localPos + vec3(x, aY, z);
+
+    // Flicker from spatial hash (same as before)
     vFlicker = sin(worldPos.x * 10.0 + worldPos.z * 7.0) * 0.5 + 0.5;
-    gl_Position = projectionMatrix * viewMatrix * worldPos;
+
+    gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(worldPos, 1.0);
   }
 `;
 
@@ -44,14 +73,13 @@ const fragmentShader = /* glsl */ `
 
 export function DebtDebrisRing({
   color,
-  beltRadius = 5.0, // Between ring 2 (4.2) and ring 3 (5.8)
+  beltRadius = 5.0,
   beltWidth = 0.5,
   count = 80,
 }: DebtDebrisRingProps) {
   const groupRef = useRef<Group>(null);
   const meshRef = useRef<InstancedMesh>(null);
 
-  // Octahedron geometry (tiny shards, rendered as wireframe via material)
   const geo = useMemo(() => new OctahedronGeometry(0.06, 0), []);
 
   const mat = useMemo(
@@ -71,44 +99,39 @@ export function DebtDebrisRing({
     [color]
   );
 
-  // Pre-compute shard positions
-  const shardData = useMemo(() => {
-    const data = [];
+  // Bake per-instance attributes (angles, radii, scales, rotation speeds)
+  useEffect(() => {
+    if (!meshRef.current) return;
+    const mesh = meshRef.current;
+
+    const angles = new Float32Array(count);
+    const radii = new Float32Array(count);
+    const ys = new Float32Array(count);
+    const scales = new Float32Array(count);
+    const rotSpeeds = new Float32Array(count * 2);
+
     for (let i = 0; i < count; i++) {
-      const angle = (i / count) * Math.PI * 2 + Math.random() * 0.3;
-      const r = beltRadius + (Math.random() - 0.5) * beltWidth;
-      const y = (Math.random() - 0.5) * 0.2;
-      const scale = 0.5 + Math.random() * 1.5;
-      const rotX = Math.random() * Math.PI;
-      const rotY = Math.random() * Math.PI;
-      data.push({ angle, r, y, scale, rotX, rotY });
+      angles[i] = (i / count) * Math.PI * 2 + Math.random() * 0.3;
+      radii[i] = beltRadius + (Math.random() - 0.5) * beltWidth;
+      ys[i] = (Math.random() - 0.5) * 0.2;
+      scales[i] = 0.5 + Math.random() * 1.5;
+      rotSpeeds[i * 2] = 0.3 + Math.random() * 0.4;     // rotX speed (~0.5 avg)
+      rotSpeeds[i * 2 + 1] = 0.2 + Math.random() * 0.2; // rotY speed (~0.3 avg)
     }
-    return data;
+
+    mesh.geometry.setAttribute('aAngle', new InstancedBufferAttribute(angles, 1));
+    mesh.geometry.setAttribute('aRadius', new InstancedBufferAttribute(radii, 1));
+    mesh.geometry.setAttribute('aY', new InstancedBufferAttribute(ys, 1));
+    mesh.geometry.setAttribute('aScale', new InstancedBufferAttribute(scales, 1));
+    mesh.geometry.setAttribute('aRotSpeed', new InstancedBufferAttribute(rotSpeeds, 2));
   }, [count, beltRadius, beltWidth]);
 
-  const dummy = useMemo(() => new Object3D(), []);
-
   useFrame(({ clock }) => {
-    const t = clock.getElapsedTime();
-    mat.uniforms.uTime.value = t;
+    // Single uniform update — all animation computed on GPU
+    mat.uniforms.uTime.value = clock.getElapsedTime();
 
     if (groupRef.current) {
-      groupRef.current.rotation.y += 0.001; // Slow counter-rotation
-    }
-
-    // Update instance matrices (shards drift slightly)
-    if (meshRef.current) {
-      shardData.forEach((s, i) => {
-        const driftAngle = s.angle + t * 0.02;
-        const x = Math.cos(driftAngle) * s.r;
-        const z = Math.sin(driftAngle) * s.r;
-        dummy.position.set(x, s.y, z);
-        dummy.rotation.set(s.rotX + t * 0.5, s.rotY + t * 0.3, 0);
-        dummy.scale.setScalar(s.scale);
-        dummy.updateMatrix();
-        meshRef.current!.setMatrixAt(i, dummy.matrix);
-      });
-      meshRef.current.instanceMatrix.needsUpdate = true;
+      groupRef.current.rotation.y += 0.001;
     }
   });
 
