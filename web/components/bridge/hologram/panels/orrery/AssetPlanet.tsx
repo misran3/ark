@@ -192,8 +192,15 @@ export function AssetPlanet({
         e.stopPropagation();
         onClick?.();
       }}
-      onPointerEnter={() => setHovered(true)}
-      onPointerLeave={() => setHovered(false)}
+      onPointerOver={(e) => {
+        e.stopPropagation();
+        setHovered(true);
+        document.body.style.cursor = 'pointer';
+      }}
+      onPointerOut={() => {
+        setHovered(false);
+        document.body.style.cursor = 'auto';
+      }}
     >
       {/* Wireframe planet */}
       <group ref={wireGroupRef} scale={hovered ? 1.15 : 1}>
