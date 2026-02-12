@@ -8,21 +8,81 @@ import { extend } from '@react-three/fiber';
 import '@/lib/materials/VolumetricGlowMaterial';
 import '@/lib/materials/EnergyFlowMaterial';
 import { InstancedParticleSystem } from '@/lib/particles';
-import { noiseGLSL, fresnelGLSL, gradientGLSL } from '@/lib/shaders';
 import { tubeFromPoints } from '@/lib/utils/geometry';
+import { useConsoleStore } from '@/lib/stores/console-store';
 
-// ---- Custom Solar Surface Shader Material ----
+/**
+ * Bake 3D noise into a 2D DataTexture via spherical UV mapping.
+ * Samples multi-octave hash noise at UV coordinates for seamless wrapping.
+ */
+function bakeFBMTexture(
+  resolution: number,
+  scale: number,
+  octaves: number,
+  seed: number
+): THREE.DataTexture {
+  const data = new Uint8Array(resolution * resolution * 4);
+
+  for (let y = 0; y < resolution; y++) {
+    for (let x = 0; x < resolution; x++) {
+      const u = x / resolution;
+      const v = y / resolution;
+
+      // Map UV to spherical coordinates for seamless wrapping
+      const theta = u * Math.PI * 2;
+      const phi = v * Math.PI;
+      const sx = Math.sin(phi) * Math.cos(theta) * scale;
+      const sy = Math.sin(phi) * Math.sin(theta) * scale;
+      const sz = Math.cos(phi) * scale;
+
+      // Multi-octave value noise
+      let value = 0;
+      let amplitude = 0.5;
+      let freq = 1;
+      for (let o = 0; o < octaves; o++) {
+        const px = sx * freq + seed;
+        const py = sy * freq + seed * 1.3;
+        const pz = sz * freq + seed * 0.7;
+        const h = Math.sin(px * 127.1 + py * 311.7 + pz * 74.7) * 43758.5453;
+        value += (h - Math.floor(h)) * amplitude;
+        amplitude *= 0.5;
+        freq *= 2;
+      }
+
+      const byte = Math.floor(Math.min(1, Math.max(0, value)) * 255);
+      const idx = (y * resolution + x) * 4;
+      data[idx] = byte;
+      data[idx + 1] = byte;
+      data[idx + 2] = byte;
+      data[idx + 3] = 255;
+    }
+  }
+
+  const tex = new THREE.DataTexture(data, resolution, resolution, THREE.RGBAFormat);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.magFilter = THREE.LinearFilter;
+  tex.minFilter = THREE.LinearFilter;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+// ---- Custom Solar Surface Shader Material (baked texture version) ----
 const SolarSurfaceMaterial = shaderMaterial(
   {
     time: 0,
     emissiveIntensity: 5.0,
+    uNoiseTex1: null as THREE.DataTexture | null,
+    uNoiseTex2: null as THREE.DataTexture | null,
   },
   // vertex
   /* glsl */ `
     varying vec3 vNormal;
     varying vec3 vWorldPosition;
     varying vec3 vViewDir;
+    varying vec2 vUv;
     void main() {
+      vUv = uv;
       vNormal = normalize(normalMatrix * normal);
       vec4 wp = modelMatrix * vec4(position, 1.0);
       vWorldPosition = wp.xyz;
@@ -30,36 +90,39 @@ const SolarSurfaceMaterial = shaderMaterial(
       gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     }
   `,
-  // fragment
-  `${noiseGLSL}\n${fresnelGLSL}\n${gradientGLSL}\n` + /* glsl */ `
+  // fragment — scrolls baked textures instead of computing FBM per-fragment
+  /* glsl */ `
     uniform float time;
     uniform float emissiveIntensity;
+    uniform sampler2D uNoiseTex1;
+    uniform sampler2D uNoiseTex2;
     varying vec3 vNormal;
     varying vec3 vWorldPosition;
     varying vec3 vViewDir;
+    varying vec2 vUv;
 
     void main() {
-      // Two layers of FBM noise at different speeds for turbulence
-      float n1 = fbm(vWorldPosition * 3.0 + vec3(0.0, time * 0.2, 0.0), 4) * 0.5 + 0.5;
-      float n2 = fbm(vWorldPosition * 6.0 - vec3(time * 0.15, 0.0, time * 0.1), 3) * 0.5 + 0.5;
+      // Scroll UVs at different speeds (replaces per-fragment FBM)
+      vec2 uv1 = vUv + vec2(0.0, time * 0.05);
+      vec2 uv2 = vUv * 1.5 - vec2(time * 0.03, time * 0.02);
+
+      float n1 = texture2D(uNoiseTex1, uv1).r;
+      float n2 = texture2D(uNoiseTex2, uv2).r;
       float combined = n1 * 0.6 + n2 * 0.4;
 
-      // 3-stop gradient: white-hot → gold → orange
-      vec3 surface = gradient3(
-        vec3(0.996, 0.953, 0.78),   // #fef3c7 white-hot
-        vec3(0.984, 0.749, 0.141),  // #fbbf24 gold
-        vec3(0.976, 0.451, 0.086),  // #f97316 orange
-        combined
-      );
+      // Same 3-stop gradient: white-hot → gold → orange
+      vec3 whiteHot = vec3(0.996, 0.953, 0.78);
+      vec3 gold = vec3(0.984, 0.749, 0.141);
+      vec3 orange = vec3(0.976, 0.451, 0.086);
+      vec3 surface = combined > 0.5
+        ? mix(gold, whiteHot, (combined - 0.5) * 2.0)
+        : mix(orange, gold, combined * 2.0);
 
-      // Fresnel rim — white glow
-      float rim = fresnel(normalize(vViewDir), normalize(vNormal), 2.0);
-      surface += vec3(1.0, 1.0, 0.95) * rim * 0.6;
+      // Fresnel rim
+      float rim = pow(1.0 - max(dot(normalize(vViewDir), normalize(vNormal)), 0.0), 2.0);
+      surface += vec3(1.0) * rim * 0.6;
 
-      // Apply emissive intensity for bloom pickup
-      surface *= emissiveIntensity;
-
-      gl_FragColor = vec4(surface, 1.0);
+      gl_FragColor = vec4(surface * emissiveIntensity, 1.0);
     }
   `
 );
@@ -141,6 +204,8 @@ export default function SolarFlare({
   const isCollapsingRef = useRef(false);
   const collapseStartTimeRef = useRef(0);
 
+  const isPanelOpen = useConsoleStore((s) => !!s.expandedPanel);
+
   // Prominence arc tube geometries — regenerate periodically
   const arcTimerRef = useRef(0);
   const arcGeosRef = useRef<THREE.TubeGeometry[]>([]);
@@ -149,6 +214,17 @@ export default function SolarFlare({
 
   const ARC_COUNT = 7;
   const solarRadius = size * 0.4;
+
+  // Baked FBM noise textures — computed once, scrolled in shader
+  const noiseTex1 = useMemo(() => bakeFBMTexture(512, 3.0, 4, 42.0), []);
+  const noiseTex2 = useMemo(() => bakeFBMTexture(512, 6.0, 3, 137.0), []);
+
+  useEffect(() => {
+    return () => {
+      noiseTex1.dispose();
+      noiseTex2.dispose();
+    };
+  }, [noiseTex1, noiseTex2]);
 
   // Generate initial prominence arcs
   const regenerateArcs = useCallback(() => {
@@ -222,6 +298,15 @@ export default function SolarFlare({
   useFrame(({ clock }, delta) => {
     if (!groupRef.current) return;
     const time = clock.getElapsedTime();
+
+    if (isPanelOpen && !isCollapsingRef.current) {
+      if (outerCoronaRef.current) outerCoronaRef.current.time = time;
+      if (midCoronaRef.current) midCoronaRef.current.time = time;
+      if (surfaceRef.current) surfaceRef.current.time = time;
+      arcEnergyRefs.current.forEach((r) => { if (r) r.time = time; });
+      return;
+    }
+
     const hovered = isHoveredRef.current;
 
     // Collapse
@@ -389,6 +474,8 @@ export default function SolarFlare({
         <solarSurfaceMaterial
           ref={surfaceRef}
           key={SolarSurfaceMaterial.key}
+          uNoiseTex1={noiseTex1}
+          uNoiseTex2={noiseTex2}
           toneMapped={false}
         />
       </mesh>
