@@ -4,6 +4,11 @@ import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useThreatStore, type Threat } from '@/lib/stores/threat-store';
+import {
+  STATIC_THREAT_TYPES,
+  DRIFT,
+  generateConvergenceTarget,
+} from '@/lib/constants/scene-layout';
 import AsteroidField from '@/components/three/threats/AsteroidField';
 import IonStorm from '@/components/three/threats/IonStorm';
 import SolarFlare from '@/components/three/threats/SolarFlare';
@@ -42,6 +47,7 @@ function ThreatRenderer({ threat }: { threat: Threat }) {
           amount={threat.amount}
           seed={threat.seed}
           createdAt={threat.createdAt}
+          driftEnabled={false}
           onHover={onHover}
           onDeflect={onClick}
         />
@@ -61,6 +67,20 @@ function ThreatRenderer({ threat }: { threat: Threat }) {
   }
 }
 
+/** Static threat — rendered at its store position, no drift */
+function StaticThreat({ threat }: { threat: Threat }) {
+  const movedThreat = useMemo(
+    () => ({ ...threat, position: [0, 0, 0] as [number, number, number] }),
+    [threat],
+  );
+
+  return (
+    <group position={threat.position}>
+      <ThreatRenderer threat={movedThreat} />
+    </group>
+  );
+}
+
 /** Wraps a threat in a group that slowly drifts from its spawn toward center */
 function DriftingThreat({ threat }: { threat: Threat }) {
   const groupRef = useRef<THREE.Group>(null!);
@@ -72,26 +92,17 @@ function DriftingThreat({ threat }: { threat: Threat }) {
     [threat.id],
   );
 
-  // Each threat converges to a unique point within a radius near center
-  const target = useMemo(() => {
-    const hash = threat.id
-      .split('')
-      .reduce((acc, c) => acc + c.charCodeAt(0), 0);
-    const angle = ((hash % 628) / 100); // 0 to ~2pi
-    const r = 2 + (hash % 30) / 10; // radius 2-5
-    return new THREE.Vector3(
-      Math.cos(angle) * r,
-      Math.sin(angle) * r * 0.4, // flatten vertically
-      -10 + (hash % 40) / 10, // Z: -10 to -6
-    );
-  }, [threat.id]);
+  const target = useMemo(
+    () => generateConvergenceTarget(threat.id),
+    [threat.id],
+  );
 
   const currentPos = useRef(spawnPos.clone());
 
   useFrame((_, delta) => {
     if (!groupRef.current) return;
     if (!threat.deflected) {
-      currentPos.current.lerp(target, delta * 0.008);
+      currentPos.current.lerp(target, delta * DRIFT.speed);
     }
     groupRef.current.position.copy(currentPos.current);
   });
@@ -112,9 +123,13 @@ function DriftingThreat({ threat }: { threat: Threat }) {
 export function ThreatsLayer({ threats }: ThreatsLayerProps) {
   return (
     <group>
-      {threats.map((threat) => (
-        <DriftingThreat key={threat.id} threat={threat} />
-      ))}
+      {threats.map((threat) =>
+        STATIC_THREAT_TYPES.has(threat.type) ? (
+          <StaticThreat key={threat.id} threat={threat} />
+        ) : (
+          <DriftingThreat key={threat.id} threat={threat} />
+        ),
+      )}
     </group>
   );
 }
