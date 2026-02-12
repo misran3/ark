@@ -19,18 +19,18 @@ interface IonStormProps {
 
 // Nebula cloud sphere config
 interface CloudSphere {
+  radiusMult: number;
   noiseScale: number;
   color: string;
   orbitSpeed: number;
   orbitPhase: number;
+  glowStrength: number;
 }
 
 const CLOUD_CONFIGS: CloudSphere[] = [
-  { noiseScale: 1.5, color: '#a855f7', orbitSpeed: 0.3, orbitPhase: 0 },
-  { noiseScale: 2.0, color: '#c084fc', orbitSpeed: 0.4, orbitPhase: 1.2 },
-  { noiseScale: 2.5, color: '#ec4899', orbitSpeed: 0.5, orbitPhase: 2.5 },
-  { noiseScale: 3.0, color: '#a855f7', orbitSpeed: 0.35, orbitPhase: 3.8 },
-  { noiseScale: 3.5, color: '#c084fc', orbitSpeed: 0.45, orbitPhase: 5.0 },
+  { radiusMult: 0.5, noiseScale: 1.5, color: '#a855f7', orbitSpeed: 0.3, orbitPhase: 0, glowStrength: 0.5 },
+  { radiusMult: 0.7, noiseScale: 2.5, color: '#ec4899', orbitSpeed: 0.5, orbitPhase: 2.5, glowStrength: 0.45 },
+  { radiusMult: 0.9, noiseScale: 3.5, color: '#c084fc', orbitSpeed: 0.45, orbitPhase: 5.0, glowStrength: 0.4 },
 ];
 
 const OUTER_ARC_COUNT = 8;
@@ -40,7 +40,7 @@ const CORE_ARC_COUNT = 4;
  * Ion Storm — "The Electric Maelstrom"
  * 6-layer composition:
  * 1. Outer Electromagnetic Field (VolumetricGlowMaterial)
- * 2. Volumetric Nebula Cloud (5 overlapping spheres)
+ * 2. Volumetric Nebula Cloud (3 overlapping spheres)
  * 3. Core Energy Sphere (custom FBM shader)
  * 4. Lightning Arc System (TubeGeometry via generateLightningPath)
  * 5. Vortex Particles + Electric Sparks
@@ -414,20 +414,20 @@ export default function IonStorm({
         />
       </mesh>
 
-      {/* ===== Layer 2: Volumetric Nebula Cloud (5 spheres) ===== */}
+      {/* ===== Layer 2: Volumetric Nebula Cloud (3 spheres) ===== */}
       {CLOUD_CONFIGS.map((cfg, i) => (
         <mesh
           key={`cloud-${i}`}
           ref={(el) => { if (el) cloudMeshRefs.current[i] = el; }}
         >
-          <icosahedronGeometry args={[size * (0.5 + i * 0.1), 2]} />
+          <icosahedronGeometry args={[size * cfg.radiusMult, 2]} />
           <volumetricGlowMaterial
             ref={(el: any) => { if (el) cloudRefs.current[i] = el; }}
             color={cfg.color}
             noiseScale={cfg.noiseScale}
             noiseSpeed={0.6}
             rimPower={2.0}
-            glowStrength={0.3}
+            glowStrength={cfg.glowStrength}
             opacity={0.12}
             transparent
             side={THREE.BackSide}
