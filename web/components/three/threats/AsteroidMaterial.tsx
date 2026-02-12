@@ -103,14 +103,14 @@ const fragmentShader = `
     vec3 lavaColor = mix(damagedCrackColor, damagedCrackInner, heatFactor);
 
     // Base surface: dark rock with subtle heat glow toward center
-    vec3 surface = mix(rockColor, lavaColor * 0.25, heatFactor * 0.4);
+    vec3 surface = mix(rockColor, lavaColor * 0.25, heatFactor * 0.15);
 
     // Add glowing cracks (dampened by damage)
     float finalEmissive = emissiveStrength * emissiveDampen;
     surface = mix(surface, lavaColor * finalEmissive, crackWidth);
 
     // Fresnel rim — orange glow at glancing angles (dampened by damage)
-    surface += damagedCrackColor * rim * 0.5 * emissiveDampen;
+    surface += damagedCrackColor * rim * 0.25 * emissiveDampen;
 
     // --- Critically damaged: expose glowing core through gaps ---
     float coreExposure = smoothstep(0.6, 1.0, damageLevel);
@@ -132,8 +132,8 @@ const AsteroidShaderMaterial = shaderMaterial(
     heatIntensity: 1.0,
     crackColor: new THREE.Color(0.976, 0.451, 0.086),     // #f97316 orange
     crackColorInner: new THREE.Color(0.863, 0.149, 0.149), // #dc2626 red
-    baseColor: new THREE.Color(0.102, 0.102, 0.102),       // #1a1a1a charcoal
-    emissiveStrength: 3.0,
+    baseColor: new THREE.Color(0.165, 0.165, 0.165),       // #2a2a2a lighter charcoal
+    emissiveStrength: 1.6,       // was 3.0 — cracks glow but don't dominate
     damageLevel: 0,        // 0 = pristine, 1 = critically damaged
     sympatheticGlow: 0,    // 0 = none, 1 = full field-pulse intensity
   },
