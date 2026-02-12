@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useCallback } from 'react';
-import { Text } from '@react-three/drei';
+import { Text, Billboard } from '@react-three/drei';
 import { Color } from 'three';
 import { useConsoleStore } from '@/lib/stores/console-store';
 import { useAssetStore, RING_RADII, DEBRIS_BELT_RADIUS } from '@/lib/stores/asset-store';
@@ -208,6 +208,26 @@ export function AssetNavigation() {
         >
           {`LIABILITIES · -${formatDollars(totalLiabilities)}`}
         </Text>
+      )}
+
+      {/* === "Select a planet" prompt — visible when no planet is selected === */}
+      {!selectedAssetId && revealProgress > 0.6 && (
+        <Billboard>
+          <Text
+            fontSize={0.14}
+            letterSpacing={0.15}
+            color={systemColor}
+            anchorX="center"
+            anchorY="middle"
+            fillOpacity={0.5}
+            outlineWidth="5%"
+            outlineColor="#000000"
+            outlineOpacity={0.3}
+            position={[0, -1.5, 0.5]}
+          >
+            SELECT A PLANET TO BEGIN
+          </Text>
+        </Billboard>
       )}
 
       {/* === CRITICAL ALERT — only when health < 40% and fully revealed === */}
