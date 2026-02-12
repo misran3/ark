@@ -14,7 +14,8 @@ export function CommandConsole() {
   const recDeck = shieldsMap['recreation-deck'];
   const isRecWarning = recDeck && (recDeck.status === 'warning' || recDeck.status === 'critical' || recDeck.status === 'breached');
 
-  const { expandedPanel, activationPhase } = useConsoleStore();
+  const expandedPanel = useConsoleStore((s) => s.expandedPanel);
+  const activationPhase = useConsoleStore((s) => s.activationPhase);
   const isExpanded = expandedPanel !== null && activationPhase !== 'idle';
 
   const getPanelStyle = (panelType: PanelType, bootOpacity: number, defaultTransition: string): React.CSSProperties => {

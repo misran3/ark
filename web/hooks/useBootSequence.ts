@@ -18,7 +18,6 @@ const PHASE_DURATIONS: Record<string, number> = {
  */
 export function useBootSequence() {
   const phase = useBootStore((s) => s.phase);
-  const consoleIntensity = useBootStore((s) => s.consoleIntensity);
   const hasSeenBoot = useBootStore((s) => s.hasSeenBoot);
 
   const setPhase = useBootStore.getState().setPhase;
@@ -92,17 +91,26 @@ export function useBootSequence() {
     };
   }, [phase]);
 
-  // Sync consoleIntensity to CSS variable
+  // Sync consoleIntensity to CSS variable via direct store subscription
+  // (bypasses React re-render cycle -- DOM update only)
   useEffect(() => {
+    // Set initial value
     document.documentElement.style.setProperty(
       '--console-intensity',
-      String(consoleIntensity)
+      String(useBootStore.getState().consoleIntensity)
     );
-  }, [consoleIntensity]);
+    // Subscribe to changes (no React re-render)
+    const unsub = useBootStore.subscribe((state) => {
+      document.documentElement.style.setProperty(
+        '--console-intensity',
+        String(state.consoleIntensity)
+      );
+    });
+    return unsub;
+  }, []);
 
   return {
     phase,
-    consoleIntensity,
     hasSeenBoot,
     startBoot,
     skipBoot,
@@ -156,7 +164,7 @@ function animateConsoleIntensity(
     if (progress >= 1) {
       clearInterval(intervalId);
     }
-  }, 16); // ~60fps
+  }, 50); // ~20fps -- opacity fade doesn't need 60fps precision
 
   return intervalId;
 }

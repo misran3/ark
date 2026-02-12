@@ -3,6 +3,27 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+// ─── FPS Ring Buffer (outside Zustand to avoid 60fps store updates) ──────────
+const FPS_BUFFER_SIZE = 600;
+const _fpsBuffer = new Float32Array(FPS_BUFFER_SIZE).fill(60);
+let _fpsWriteIndex = 0;
+
+/** Record an FPS sample without triggering any React re-renders */
+export function recordFps(fps: number) {
+  _fpsBuffer[_fpsWriteIndex] = fps;
+  _fpsWriteIndex = (_fpsWriteIndex + 1) % FPS_BUFFER_SIZE;
+}
+
+/** Read the FPS ring buffer as an ordered array (oldest → newest) */
+export function readFpsHistory(): Float32Array {
+  return _fpsBuffer;
+}
+
+/** Get the current write index for ordered iteration */
+export function getFpsWriteIndex(): number {
+  return _fpsWriteIndex;
+}
+
 interface DevDashboardState {
   // Panel state
   isOpen: boolean;
@@ -20,9 +41,6 @@ interface DevDashboardState {
   activeScenarioId: string | null;
   showFullOverlay: boolean;
 
-  // Performance tracking
-  fpsHistory: number[];
-
   // Actions
   toggle: () => void;
   setActiveTab: (tab: 'threats' | 'shields' | 'data' | 'animation' | 'performance' | 'nova') => void;
@@ -33,7 +51,6 @@ interface DevDashboardState {
   setAnimationToggle: (key: string, enabled: boolean) => void;
   setActiveScenario: (id: string | null) => void;
   toggleFullOverlay: () => void;
-  recordFps: (fps: number) => void;
 }
 
 const defaultAnimationToggles = {
@@ -61,7 +78,6 @@ export const useDevStore = create<DevDashboardState>()(
       animationToggles: defaultAnimationToggles,
       activeScenarioId: null,
       showFullOverlay: false,
-      fpsHistory: Array(600).fill(60),
 
       // Actions
       toggle: () =>
@@ -127,18 +143,6 @@ export const useDevStore = create<DevDashboardState>()(
         set((state) => ({
           showFullOverlay: !state.showFullOverlay,
         })),
-
-      recordFps: (fps) =>
-        set((state) => {
-          const newHistory = [...state.fpsHistory];
-          if (newHistory.length >= 600) {
-            newHistory.shift();
-          }
-          newHistory.push(fps);
-          return {
-            fpsHistory: newHistory,
-          };
-        }),
     }),
     {
       name: 'ark-dev-dashboard',

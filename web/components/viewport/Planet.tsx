@@ -4,6 +4,8 @@ import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
+const BG_FPS = 15;
+
 const planetVertexShader = /* glsl */ `
   varying vec2 vUv;
   varying vec3 vNormal;
@@ -110,11 +112,13 @@ export function Planet({ brightness = 1 }: PlanetProps) {
     [],
   );
 
+  // Quantized to 15fps — planet rotates at 0.01 rad/sec, steps of 0.04° are invisible
   useFrame(({ clock }) => {
-    if (shaderRef.current) {
-      shaderRef.current.uniforms.uTime.value = clock.getElapsedTime();
-      shaderRef.current.uniforms.uBrightness.value = brightness;
-    }
+    if (!shaderRef.current) return;
+    const qt = Math.floor(clock.getElapsedTime() * BG_FPS) / BG_FPS;
+    shaderRef.current.uniforms.uBrightness.value = brightness;
+    if (shaderRef.current.uniforms.uTime.value === qt) return;
+    shaderRef.current.uniforms.uTime.value = qt;
   });
 
   return (

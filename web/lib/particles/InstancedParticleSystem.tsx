@@ -95,6 +95,9 @@ export default function InstancedParticleSystem({
 }: InstancedParticleSystemProps) {
   const pointsRef = useRef<THREE.Points>(null!);
   const emitAccRef = useRef(0);
+  // Throttle: update physics every 2nd frame, accumulate delta to maintain speed
+  const tickFrameRef = useRef(0);
+  const accDeltaRef = useRef(0);
 
   const state = useMemo(() => {
     const positions = new Float32Array(count * 3);
@@ -176,6 +179,13 @@ export default function InstancedParticleSystem({
     const points = pointsRef.current;
     if (!points) return;
 
+    // Throttle: run physics every 2nd frame, accumulate delta
+    tickFrameRef.current++;
+    accDeltaRef.current += delta;
+    if (tickFrameRef.current % 2 !== 0) return;
+    const accDelta = accDeltaRef.current;
+    accDeltaRef.current = 0;
+
     const elapsed = clock.getElapsedTime();
     const { positions, velocities, lifetimes, maxLifetimes } = state;
 
@@ -186,7 +196,7 @@ export default function InstancedParticleSystem({
       } else {
         tickStateRef.current.mesh = points;
       }
-      onTick(tickStateRef.current, delta, elapsed);
+      onTick(tickStateRef.current, accDelta, elapsed);
     }
 
     const sizeArr = buffers.sizes;
@@ -194,7 +204,7 @@ export default function InstancedParticleSystem({
     const opacityArr = buffers.opacities;
 
     for (let i = 0; i < count; i++) {
-      lifetimes[i] += delta;
+      lifetimes[i] += accDelta;
       const life = lifetimes[i];
       const maxLife = maxLifetimes[i];
 
@@ -226,12 +236,12 @@ export default function InstancedParticleSystem({
       const t = life / maxLife; // 0 → 1
 
       // Physics
-      positions[i * 3] += velocities[i * 3] * delta;
-      positions[i * 3 + 1] += velocities[i * 3 + 1] * delta;
-      positions[i * 3 + 2] += velocities[i * 3 + 2] * delta;
-      velocities[i * 3] += gravity[0] * delta;
-      velocities[i * 3 + 1] += gravity[1] * delta;
-      velocities[i * 3 + 2] += gravity[2] * delta;
+      positions[i * 3] += velocities[i * 3] * accDelta;
+      positions[i * 3 + 1] += velocities[i * 3 + 1] * accDelta;
+      positions[i * 3 + 2] += velocities[i * 3 + 2] * accDelta;
+      velocities[i * 3] += gravity[0] * accDelta;
+      velocities[i * 3 + 1] += gravity[1] * accDelta;
+      velocities[i * 3 + 2] += gravity[2] * accDelta;
 
       // Size: shrink over lifetime
       sizeArr[i] = size * (1.0 - t * 0.6);

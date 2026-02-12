@@ -8,7 +8,9 @@ import { useConsoleStore } from '@/lib/stores/console-store';
  * Mount this once at the page level.
  */
 export function useHologramDismiss() {
-  const { expandedPanel, activationPhase, collapsePanel } = useConsoleStore();
+  const expandedPanel = useConsoleStore((s) => s.expandedPanel);
+  const activationPhase = useConsoleStore((s) => s.activationPhase);
+  const collapsePanel = useConsoleStore((s) => s.collapsePanel);
 
   useEffect(() => {
     if (!expandedPanel || activationPhase === 'dismissing') return;

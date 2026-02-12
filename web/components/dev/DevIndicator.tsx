@@ -3,7 +3,8 @@
 import { useDevStore } from '@/lib/stores/dev-store';
 
 export function DevIndicator() {
-  const { isOpen, toggle } = useDevStore();
+  const isOpen = useDevStore((s) => s.isOpen);
+  const toggle = useDevStore((s) => s.toggle);
 
   // Don't show indicator when panel is open
   if (isOpen) return null;

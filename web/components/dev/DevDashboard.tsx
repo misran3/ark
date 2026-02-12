@@ -9,17 +9,14 @@ import { PerformancePanel } from './tabs/PerformancePanel';
 import { NovaControls } from './tabs/NovaControls';
 
 export function DevDashboard() {
-  const devStore = useDevStore();
-  const {
-    isOpen,
-    activeTab,
-    panelPosition,
-    panelWidth,
-    setActiveTab,
-    setPanelPosition,
-    toggle,
-    toggleFullOverlay,
-  } = devStore;
+  const isOpen = useDevStore((s) => s.isOpen);
+  const activeTab = useDevStore((s) => s.activeTab);
+  const panelPosition = useDevStore((s) => s.panelPosition);
+  const panelWidth = useDevStore((s) => s.panelWidth);
+  const setActiveTab = useDevStore((s) => s.setActiveTab);
+  const setPanelPosition = useDevStore((s) => s.setPanelPosition);
+  const toggle = useDevStore((s) => s.toggle);
+  const toggleFullOverlay = useDevStore((s) => s.toggleFullOverlay);
 
   const panelRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);

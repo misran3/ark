@@ -1,6 +1,7 @@
 'use client';
 
-import { Canvas } from '@react-three/fiber';
+import { useEffect } from 'react';
+import { Canvas, useThree } from '@react-three/fiber';
 import { StarfieldBackground } from './StarfieldBackground';
 import { Planet } from './Planet';
 import { NebulaBackground } from './NebulaBackground';
@@ -18,6 +19,31 @@ import { StarChart } from '@/components/bridge/hologram/panels/star-chart/StarCh
 import { FleetCommand } from '@/components/bridge/hologram/panels/FleetCommand';
 import { useConsoleStore } from '@/lib/stores/console-store';
 import { CAMERA } from '@/lib/constants/scene-layout';
+
+/** Drives the render loop at a capped FPS via demand-mode invalidation */
+function FrameLimiter({ fps = 60 }: { fps?: number }) {
+  const invalidate = useThree((s) => s.invalidate);
+
+  useEffect(() => {
+    let animId: number;
+    let lastTime = 0;
+    const interval = 1000 / fps;
+
+    const loop = (time: number) => {
+      animId = requestAnimationFrame(loop);
+      const elapsed = time - lastTime;
+      if (elapsed >= interval) {
+        lastTime = time - (elapsed % interval);
+        invalidate();
+      }
+    };
+
+    animId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(animId);
+  }, [fps, invalidate]);
+
+  return null;
+}
 
 export function Viewport3D() {
   const allThreats = useThreatStore((state) => state.threats);
@@ -42,7 +68,11 @@ export function Viewport3D() {
           antialias: false,
           alpha: true,
         }}
+        frameloop="demand"
       >
+        {/* Cap render loop to 60 FPS — halves GPU/CPU load vs 120 Hz */}
+        <FrameLimiter />
+
         {/* Deep space nebula clouds */}
         <NebulaBackground />
 
@@ -70,8 +100,8 @@ export function Viewport3D() {
           {expandedPanel === 'cards' && <FleetCommand />}
         </HologramOverlay>
 
-        {/* Post-processing: bloom, chromatic aberration, vignette */}
-        <SceneEffects />
+        {/* Post-processing: bloom, chromatic aberration, vignette — skip at idle */}
+        {(threats.length > 0 || expandedPanel !== null) && <SceneEffects />}
       </Canvas>
     </div>
   );

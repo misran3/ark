@@ -282,8 +282,18 @@ export default function Wormhole({
 
   useFrame(({ clock }, delta) => {
     if (!groupRef.current) return;
-    if (isPanelOpen && !isCollapsingRef.current) return;
     const time = clock.getElapsedTime();
+
+    if (isPanelOpen && !isCollapsingRef.current) {
+      if (outerGlowRef.current) outerGlowRef.current.time = time;
+      if (rimRef.current) rimRef.current.time = time;
+      for (let i = 0; i < 2; i++) {
+        const mat = portalRefs.current[i];
+        if (mat) mat.time = time;
+      }
+      return;
+    }
+
     const hovered = isHoveredRef.current;
 
     // Set collapse start time

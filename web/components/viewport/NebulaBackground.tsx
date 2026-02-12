@@ -1,10 +1,16 @@
 'use client';
 
-import { useRef, useMemo, useEffect, type RefObject } from 'react';
+import { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
-// ─── JS-side noise functions (matching the original GLSL, run once on mount) ───
+/**
+ * Background elements update at 15fps to save GPU/CPU power.
+ * The drift is so slow (0.002 units/sec) that 15fps is imperceptible.
+ */
+const BG_FPS = 15;
+
+// ─── JS-side noise (baked once on mount into DataTextures) ───
 
 function hash(px: number, py: number, seed: number): number {
   const dot = (px + seed) * 127.1 + (py + seed) * 311.7;
@@ -46,10 +52,6 @@ function fbm(px: number, py: number, seed: number): number {
 
 const TEX_SIZE = 256;
 
-/**
- * Bake 3 noise layers into a single RGBA DataTexture.
- * R = fbm(uv * 2.0), G = fbm(uv * 3.5 + 5.0), B = fbm(uv * 1.5 + 10.0)
- */
 function generateNebulaTexture(seed: number): THREE.DataTexture {
   const data = new Uint8Array(TEX_SIZE * TEX_SIZE * 4);
 
@@ -79,9 +81,21 @@ function generateNebulaTexture(seed: number): THREE.DataTexture {
   return tex;
 }
 
-// ─── Simplified shader: sample pre-baked texture instead of computing FBM ───
+// ─── Merged shader: 3 nebula layers in a single draw call ───
+//
+// Original: 3 overlapping planes (3 draw calls, 3× overdraw with alpha blending)
+// Merged:   1 plane sampling 3 noise textures with per-layer UV transforms
+//
+// UV math: each original plane had a different world-space position/scale.
+// The merged plane covers the combined bounding box. Per-layer UVs are computed
+// from the merged UV via: layerUV = (mergedUV - 0.5) * scale + offset
+//
+// Merged plane: center=[25, 75, -1950], size=[1650, 1050]
+// Layer 1: center=[-200, 50], size=[1200, 800] → scale=(1.375, 1.3125), offset=(0.6875, 0.53125)
+// Layer 2: center=[400, 300],  size=[900,  600] → scale=(1.833, 1.75),   offset=(0.0833, 0.125)
+// Layer 3: center=[-350,-200], size=[800,  500] → scale=(2.0625, 2.1),   offset=(0.96875, 1.05)
 
-const nebulaVertexShader = /* glsl */ `
+const vertexShader = /* glsl */ `
   varying vec2 vUv;
 
   void main() {
@@ -90,137 +104,116 @@ const nebulaVertexShader = /* glsl */ `
   }
 `;
 
-const nebulaFragmentShader = /* glsl */ `
+const fragmentShader = /* glsl */ `
   uniform float uTime;
-  uniform vec3 uColor1;
-  uniform vec3 uColor2;
-  uniform vec3 uColor3;
-  uniform sampler2D uNoiseTex;
+  uniform sampler2D uNoiseTex1;
+  uniform sampler2D uNoiseTex2;
+  uniform sampler2D uNoiseTex3;
 
   varying vec2 vUv;
 
+  // Per-layer UV transforms (merged plane → original plane UV space)
+  const vec2 UV_SCALE_1  = vec2(1.375, 1.3125);
+  const vec2 UV_OFFSET_1 = vec2(0.6875, 0.53125);
+  const vec2 UV_SCALE_2  = vec2(1.833, 1.75);
+  const vec2 UV_OFFSET_2 = vec2(0.0833, 0.125);
+  const vec2 UV_SCALE_3  = vec2(2.0625, 2.1);
+  const vec2 UV_OFFSET_3 = vec2(0.96875, 1.05);
+
+  // Per-layer colors
+  const vec3 C1A = vec3(0.059, 0.090, 0.165); // deep blue  #0f172a
+  const vec3 C1B = vec3(0.067, 0.369, 0.349); // teal       #115e59
+  const vec3 C1C = vec3(0.118, 0.227, 0.373); // blue       #1e3a5f
+
+  const vec3 C2A = vec3(0.051, 0.580, 0.533); // teal       #0d9488
+  const vec3 C2B = vec3(0.180, 0.063, 0.396); // purple     #2e1065
+  const vec3 C2C = vec3(0.118, 0.227, 0.373); // blue       #1e3a5f
+
+  const vec3 C3A = vec3(0.059, 0.090, 0.165); // deep blue  #0f172a
+  const vec3 C3B = vec3(0.298, 0.114, 0.584); // purple     #4c1d95
+  const vec3 C3C = vec3(0.067, 0.369, 0.349); // teal       #115e59
+
+  vec4 computeLayer(sampler2D noiseTex, vec2 uvScale, vec2 uvOffset, vec3 col1, vec3 col2, vec3 col3) {
+    vec2 layerUv = (vUv - 0.5) * uvScale + uvOffset;
+
+    // Edge fade for this layer's region
+    float edgeFade = smoothstep(0.0, 0.2, layerUv.x) * smoothstep(1.0, 0.8, layerUv.x)
+                   * smoothstep(0.0, 0.2, layerUv.y) * smoothstep(1.0, 0.8, layerUv.y);
+    if (edgeFade < 0.001) return vec4(0.0);
+
+    // Drifted UV for noise sampling
+    vec2 uv = layerUv + vec2(uTime * 0.002, uTime * 0.001);
+    vec3 n = texture2D(noiseTex, uv).rgb;
+
+    // Color mixing from noise layers
+    vec3 color = mix(col1, col2, smoothstep(0.3, 0.7, n.r));
+    color = mix(color, col3, smoothstep(0.4, 0.8, n.g) * 0.5);
+
+    // Alpha from noise
+    float alpha = smoothstep(0.3, 0.6, n.r) * smoothstep(0.25, 0.55, n.b);
+    alpha *= 0.35 * edgeFade;
+
+    return vec4(color, alpha);
+  }
+
   void main() {
-    // Very slow drift (same as original)
-    vec2 uv = vUv + vec2(uTime * 0.002, uTime * 0.001);
+    vec4 l1 = computeLayer(uNoiseTex1, UV_SCALE_1, UV_OFFSET_1, C1A, C1B, C1C);
+    vec4 l2 = computeLayer(uNoiseTex2, UV_SCALE_2, UV_OFFSET_2, C2A, C2B, C2C);
+    vec4 l3 = computeLayer(uNoiseTex3, UV_SCALE_3, UV_OFFSET_3, C3A, C3B, C3C);
 
-    // Sample pre-baked noise layers from texture RGB channels
-    vec3 noiseSample = texture2D(uNoiseTex, uv).rgb;
-    float n1 = noiseSample.r;
-    float n2 = noiseSample.g;
-    float n3 = noiseSample.b;
+    // Premultiply each layer and sum (emulates additive blend of 3 separate draws)
+    vec3 color = l1.rgb * l1.a + l2.rgb * l2.a + l3.rgb * l3.a;
 
-    // Color mixing driven by noise layers (same as original)
-    vec3 color = mix(uColor1, uColor2, smoothstep(0.3, 0.7, n1));
-    color = mix(color, uColor3, smoothstep(0.4, 0.8, n2) * 0.5);
-
-    // Alpha: fade edges to transparent, keep dim overall
-    float alpha = smoothstep(0.3, 0.6, n1) * smoothstep(0.25, 0.55, n3);
-    alpha *= 0.35;
-
-    // Fade out at quad edges
-    float edgeFade = smoothstep(0.0, 0.2, vUv.x) * smoothstep(1.0, 0.8, vUv.x)
-                   * smoothstep(0.0, 0.2, vUv.y) * smoothstep(1.0, 0.8, vUv.y);
-    alpha *= edgeFade;
-
-    gl_FragColor = vec4(color, alpha);
+    gl_FragColor = vec4(color, 1.0);
   }
 `;
 
-interface NebulaPlaneProps {
-  position: [number, number, number];
-  scale: [number, number, number];
-  color1: string;
-  color2: string;
-  color3: string;
-  seed: number;
-  shaderRef: RefObject<THREE.ShaderMaterial | null>;
-}
+/**
+ * NebulaBackground — single merged plane with 3 noise layers.
+ *
+ * Previous: 3 overlapping <mesh> with alpha blending (3 draw calls, 3× overdraw)
+ * Now: 1 <mesh> sampling 3 pre-baked noise textures in one fragment shader pass.
+ *
+ * Time updates quantized to 15fps — imperceptible at 0.002 units/sec drift.
+ */
+export function NebulaBackground() {
+  const matRef = useRef<THREE.ShaderMaterial>(null);
 
-function NebulaPlane({ position, scale, color1, color2, color3, seed, shaderRef }: NebulaPlaneProps) {
-  const noiseTex = useMemo(() => generateNebulaTexture(seed), [seed]);
+  const { tex1, tex2, tex3 } = useMemo(() => ({
+    tex1: generateNebulaTexture(1.0),
+    tex2: generateNebulaTexture(2.0),
+    tex3: generateNebulaTexture(3.0),
+  }), []);
 
   useEffect(() => {
-    return () => { noiseTex.dispose(); };
-  }, [noiseTex]);
+    return () => { tex1.dispose(); tex2.dispose(); tex3.dispose(); };
+  }, [tex1, tex2, tex3]);
 
-  const uniforms = useMemo(
-    () => ({
-      uTime: { value: 0 },
-      uColor1: { value: new THREE.Color(color1) },
-      uColor2: { value: new THREE.Color(color2) },
-      uColor3: { value: new THREE.Color(color3) },
-      uNoiseTex: { value: noiseTex },
-    }),
-    [color1, color2, color3, noiseTex],
-  );
+  useFrame(({ clock }) => {
+    if (!matRef.current) return;
+    const qt = Math.floor(clock.getElapsedTime() * BG_FPS) / BG_FPS;
+    if (matRef.current.uniforms.uTime.value === qt) return;
+    matRef.current.uniforms.uTime.value = qt;
+  });
 
   return (
-    <mesh position={position} scale={scale}>
+    <mesh position={[25, 75, -1950]} scale={[1650, 1050, 1]}>
       <planeGeometry args={[1, 1]} />
       <shaderMaterial
-        ref={shaderRef}
-        uniforms={uniforms}
-        vertexShader={nebulaVertexShader}
-        fragmentShader={nebulaFragmentShader}
+        ref={matRef}
+        uniforms={{
+          uTime: { value: 0 },
+          uNoiseTex1: { value: tex1 },
+          uNoiseTex2: { value: tex2 },
+          uNoiseTex3: { value: tex3 },
+        }}
+        vertexShader={vertexShader}
+        fragmentShader={fragmentShader}
         transparent
         depthWrite={false}
         blending={THREE.AdditiveBlending}
         side={THREE.DoubleSide}
       />
     </mesh>
-  );
-}
-
-/**
- * NebulaBackground — 3 overlapping planes with pre-baked noise textures.
- * Cool-toned gas clouds (blues, teals, muted purple) with near-imperceptible drift.
- * Noise is computed once on mount, not per-frame.
- */
-export function NebulaBackground() {
-  const mat1 = useRef<THREE.ShaderMaterial>(null);
-  const mat2 = useRef<THREE.ShaderMaterial>(null);
-  const mat3 = useRef<THREE.ShaderMaterial>(null);
-
-  // Single useFrame for all 3 nebula planes
-  useFrame(({ clock }) => {
-    const t = clock.getElapsedTime();
-    if (mat1.current) mat1.current.uniforms.uTime.value = t;
-    if (mat2.current) mat2.current.uniforms.uTime.value = t;
-    if (mat3.current) mat3.current.uniforms.uTime.value = t;
-  });
-
-  return (
-    <group>
-      {/* Large central cloud — deep blue + teal */}
-      <NebulaPlane
-        shaderRef={mat1}
-        position={[-200, 50, -1950]}
-        scale={[1200, 800, 1]}
-        color1="#0f172a"
-        color2="#115e59"
-        color3="#1e3a5f"
-        seed={1.0}
-      />
-      {/* Upper-right wisp — teal + purple */}
-      <NebulaPlane
-        shaderRef={mat2}
-        position={[400, 300, -1980]}
-        scale={[900, 600, 1]}
-        color1="#0d9488"
-        color2="#2e1065"
-        color3="#1e3a5f"
-        seed={2.0}
-      />
-      {/* Lower-left accent — deep blue + muted purple */}
-      <NebulaPlane
-        shaderRef={mat3}
-        position={[-350, -200, -1920]}
-        scale={[800, 500, 1]}
-        color1="#0f172a"
-        color2="#4c1d95"
-        color3="#115e59"
-        seed={3.0}
-      />
-    </group>
   );
 }

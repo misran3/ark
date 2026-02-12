@@ -41,7 +41,7 @@ export default function SceneEffects({
         luminanceSmoothing={0.9}
         radius={bloomRadius}
         mipmapBlur
-        levels={3}
+        levels={1}
         blendFunction={BlendFunction.ADD}
       />
       <ChromaticAberration

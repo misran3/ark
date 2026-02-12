@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { useDevStore } from '@/lib/stores/dev-store';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { useDevStore, recordFps, readFpsHistory, getFpsWriteIndex } from '@/lib/stores/dev-store';
 
 export function PerformancePanel() {
-  const { fpsHistory, showFullOverlay, recordFps, toggleFullOverlay } =
-    useDevStore();
+  const showFullOverlay = useDevStore((s) => s.showFullOverlay);
+  const toggleFullOverlay = useDevStore((s) => s.toggleFullOverlay);
 
   const [currentFps, setCurrentFps] = useState(60);
   const [memoryStats, setMemoryStats] = useState<{
@@ -13,9 +13,72 @@ export function PerformancePanel() {
     total: number;
   } | null>(null);
 
-  // FPS measurement loop
+  // FPS measurement loop -- records to ring buffer (no store updates)
+  // Only updates React state for the current FPS display at ~4Hz
   const lastFrameTimeRef = useRef<number>(0);
   const animationFrameIdRef = useRef<number | null>(null);
+  const displayUpdateRef = useRef<number>(0);
+  const canvasRedrawRef = useRef<number>(0);
+
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Draw the FPS graph imperatively (no React re-render needed)
+  const drawGraph = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const width = canvas.width;
+    const height = canvas.height;
+    const maxFps = 60;
+    const buffer = readFpsHistory();
+    const writeIdx = getFpsWriteIndex();
+
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = 'rgba(255,255,255,0.02)';
+    ctx.fillRect(0, 0, width, height);
+
+    // Guide lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.lineWidth = 1;
+    const y60 = height - (60 / maxFps) * height;
+    ctx.beginPath(); ctx.moveTo(0, y60); ctx.lineTo(width, y60); ctx.stroke();
+    const y30 = height - (30 / maxFps) * height;
+    ctx.beginPath(); ctx.moveTo(0, y30); ctx.lineTo(width, y30); ctx.stroke();
+
+    // Draw FPS line from ring buffer (oldest to newest)
+    const pointCount = 200;
+    const startIdx = (writeIdx - pointCount + buffer.length) % buffer.length;
+
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    let lastColor = '';
+    for (let i = 0; i < pointCount; i++) {
+      const fps = buffer[(startIdx + i) % buffer.length];
+      const x = (i / (pointCount - 1)) * width;
+      const y = height - (fps / maxFps) * height;
+      const color = fps >= 55 ? '#10b981' : fps >= 30 ? '#eab308' : '#ef4444';
+
+      if (i === 0) {
+        ctx.strokeStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        lastColor = color;
+      } else if (color !== lastColor) {
+        ctx.stroke();
+        ctx.strokeStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        lastColor = color;
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+    ctx.stroke();
+  }, []);
 
   useEffect(() => {
     let isComponentMounted = true;
@@ -30,9 +93,23 @@ export function PerformancePanel() {
       const delta = timestamp - lastFrameTimeRef.current;
       const fps = Math.round(1000 / delta);
 
+      // Write to ring buffer (zero cost -- no store update, no React re-render)
+      recordFps(fps);
+
       if (isComponentMounted) {
-        setCurrentFps(fps);
-        recordFps(fps);
+        // Update display at ~4Hz (every 250ms) instead of 60fps
+        displayUpdateRef.current += delta;
+        if (displayUpdateRef.current > 250) {
+          displayUpdateRef.current = 0;
+          setCurrentFps(fps);
+        }
+
+        // Redraw canvas at ~10Hz (every 100ms)
+        canvasRedrawRef.current += delta;
+        if (canvasRedrawRef.current > 100) {
+          canvasRedrawRef.current = 0;
+          drawGraph();
+        }
       }
 
       lastFrameTimeRef.current = timestamp;
@@ -47,7 +124,7 @@ export function PerformancePanel() {
         cancelAnimationFrame(animationFrameIdRef.current);
       }
     };
-  }, [recordFps]);
+  }, [drawGraph]);
 
   // Update memory stats periodically
   useEffect(() => {
@@ -148,7 +225,17 @@ export function PerformancePanel() {
         >
           FPS Graph (10s)
         </div>
-        <FpsGraph fpsHistory={fpsHistory} />
+        <canvas
+          ref={canvasRef}
+          width={340 - 32}
+          height={60}
+          style={{
+            width: '100%',
+            height: '60px',
+            display: 'block',
+            borderRadius: '4px',
+          }}
+        />
       </div>
 
       {/* Memory Stats */}
@@ -252,115 +339,3 @@ export function PerformancePanel() {
   );
 }
 
-/**
- * FPS Graph component that renders a canvas with FPS history
- */
-function FpsGraph({ fpsHistory }: { fpsHistory: number[] }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const width = canvas.width;
-    const height = canvas.height;
-    const maxFps = 60;
-
-    // Clear canvas
-    ctx.clearRect(0, 0, width, height);
-
-    // Draw background
-    ctx.fillStyle = 'rgba(255,255,255,0.02)';
-    ctx.fillRect(0, 0, width, height);
-
-    // Draw guide lines
-    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-    ctx.lineWidth = 1;
-
-    // 60 FPS line
-    const y60 = height - (60 / maxFps) * height;
-    ctx.beginPath();
-    ctx.moveTo(0, y60);
-    ctx.lineTo(width, y60);
-    ctx.stroke();
-
-    // 30 FPS line
-    const y30 = height - (30 / maxFps) * height;
-    ctx.beginPath();
-    ctx.moveTo(0, y30);
-    ctx.lineTo(width, y30);
-    ctx.stroke();
-
-    // Draw FPS line graph
-    const pointCount = Math.min(fpsHistory.length, 200);
-    const startIdx = Math.max(0, fpsHistory.length - pointCount);
-    const points = fpsHistory.slice(startIdx);
-
-    if (points.length > 1) {
-      ctx.lineWidth = 2;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-
-      let lastX = 0;
-      let lastY = 0;
-      let lastColor = getFpsColorForGraph(points[0]);
-
-      for (let i = 0; i < points.length; i++) {
-        const fps = points[i];
-        const x = (i / (points.length - 1)) * width;
-        const y = height - (fps / maxFps) * height;
-        const color = getFpsColorForGraph(fps);
-
-        if (i === 0) {
-          ctx.strokeStyle = color;
-          ctx.beginPath();
-          ctx.moveTo(x, y);
-        } else if (color !== lastColor) {
-          // Finish previous segment
-          ctx.lineTo(lastX, lastY);
-          ctx.stroke();
-
-          // Start new segment with new color
-          ctx.strokeStyle = color;
-          ctx.beginPath();
-          ctx.moveTo(lastX, lastY);
-          ctx.lineTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
-        }
-
-        lastX = x;
-        lastY = y;
-        lastColor = color;
-      }
-
-      ctx.stroke();
-    }
-  }, [fpsHistory]);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      width={340 - 32} // Account for padding
-      height={60}
-      style={{
-        width: '100%',
-        height: '60px',
-        display: 'block',
-        borderRadius: '4px',
-      }}
-    />
-  );
-}
-
-/**
- * Helper function to get FPS graph color based on FPS value
- */
-function getFpsColorForGraph(fps: number): string {
-  if (fps >= 55) return '#10b981'; // Green
-  if (fps >= 30) return '#eab308'; // Yellow
-  return '#ef4444'; // Red
-}

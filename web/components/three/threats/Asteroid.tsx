@@ -9,6 +9,7 @@ import './AsteroidMaterial';
 import '@/lib/materials/VolumetricGlowMaterial';
 import '@/lib/materials/EnergyFlowMaterial';
 import { InstancedParticleSystem, TrailRibbon } from '@/lib/particles';
+import { useConsoleStore } from '@/lib/stores/console-store';
 
 // Pre-allocated reusable temp objects (module-level, zero GC pressure)
 const _lerpTarget = new THREE.Vector3();
@@ -104,6 +105,8 @@ export default function Asteroid({
   const [, forceChunkRender] = useState(0);
   const chunkCleanupTimerRef = useRef(0);
   const lastShedTimeRef = useRef(0);
+
+  const isPanelOpen = useConsoleStore((s) => !!s.expandedPanel);
 
   // Compute damage level from HP
   const isFieldMode = hp !== undefined && maxHp !== undefined;
@@ -246,6 +249,14 @@ export default function Asteroid({
   useFrame(({ clock }, delta) => {
     if (!groupRef.current) return;
     const time = clock.getElapsedTime();
+
+    // Lite mode: keep shader animations alive (GPU-cheap), skip CPU-heavy work
+    if (isPanelOpen && !isCollapsingRef.current) {
+      if (hazeRef.current) hazeRef.current.time = time;
+      if (materialRef.current) materialRef.current.time = time;
+      if (scanRingRef.current) scanRingRef.current.time = time;
+      return;
+    }
     const hovered = isHoveredRef.current;
 
     // Set collapse start time on first frame

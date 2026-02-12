@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { createSeededRandom } from '@/lib/seeded-random';
 
 const STAR_COUNT = 800;
+const BG_FPS = 15;
 
 // --- GLSL Shaders ---
 
@@ -102,11 +103,12 @@ export function StarfieldBackground() {
     return { positions, sizes, twinklePhases, twinkleSpeeds };
   }, []);
 
-  // Single uniform update per frame
+  // Quantized to 15fps — twinkle is 0.2-0.8 Hz, well above Nyquist at 15 samples/sec
   useFrame(({ clock }) => {
-    if (materialRef.current) {
-      materialRef.current.uniforms.uTime.value = clock.getElapsedTime();
-    }
+    if (!materialRef.current) return;
+    const qt = Math.floor(clock.getElapsedTime() * BG_FPS) / BG_FPS;
+    if (materialRef.current.uniforms.uTime.value === qt) return;
+    materialRef.current.uniforms.uTime.value = qt;
   });
 
   return (

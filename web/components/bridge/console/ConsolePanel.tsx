@@ -41,7 +41,7 @@ export function ConsolePanel({
   isWarning = false,
   backlightTint = 'rgba(0, 240, 255, 0.03)',
 }: ConsolePanelProps) {
-  const { expandPanel } = useConsoleStore();
+  const expandPanel = useConsoleStore((s) => s.expandPanel);
   const alertLevel = useAlertStore((state) => state.level);
   const cascadeStage = useAlertStore((state) => state.cascadeStage);
   const [isPowered, setIsPowered] = useState(false);

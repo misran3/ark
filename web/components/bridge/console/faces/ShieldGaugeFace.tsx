@@ -2,25 +2,33 @@
 
 import { useShieldStore } from '@/lib/stores/shield-store';
 import { useThreatStore } from '@/lib/stores/threat-store';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 export function ShieldGaugeFace() {
   const overallPercent = useShieldStore((s) => s.overallPercent);
   const threatCount = useThreatStore((s) => s.threats.filter((t) => !t.deflected).length);
-  const [displayAngle, setDisplayAngle] = useState(0);
+  const needleRef = useRef<HTMLDivElement>(null);
   const jitterRef = useRef<number>(0);
-  const frameRef = useRef<number>(0);
 
   // Target angle: 0% = -135deg (left), 100% = +135deg (right)
   // Gauge sweep is 270 degrees total
   const targetAngle = -135 + (overallPercent / 100) * 270;
 
-  // Needle jitter only when threats are active — no rAF when idle
+  // Needle jitter -- imperative DOM updates (no React re-renders)
   useEffect(() => {
+    const needle = needleRef.current;
+    if (!needle) return;
+
     if (threatCount === 0) {
-      setDisplayAngle(targetAngle);
+      // Static position -- CSS transition handles smooth movement
+      needle.style.transform = `rotate(${targetAngle}deg)`;
+      needle.style.transition = 'transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)';
       return;
     }
+
+    // Disable CSS transition during jitter animation
+    needle.style.transition = 'none';
+
     let animId: number;
     const animate = () => {
       const jitterAmount = Math.min(threatCount * 2, 12);
@@ -28,7 +36,7 @@ export function ShieldGaugeFace() {
       jitterRef.current += speed;
       const jitter = Math.sin(jitterRef.current) * jitterAmount +
                      Math.sin(jitterRef.current * 2.3) * (jitterAmount * 0.4);
-      setDisplayAngle(targetAngle + jitter);
+      needle.style.transform = `rotate(${targetAngle + jitter}deg)`;
       animId = requestAnimationFrame(animate);
     };
     animId = requestAnimationFrame(animate);
@@ -147,8 +155,9 @@ export function ShieldGaugeFace() {
           {overallPercent.toFixed(1)}%
         </div>
 
-        {/* Needle */}
+        {/* Needle -- transform updated imperatively via ref (no React re-renders) */}
         <div
+          ref={needleRef}
           className="absolute"
           style={{
             width: '2px',
@@ -157,11 +166,10 @@ export function ShieldGaugeFace() {
             top: '20px',
             marginLeft: '-1px',
             transformOrigin: 'center 48px',
-            transform: `rotate(${displayAngle}deg)`,
+            transform: `rotate(${targetAngle}deg)`,
             background: 'linear-gradient(to bottom, rgba(255,200,50,0.9) 0%, rgba(255,120,20,0.7) 100%)',
             borderRadius: '1px',
             boxShadow: '0 0 4px rgba(255,160,30,0.4)',
-            transition: threatCount > 0 ? 'none' : 'transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)',
           }}
         />
 

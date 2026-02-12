@@ -232,8 +232,16 @@ export default function IonStorm({
 
   useFrame(({ clock }, delta) => {
     if (!groupRef.current) return;
-    if (isPanelOpen && !isCollapsingRef.current) return;
     const time = clock.getElapsedTime();
+
+    if (isPanelOpen && !isCollapsingRef.current) {
+      if (emFieldRef.current) emFieldRef.current.time = time;
+      cloudRefs.current.forEach((r) => { if (r) r.time = time; });
+      if (ring1Ref.current) ring1Ref.current.time = time;
+      if (ring2Ref.current) ring2Ref.current.time = time;
+      return;
+    }
+
     const hovered = isHoveredRef.current;
     frameCountRef.current++;
 

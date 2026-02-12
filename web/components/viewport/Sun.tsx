@@ -4,6 +4,14 @@ import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
+const BG_FPS = 15;
+
+// Pre-computed colors — avoids parsing hex strings every frame
+const NORMAL_CORE = new THREE.Color('#ffaa00');
+const NORMAL_CORONA = new THREE.Color('#ff8800');
+const FLARE_CORE = new THREE.Color('#ff4400');
+const FLARE_CORONA = new THREE.Color('#ff0000');
+
 interface SunProps {
   solarFlareActive: boolean;
 }
@@ -76,18 +84,19 @@ export function Sun({ solarFlareActive }: SunProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const shaderRef = useRef<THREE.ShaderMaterial>(null);
 
-  // Pulsing animation
+  // Quantized to 15fps — breathing pulse at 0.5 Hz is smooth enough at 15 samples/sec
   useFrame(({ clock }) => {
+    const qt = Math.floor(clock.getElapsedTime() * BG_FPS) / BG_FPS;
+
     if (shaderRef.current) {
-      shaderRef.current.uniforms.time.value = clock.getElapsedTime();
+      shaderRef.current.uniforms.time.value = qt;
       shaderRef.current.uniforms.isSolarFlare.value = solarFlareActive ? 1.0 : 0.0;
-      shaderRef.current.uniforms.coreColor.value.set(solarFlareActive ? '#ff4400' : '#ffaa00');
-      shaderRef.current.uniforms.coronaColor.value.set(solarFlareActive ? '#ff0000' : '#ff8800');
+      shaderRef.current.uniforms.coreColor.value.copy(solarFlareActive ? FLARE_CORE : NORMAL_CORE);
+      shaderRef.current.uniforms.coronaColor.value.copy(solarFlareActive ? FLARE_CORONA : NORMAL_CORONA);
     }
 
     if (meshRef.current) {
-      // Gentle breathing scale
-      const pulse = Math.sin(clock.getElapsedTime() * 0.5) * 0.05 + 1.0;
+      const pulse = Math.sin(qt * 0.5) * 0.05 + 1.0;
       const flareScale = solarFlareActive ? 1.2 : 1.0;
       meshRef.current.scale.setScalar(pulse * flareScale);
     }

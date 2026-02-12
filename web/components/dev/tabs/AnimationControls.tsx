@@ -7,14 +7,12 @@ import { useBootStore } from '@/lib/stores/boot-store';
 import { storage } from '@/lib/utils/storage';
 
 export function AnimationControls() {
-  const {
-    animationSpeed,
-    isPaused,
-    animationToggles,
-    setAnimationSpeed,
-    togglePause,
-    setAnimationToggle,
-  } = useDevStore();
+  const animationSpeed = useDevStore((s) => s.animationSpeed);
+  const isPaused = useDevStore((s) => s.isPaused);
+  const animationToggles = useDevStore((s) => s.animationToggles);
+  const setAnimationSpeed = useDevStore((s) => s.setAnimationSpeed);
+  const togglePause = useDevStore((s) => s.togglePause);
+  const setAnimationToggle = useDevStore((s) => s.setAnimationToggle);
 
   // Update GSAP global timeline when speed changes
   useEffect(() => {

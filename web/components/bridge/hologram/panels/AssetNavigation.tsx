@@ -1,13 +1,14 @@
 'use client';
 
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
 import { Text, Billboard } from '@react-three/drei';
-import { Color } from 'three';
+import { Color, Group, AdditiveBlending } from 'three';
 import { useConsoleStore } from '@/lib/stores/console-store';
-import { useAssetStore, RING_RADII, DEBRIS_BELT_RADIUS, ASSET_NAV_ORDER } from '@/lib/stores/asset-store';
+import { useAssetStore, RING_RADII, DEBRIS_BELT_RADIUS } from '@/lib/stores/asset-store';
 import type { Asset } from '@/lib/stores/asset-store';
 import { getSystemColor, getSystemCSSColor, getSystemCSSGlow } from '@/lib/hologram/colors';
-import { HologramDetailPanel } from '@/components/bridge/hologram/HologramDetailPanel';
+import { HologramDetailPanel, DetailHeader, DetailDivider, DetailRow } from '@/components/bridge/hologram/HologramDetailPanel';
 import { HologramParticles } from '@/components/bridge/hologram/HologramParticles';
 import { ScanPulse } from '@/components/bridge/hologram/ScanPulse';
 import { OrreryCore } from '@/components/bridge/hologram/panels/orrery/OrreryCore';
@@ -26,6 +27,9 @@ function layerAlpha(progress: number, start: number, span: number): number {
 
 const ORRERY_TILT = 0.3; // radians (~17 degrees)
 const DEBT_COLOR = new Color(0.8, 0.2, 0.15);
+const DEBT_CSS_COLOR = 'rgb(204, 51, 38)';
+const DEBT_CSS_GLOW = 'rgba(204, 51, 38, 0.3)';
+const DEBT_NAV_ANGLE = (280 * Math.PI) / 180; // Virtual angle for debt ring nav
 // 4 unique orbital rings
 const UNIQUE_RINGS = [RING_RADII[1], RING_RADII[2], RING_RADII[3], RING_RADII[4]];
 
@@ -35,6 +39,7 @@ export function AssetNavigation() {
   const health = useConsoleStore((s) => s.panelHealth.networth);
   const revealProgress = useConsoleStore((s) => s.revealProgress);
   const assets = useAssetStore((s) => s.assets);
+  const liabilities = useAssetStore((s) => s.liabilities);
   const netWorth = useAssetStore((s) => s.netWorth);
   const totalLiabilities = useAssetStore((s) => s.totalLiabilities);
   const trendPct = useAssetStore((s) => s.trendPct);
@@ -45,9 +50,24 @@ export function AssetNavigation() {
   const cssColor = getSystemCSSColor('networth', health);
   const cssGlow = getSystemCSSGlow('networth', health, 0.3);
 
+  // Angular navigation order — sorted by fixedAngle for left/right cycling
+  const angularNavOrder = useMemo(() => {
+    const items = [
+      ...assets.map((a) => ({ id: a.id, angle: a.fixedAngle })),
+      { id: 'debt', angle: DEBT_NAV_ANGLE },
+    ];
+    items.sort((a, b) => a.angle - b.angle);
+    return items.map((item) => item.id);
+  }, [assets]);
+
   const handleAssetClick = useCallback((id: string) => {
     setSelectedAssetId((prev) => (prev === id ? null : id));
-    setDeepScanTarget(null); // Reset deep scan when switching asset
+    setDeepScanTarget(null);
+  }, []);
+
+  const handleDebtClick = useCallback(() => {
+    setSelectedAssetId((prev) => (prev === 'debt' ? null : 'debt'));
+    setDeepScanTarget(null);
   }, []);
 
   const handleDeepScan = useCallback((asset: Asset) => {
@@ -59,27 +79,27 @@ export function AssetNavigation() {
     setDeepScanTarget(null);
   }, []);
 
-  // Keyboard navigation
+  // Keyboard navigation — angular order (closest planet left/right)
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
         e.preventDefault();
         setSelectedAssetId((prev) => {
-          const currentIdx = prev ? ASSET_NAV_ORDER.indexOf(prev) : -1;
+          const currentIdx = prev ? angularNavOrder.indexOf(prev) : -1;
           let nextIdx: number;
           if (e.key === 'ArrowRight') {
-            nextIdx = currentIdx === -1 ? 0 : (currentIdx + 1) % ASSET_NAV_ORDER.length;
+            nextIdx = currentIdx === -1 ? 0 : (currentIdx + 1) % angularNavOrder.length;
           } else {
-            nextIdx = currentIdx <= 0 ? ASSET_NAV_ORDER.length - 1 : currentIdx - 1;
+            nextIdx = currentIdx <= 0 ? angularNavOrder.length - 1 : currentIdx - 1;
           }
-          return ASSET_NAV_ORDER[nextIdx];
+          return angularNavOrder[nextIdx];
         });
         setDeepScanTarget(null);
       }
 
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        if (!selectedAssetId) return;
+        if (!selectedAssetId || selectedAssetId === 'debt') return;
         const asset = assets.find((a) => a.id === selectedAssetId);
         if (!asset) return;
         if (deepScanTarget?.id === selectedAssetId) {
@@ -101,7 +121,7 @@ export function AssetNavigation() {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedAssetId, deepScanTarget, assets]);
+  }, [selectedAssetId, deepScanTarget, assets, angularNavOrder]);
 
   // Status label based on health
   const statusLabel =
@@ -115,31 +135,51 @@ export function AssetNavigation() {
 
   const selectedAsset = selectedAssetId ? assets.find((a) => a.id === selectedAssetId) : null;
 
-  // Camera target: offset from planet world position to frame planet + panel
-  const cameraTarget = useMemo<[number, number, number] | null>(() => {
-    if (!selectedAsset) return null;
-    const x = Math.cos(selectedAsset.fixedAngle) * selectedAsset.orbitRadius;
-    const z = Math.sin(selectedAsset.fixedAngle) * selectedAsset.orbitRadius;
-    // Offset: slightly toward camera (+Z), pan toward planet X, lift slightly
-    // Multiply by the group scale (0.4) since the orrery is in a scaled group
-    const scale = 0.4;
-    return [x * scale * 0.3, 0.6 + 0.3, 5 - 0.5];
-  }, [selectedAsset]);
+  // ── Spin-to-focus: rotate orrery so selected planet faces camera (+Z) ──
+  const orreryRef = useRef<Group>(null);
+  const currentRotY = useRef(0);
 
-  useCameraFollow(cameraTarget);
+  // Target rotation: bring selected item's angle to π/2 (front/+Z)
+  const targetRotY = useMemo(() => {
+    if (!selectedAssetId) return 0;
+    if (selectedAssetId === 'debt') return DEBT_NAV_ANGLE - Math.PI / 2;
+    const asset = assets.find((a) => a.id === selectedAssetId);
+    if (!asset) return 0;
+    return asset.fixedAngle - Math.PI / 2;
+  }, [selectedAssetId, assets]);
+  const targetRotYRef = useRef(targetRotY);
+  targetRotYRef.current = targetRotY;
 
-  // Panel position: offset right and up from selected planet
-  const panelPosition = useMemo<[number, number, number]>(() => {
-    if (!selectedAsset) return [3.5, 1.5, 0.3];
-    const x = Math.cos(selectedAsset.fixedAngle) * selectedAsset.orbitRadius;
-    const z = Math.sin(selectedAsset.fixedAngle) * selectedAsset.orbitRadius;
-    return [x + 2.2, 1.2, z + 0.3];
-  }, [selectedAsset]);
+  const SPIN_SPEED = 5; // Exponential decay constant (~500ms settle)
+
+  useFrame((_, delta) => {
+    if (!orreryRef.current) return;
+
+    // Shortest-path delta in [-π, π]
+    let diff = targetRotYRef.current - currentRotY.current;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+
+    // Snap when close enough to avoid perpetual micro-lerp
+    if (Math.abs(diff) < 0.001) {
+      currentRotY.current = targetRotYRef.current;
+    } else {
+      currentRotY.current += diff * (1 - Math.exp(-SPIN_SPEED * delta));
+    }
+
+    orreryRef.current.rotation.y = currentRotY.current;
+  });
+
+  // No camera movement — just rotate the orrery in place
+  useCameraFollow(null);
+
+  // Fixed panel position — always the same spot regardless of selected planet
+  const panelPosition: [number, number, number] = [3.5, 1.5, 1.0];
 
   return (
     <group scale={0.4}>
-      {/* Orrery group — tilted */}
-      <group rotation-x={ORRERY_TILT}>
+      {/* Orrery group — tilted + spin-to-focus Y rotation */}
+      <group ref={orreryRef} rotation-x={ORRERY_TILT}>
         {/* === LAYER 1: Central star — appears first (0% - 25%) === */}
         <group scale={0.3 + layerAlpha(revealProgress, 0, 0.25) * 0.7}>
           <OrreryCore color={systemColor} health={health} />
@@ -148,6 +188,31 @@ export function AssetNavigation() {
         {/* === LAYER 2: Debt debris ring — appears second (10% - 40%) === */}
         <group scale={layerAlpha(revealProgress, 0.1, 0.3)}>
           <DebtDebrisRing color={DEBT_COLOR} beltRadius={DEBRIS_BELT_RADIUS} count={80} />
+
+          {/* Debt ring click target (invisible torus) */}
+          <mesh
+            rotation-x={Math.PI / 2}
+            onClick={(e) => { e.stopPropagation(); handleDebtClick(); }}
+            onPointerOver={() => { document.body.style.cursor = 'pointer'; }}
+            onPointerOut={() => { document.body.style.cursor = 'auto'; }}
+          >
+            <torusGeometry args={[DEBRIS_BELT_RADIUS, 0.4, 8, 64]} />
+            <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+          </mesh>
+
+          {/* Debt selection glow — bright ring when debt is selected */}
+          {selectedAssetId === 'debt' && (
+            <mesh rotation-x={Math.PI / 2}>
+              <torusGeometry args={[DEBRIS_BELT_RADIUS, 0.06, 8, 64]} />
+              <meshBasicMaterial
+                color={DEBT_COLOR}
+                transparent
+                opacity={0.6}
+                blending={AdditiveBlending}
+                depthWrite={false}
+              />
+            </mesh>
+          )}
         </group>
 
         {/* === LAYER 3: Orbit paths — 4 unique rings (20% - 50%) === */}
@@ -157,7 +222,7 @@ export function AssetNavigation() {
           </group>
         ))}
 
-        {/* === LAYER 4: Planets — 6 assets at fixed positions (30% - 60%) === */}
+        {/* === LAYER 4: Planets — assets at fixed positions (30% - 60%) === */}
         {revealProgress > 0.25 &&
           assets.map((asset) => (
             <group key={asset.id} scale={layerAlpha(revealProgress, 0.3, 0.3)}>
@@ -326,6 +391,25 @@ export function AssetNavigation() {
           onCollapse={() => setDeepScanTarget(null)}
           onClose={handleClose}
         />
+      )}
+
+      {/* === Debt detail panel — liabilities breakdown === */}
+      {selectedAssetId === 'debt' && (
+        <HologramDetailPanel
+          position={panelPosition}
+          color={DEBT_CSS_COLOR}
+          glowColor={DEBT_CSS_GLOW}
+          onClose={handleClose}
+        >
+          <DetailHeader color={DEBT_CSS_COLOR}>◆ LIABILITY SCAN</DetailHeader>
+          <DetailDivider color={DEBT_CSS_COLOR} />
+          {liabilities.map((l) => (
+            <DetailRow key={l.id} label={l.name} value={`-${formatDollars(l.amount)}`} color="#ff6655" />
+          ))}
+          <div style={{ marginTop: '8px', borderTop: `1px dashed ${DEBT_CSS_COLOR}`, paddingTop: '6px' }}>
+            <DetailRow label="Total Liabilities" value={`-${formatDollars(totalLiabilities)}`} color="#ff4444" />
+          </div>
+        </HologramDetailPanel>
       )}
     </group>
   );

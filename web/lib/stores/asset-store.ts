@@ -89,7 +89,7 @@ function computeSize(value: number): number {
 const RING_RADII = {
   1: 2.8,   // Home
   2: 4.2,   // Investment Portfolio
-  3: 5.8,   // Emergency Fund + SUV + Sedan (shared)
+  3: 5.8,   // Emergency Fund
   4: 7.2,   // Crypto
 } as const;
 
@@ -99,7 +99,7 @@ export const DEBRIS_BELT_RADIUS = 5.0; // Between rings 2 and 3
 const deg = (d: number) => (d * Math.PI) / 180;
 
 // ── Gross assets ─────────────────────────────────────────────────
-const GROSS_ASSETS = 790_000;
+const GROSS_ASSETS = 733_000;
 
 function share(value: number): number {
   return Math.round((value / GROSS_ASSETS) * 1000) / 10; // one decimal
@@ -182,56 +182,6 @@ const DEFAULT_ASSETS: Asset[] = [
     },
   },
   {
-    id: 'suv',
-    name: 'Vehicle — SUV',
-    value: 35_000,
-    type: 'vehicle',
-    geometry: 'octahedron',
-    status: 'CAUTION',
-    orbitRing: 3,
-    orbitRadius: RING_RADII[3],
-    fixedAngle: deg(120),
-    size: computeSize(35_000),
-    trendPct: -12,
-    netWorthShare: share(35_000),
-    deepScan: {
-      purchasePrice: 42_000,
-      depreciationRate: -12,
-      monthlyCost: 680,
-      costBreakdown: [
-        { label: 'Payment', amount: 380 },
-        { label: 'Insurance', amount: 180 },
-        { label: 'Fuel', amount: 120 },
-      ],
-      mileage: 28_400,
-    },
-  },
-  {
-    id: 'sedan',
-    name: 'Vehicle — Sedan',
-    value: 22_000,
-    type: 'vehicle',
-    geometry: 'octahedron',
-    status: 'CAUTION',
-    orbitRing: 3,
-    orbitRadius: RING_RADII[3],
-    fixedAngle: deg(240),
-    size: computeSize(22_000),
-    trendPct: -15,
-    netWorthShare: share(22_000),
-    deepScan: {
-      purchasePrice: 28_000,
-      depreciationRate: -15,
-      monthlyCost: 520,
-      costBreakdown: [
-        { label: 'Payment', amount: 290 },
-        { label: 'Insurance', amount: 140 },
-        { label: 'Fuel', amount: 90 },
-      ],
-      mileage: 45_200,
-    },
-  },
-  {
     id: 'crypto',
     name: 'Crypto',
     value: 8_000,
@@ -258,7 +208,6 @@ export const ASSET_NAV_ORDER = DEFAULT_ASSETS.map((a) => a.id);
 // ── Default liabilities ──────────────────────────────────────────
 const DEFAULT_LIABILITIES: Liability[] = [
   { id: 'mortgage', name: 'Mortgage', amount: 380_000 },
-  { id: 'auto-loan', name: 'Auto Loan', amount: 15_000 },
 ];
 
 // ── Store ────────────────────────────────────────────────────────
@@ -275,9 +224,9 @@ interface AssetState {
 export const useAssetStore = create<AssetState>((set, get) => ({
   assets: DEFAULT_ASSETS,
   liabilities: DEFAULT_LIABILITIES,
-  totalLiabilities: 395_000,
-  netWorth: 395_000,
-  grossAssets: 790_000,
+  totalLiabilities: 380_000,
+  netWorth: 353_000,
+  grossAssets: 733_000,
   trendPct: 4.2,
   getAssetHealth: () => {
     const state = get();

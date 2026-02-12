@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { createSeededRandom } from '@/lib/seeded-random';
 
 const DUST_COUNT = 200;
+const BG_FPS = 15;
 
 const dustVertexShader = /* glsl */ `
   attribute float aSize;
@@ -97,10 +98,12 @@ export function SpaceDust() {
     return { positions, sizes, velocities, alphas };
   }, [boundsMin, boundsMax]);
 
+  // Quantized to 15fps — dust drifts at 0.5-1.5 units/sec, imperceptible stepping
   useFrame(({ clock }) => {
-    if (materialRef.current) {
-      materialRef.current.uniforms.uTime.value = clock.getElapsedTime();
-    }
+    if (!materialRef.current) return;
+    const qt = Math.floor(clock.getElapsedTime() * BG_FPS) / BG_FPS;
+    if (materialRef.current.uniforms.uTime.value === qt) return;
+    materialRef.current.uniforms.uTime.value = qt;
   });
 
   return (

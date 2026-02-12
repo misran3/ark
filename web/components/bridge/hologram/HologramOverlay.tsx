@@ -42,8 +42,12 @@ export function HologramOverlay({ children }: HologramOverlayProps) {
   const phaseTimerRef = useRef(0);
   const lastProgressRef = useRef(-1);
 
-  const { expandedPanel, activationPhase, setActivationPhase, panelHealth, setRevealProgress } =
-    useConsoleStore();
+  const expandedPanel = useConsoleStore((s) => s.expandedPanel);
+  const activationPhase = useConsoleStore((s) => s.activationPhase);
+  const panelHealth = useConsoleStore((s) => s.panelHealth);
+  // Actions via getState() -- stable refs, no subscription overhead
+  const setActivationPhase = useConsoleStore.getState().setActivationPhase;
+  const setRevealProgress = useConsoleStore.getState().setRevealProgress;
 
   const camera = useThree((s) => s.camera);
 
