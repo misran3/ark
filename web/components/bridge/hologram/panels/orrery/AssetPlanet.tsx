@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Text } from '@react-three/drei';
 import {
@@ -26,6 +26,7 @@ interface AssetPlanetProps {
   tilt: number;        // Orrery tilt in radians
   orbitOffset: number;  // Starting angle offset
   time: number;         // Current animation time (passed from parent useFrame)
+  onClick?: () => void;
 }
 
 const formatCredits = (v: number) => {
@@ -46,9 +47,11 @@ export function AssetPlanet({
   tilt,
   orbitOffset,
   time,
+  onClick,
 }: AssetPlanetProps) {
   const groupRef = useRef<Group>(null);
   const wireGroupRef = useRef<Group>(null);
+  const [hovered, setHovered] = useState(false);
 
   // Wireframe geometry
   const wireGeo = useMemo(() => {
@@ -107,9 +110,14 @@ export function AssetPlanet({
   });
 
   return (
-    <group ref={groupRef}>
+    <group
+      ref={groupRef}
+      onClick={(e) => { e.stopPropagation(); onClick?.(); }}
+      onPointerEnter={() => setHovered(true)}
+      onPointerLeave={() => setHovered(false)}
+    >
       {/* Wireframe planet */}
-      <group ref={wireGroupRef}>
+      <group ref={wireGroupRef} scale={hovered ? 1.15 : 1}>
         <lineSegments geometry={wireGeo} material={wireMat} />
         <mesh geometry={fillGeo} material={fillMat} />
         {hasRing && ringWireGeo && (

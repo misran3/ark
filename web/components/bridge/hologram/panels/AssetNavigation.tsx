@@ -1,12 +1,14 @@
 'use client';
 
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useState, useCallback } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Text } from '@react-three/drei';
 import { Color, Group } from 'three';
 import { useConsoleStore } from '@/lib/stores/console-store';
 import { useAssetStore } from '@/lib/stores/asset-store';
-import { getSystemColor } from '@/lib/hologram/colors';
+import { getSystemColor, getSystemCSSColor, getSystemCSSGlow } from '@/lib/hologram/colors';
+import { DEMO_SNAPSHOT } from '@/lib/data/demo-financial-data';
+import { HologramDetailPanel, DetailHeader, DetailRow, DetailDivider } from '@/components/bridge/hologram/HologramDetailPanel';
 import { HologramParticles } from '@/components/bridge/hologram/HologramParticles';
 import { ScanPulse } from '@/components/bridge/hologram/ScanPulse';
 import { OrreryCore } from '@/components/bridge/hologram/panels/orrery/OrreryCore';
@@ -34,8 +36,24 @@ export function AssetNavigation() {
   const liabilities = useAssetStore((s) => s.liabilities);
   const trendPct = useAssetStore((s) => s.trendPct);
   const timeRef = useRef(0);
+  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
 
   const systemColor = useMemo(() => getSystemColor('networth', health).clone(), [health]);
+  const cssColor = getSystemCSSColor('networth', health);
+  const cssGlow = getSystemCSSGlow('networth', health, 0.3);
+
+  const handleAssetClick = useCallback((id: string) => {
+    setSelectedAssetId((prev) => (prev === id ? null : id));
+  }, []);
+
+  // Map asset planets to demo accounts for detail view
+  const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+  const assetAccountMap: Record<string, { nickname: string; type: string; balance: number }> = isDemo ? {
+    hull: { nickname: DEMO_SNAPSHOT.accounts[0].nickname, type: DEMO_SNAPSHOT.accounts[0].type, balance: DEMO_SNAPSHOT.accounts[0].balance },
+    liquid: { nickname: DEMO_SNAPSHOT.accounts[1].nickname, type: DEMO_SNAPSHOT.accounts[1].type, balance: DEMO_SNAPSHOT.accounts[1].balance },
+    cargo: { nickname: DEMO_SNAPSHOT.accounts[2].nickname, type: DEMO_SNAPSHOT.accounts[2].type, balance: DEMO_SNAPSHOT.accounts[2].balance },
+    stationed: { nickname: 'Investments', type: 'brokerage', balance: 0 },
+  } : {};
 
   // Status label based on health
   const statusLabel =
@@ -92,6 +110,7 @@ export function AssetNavigation() {
               tilt={ORRERY_TILT}
               orbitOffset={(i * Math.PI * 2) / assets.length}
               time={timeRef.current}
+              onClick={() => handleAssetClick(asset.id)}
             />
           </group>
         ))}
@@ -203,6 +222,41 @@ export function AssetNavigation() {
           ASSET INTEGRITY CRITICAL
         </Text>
       )}
+
+      {/* Asset detail panel */}
+      {selectedAssetId && (() => {
+        const asset = assets.find((a) => a.id === selectedAssetId);
+        if (!asset) return null;
+        const account = assetAccountMap[asset.id];
+        const fmtCredits = (v: number) => `$${v.toLocaleString()}`;
+        const grossAssets = netWorth + liabilities;
+
+        return (
+          <HologramDetailPanel
+            position={[3.5, 1.5, 0.3]}
+            color={cssColor}
+            glowColor={cssGlow}
+            onClose={() => setSelectedAssetId(null)}
+          >
+            <DetailHeader color={cssColor}>
+              {account ? account.nickname : asset.name}
+            </DetailHeader>
+            {account && (
+              <div style={{ opacity: 0.5, marginBottom: '6px', fontSize: '10px', textTransform: 'uppercase' }}>
+                {account.type.replace('_', ' ')}
+              </div>
+            )}
+            <DetailRow
+              label="Balance"
+              value={fmtCredits(account ? account.balance : asset.value)}
+              color={account && account.balance < 0 ? '#ff4444' : '#44ff88'}
+            />
+            <DetailDivider color={cssColor} />
+            <DetailRow label="Trend" value={`${trendPct >= 0 ? '+' : ''}${trendPct.toFixed(1)}%`} color={trendPct >= 0 ? '#44ff88' : '#ff4444'} />
+            <DetailRow label="Net Worth Share" value={`${grossAssets > 0 ? ((asset.value / grossAssets) * 100).toFixed(1) : '0.0'}%`} />
+          </HologramDetailPanel>
+        );
+      })()}
     </group>
   );
 }
