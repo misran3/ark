@@ -5,7 +5,9 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import '@/lib/materials/GravitationalLensingMaterial';
 import '@/lib/materials/VolumetricGlowMaterial';
-import { InstancedParticleSystem, type ParticleState } from '@/lib/particles';
+import { InstancedParticleSystem } from '@/lib/particles';
+import { AccretionDisk } from './AccretionDisk';
+import { useConsoleStore } from '@/lib/stores/console-store';
 
 interface BlackHoleProps {
   position: [number, number, number];
@@ -56,34 +58,10 @@ export default function BlackHole({
   const growthStartTimeRef = useRef(0);
   const growthScaleRef = useRef(1.0);
 
+  const isPanelOpen = useConsoleStore((s) => !!s.expandedPanel);
+
   const eventHorizonRadius = size * 0.8;
   const diskOuterRadius = eventHorizonRadius * 2.5;
-
-  // Per-particle orbit data for the accretion disk (Keplerian spiral)
-  const diskOrbits = useMemo(() => {
-    const angles = new Float32Array(400);
-    const radii = new Float32Array(400);
-    for (let i = 0; i < 400; i++) {
-      angles[i] = Math.random() * Math.PI * 2;
-      radii[i] =
-        eventHorizonRadius * 1.1 +
-        Math.random() * (diskOuterRadius - eventHorizonRadius * 1.1);
-    }
-    return { angles, radii };
-  }, [eventHorizonRadius, diskOuterRadius]);
-
-  // Trail disk orbit data (slightly behind main disk)
-  const trailOrbits = useMemo(() => {
-    const angles = new Float32Array(200);
-    const radii = new Float32Array(200);
-    for (let i = 0; i < 200; i++) {
-      angles[i] = Math.random() * Math.PI * 2;
-      radii[i] =
-        eventHorizonRadius * 1.1 +
-        Math.random() * (diskOuterRadius - eventHorizonRadius * 1.1);
-    }
-    return { angles, radii };
-  }, [eventHorizonRadius, diskOuterRadius]);
 
   // Targeting bracket geometry
   const bracketGeometry = useMemo(() => {
@@ -135,86 +113,17 @@ export default function BlackHole({
     }
   }, [onClick]);
 
-  // Accretion disk onTick — Keplerian spiral physics
-  const accretionDiskTick = useCallback(
-    (data: ParticleState, delta: number) => {
-      const { positions, velocities, count } = data;
-      const speedMult = isHoveredRef.current ? 1.5 : 1.0;
-
-      for (let i = 0; i < count; i++) {
-        const i3 = i * 3;
-        let angle = diskOrbits.angles[i];
-        let radius = diskOrbits.radii[i];
-
-        // Keplerian: angular velocity ∝ 1/√r
-        const angularSpeed = (1.5 / Math.sqrt(Math.max(radius, 0.1))) * speedMult;
-        angle += angularSpeed * delta;
-
-        // Spiral inward slowly
-        radius -= 0.15 * delta * speedMult;
-
-        // Respawn at outer edge when reaching event horizon
-        if (radius < eventHorizonRadius * 1.1) {
-          radius = diskOuterRadius * (0.8 + Math.random() * 0.2);
-          angle = Math.random() * Math.PI * 2;
-        }
-
-        diskOrbits.angles[i] = angle;
-        diskOrbits.radii[i] = radius;
-
-        // Flat disk: Y ∈ ±0.15
-        positions[i3] = Math.cos(angle) * radius;
-        positions[i3 + 1] = (Math.random() - 0.5) * 0.3;
-        positions[i3 + 2] = Math.sin(angle) * radius;
-
-        // Zero velocities — we handle movement entirely in onTick
-        velocities[i3] = 0;
-        velocities[i3 + 1] = 0;
-        velocities[i3 + 2] = 0;
-      }
-    },
-    [diskOrbits, eventHorizonRadius, diskOuterRadius],
-  );
-
-  // Trail disk onTick — follows main disk but slightly behind
-  const trailDiskTick = useCallback(
-    (data: ParticleState, delta: number) => {
-      const { positions, velocities, count } = data;
-      const speedMult = isHoveredRef.current ? 1.5 : 1.0;
-
-      for (let i = 0; i < count; i++) {
-        const i3 = i * 3;
-        let angle = trailOrbits.angles[i];
-        let radius = trailOrbits.radii[i];
-
-        const angularSpeed = (1.5 / Math.sqrt(Math.max(radius, 0.1))) * speedMult;
-        angle += angularSpeed * delta;
-        radius -= 0.12 * delta * speedMult;
-
-        if (radius < eventHorizonRadius * 1.1) {
-          radius = diskOuterRadius * (0.8 + Math.random() * 0.2);
-          angle = Math.random() * Math.PI * 2;
-        }
-
-        trailOrbits.angles[i] = angle;
-        trailOrbits.radii[i] = radius;
-
-        // Slightly behind the main disk
-        positions[i3] = Math.cos(angle - 0.05) * radius;
-        positions[i3 + 1] = (Math.random() - 0.5) * 0.3;
-        positions[i3 + 2] = Math.sin(angle - 0.05) * radius;
-
-        velocities[i3] = 0;
-        velocities[i3 + 1] = 0;
-        velocities[i3 + 2] = 0;
-      }
-    },
-    [trailOrbits, eventHorizonRadius, diskOuterRadius],
-  );
-
   useFrame(({ clock }, delta) => {
     if (!groupRef.current) return;
     const time = clock.getElapsedTime();
+
+    if (isPanelOpen && !isCollapsingRef.current) {
+      if (lensingRef.current) lensingRef.current.time = time;
+      if (hawkingRef.current) hawkingRef.current.time = time;
+      if (jetTopRef.current) jetTopRef.current.time = time;
+      if (jetBottomRef.current) jetBottomRef.current.time = time;
+      return;
+    }
     const hovered = isHoveredRef.current;
 
     // Set collapse start time on first frame
@@ -381,38 +290,30 @@ export default function BlackHole({
         />
       </mesh>
 
-      {/* ===== Layer 3: Accretion Disk ===== */}
-
-      {/* Main disk — Keplerian spiral particles */}
-      <InstancedParticleSystem
+      {/* ===== Layer 3: Accretion Disk (GPU-driven Keplerian spiral) ===== */}
+      <AccretionDisk
         count={400}
+        eventHorizonRadius={eventHorizonRadius}
+        outerRadius={diskOuterRadius}
         color="#7c3aed"
-        colorEnd="#93c5fd"
-        velocityMin={[0, 0, 0]}
-        velocityMax={[0, 0, 0]}
-        gravity={[0, 0, 0]}
-        lifespan={[5.0, 10.0]}
-        emitRate={80}
-        size={eventHorizonRadius * 0.08}
-        spawnRadius={diskOuterRadius}
-        loop
-        onTick={accretionDiskTick}
+        colorInner="#fbbf24"
+        spiralRate={0.15}
+        speedMult={1.0}
+        opacity={1.0}
+        diskHeight={0.15}
+        particleSize={3.0}
       />
-
-      {/* Trail disk — smaller particles, motion blur feel */}
-      <InstancedParticleSystem
+      <AccretionDisk
         count={200}
+        eventHorizonRadius={eventHorizonRadius}
+        outerRadius={diskOuterRadius}
         color="#4c1d95"
-        colorEnd="#7c3aed"
-        velocityMin={[0, 0, 0]}
-        velocityMax={[0, 0, 0]}
-        gravity={[0, 0, 0]}
-        lifespan={[5.0, 10.0]}
-        emitRate={40}
-        size={eventHorizonRadius * 0.05}
-        spawnRadius={diskOuterRadius}
-        loop
-        onTick={trailDiskTick}
+        colorInner="#f59e0b"
+        spiralRate={0.12}
+        speedMult={1.0}
+        opacity={0.5}
+        diskHeight={0.2}
+        particleSize={2.5}
       />
 
       {/* ===== Layer 4: Event Horizon (void) ===== */}
