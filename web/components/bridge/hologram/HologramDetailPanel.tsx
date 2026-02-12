@@ -155,15 +155,6 @@ export function HologramDetailPanel(props: HologramDetailPanelProps) {
     };
   }, [onClose]);
 
-  // ESC to dismiss
-  useEffect(() => {
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    document.addEventListener('keydown', handleKey);
-    return () => document.removeEventListener('keydown', handleKey);
-  }, [onClose]);
-
   return (
     <Html center position={position} style={{ pointerEvents: 'auto' }} zIndexRange={[100, 0]}>
       <div

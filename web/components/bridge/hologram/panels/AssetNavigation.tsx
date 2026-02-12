@@ -1,10 +1,10 @@
 'use client';
 
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import { Text, Billboard } from '@react-three/drei';
 import { Color } from 'three';
 import { useConsoleStore } from '@/lib/stores/console-store';
-import { useAssetStore, RING_RADII, DEBRIS_BELT_RADIUS } from '@/lib/stores/asset-store';
+import { useAssetStore, RING_RADII, DEBRIS_BELT_RADIUS, ASSET_NAV_ORDER } from '@/lib/stores/asset-store';
 import type { Asset } from '@/lib/stores/asset-store';
 import { getSystemColor, getSystemCSSColor, getSystemCSSGlow } from '@/lib/hologram/colors';
 import { HologramDetailPanel } from '@/components/bridge/hologram/HologramDetailPanel';
@@ -58,6 +58,50 @@ export function AssetNavigation() {
     setSelectedAssetId(null);
     setDeepScanTarget(null);
   }, []);
+
+  // Keyboard navigation
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setSelectedAssetId((prev) => {
+          const currentIdx = prev ? ASSET_NAV_ORDER.indexOf(prev) : -1;
+          let nextIdx: number;
+          if (e.key === 'ArrowRight') {
+            nextIdx = currentIdx === -1 ? 0 : (currentIdx + 1) % ASSET_NAV_ORDER.length;
+          } else {
+            nextIdx = currentIdx <= 0 ? ASSET_NAV_ORDER.length - 1 : currentIdx - 1;
+          }
+          return ASSET_NAV_ORDER[nextIdx];
+        });
+        setDeepScanTarget(null);
+      }
+
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        if (!selectedAssetId) return;
+        const asset = assets.find((a) => a.id === selectedAssetId);
+        if (!asset) return;
+        if (deepScanTarget?.id === selectedAssetId) {
+          setDeepScanTarget(null);
+        } else {
+          setDeepScanTarget(asset);
+        }
+      }
+
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (deepScanTarget) {
+          setDeepScanTarget(null);
+        } else if (selectedAssetId) {
+          setSelectedAssetId(null);
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [selectedAssetId, deepScanTarget, assets]);
 
   // Status label based on health
   const statusLabel =
