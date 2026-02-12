@@ -269,36 +269,45 @@ function AssetScanContent({
         }}
       />
 
-      {/* Asset name */}
-      <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '2px' }}>
+      {/* Asset name — larger */}
+      <div style={{ fontSize: '14px', fontWeight: 700, marginBottom: '4px', letterSpacing: '0.5px' }}>
         {asset.name}
       </div>
 
-      {/* Status */}
-      <div style={{ fontSize: '10px', color: statusColor, letterSpacing: '1px', marginBottom: '8px' }}>
-        Status: {asset.status}
+      {/* Status badge */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', marginBottom: '10px' }}>
+        <span
+          style={{
+            display: 'inline-block',
+            width: '6px',
+            height: '6px',
+            borderRadius: '50%',
+            backgroundColor: statusColor,
+            boxShadow: `0 0 4px ${statusColor}`,
+          }}
+        />
+        <span style={{ color: statusColor, letterSpacing: '1px' }}>{asset.status}</span>
       </div>
 
-      {/* Quick glance rows */}
-      <div className="flex justify-between items-baseline" style={{ marginBottom: '4px' }}>
-        <span style={{ opacity: 0.6 }}>Current Value</span>
-        <span style={{ fontVariantNumeric: 'tabular-nums' }}>{fmt(asset.value)}</span>
+      {/* Current value — hero number */}
+      <div style={{ fontSize: '18px', fontWeight: 700, marginBottom: '2px', fontVariantNumeric: 'tabular-nums' }}>
+        {fmt(asset.value)}
       </div>
-      <div className="flex justify-between items-baseline" style={{ marginBottom: '4px' }}>
-        <span style={{ opacity: 0.6 }}>Net Worth Share</span>
-        <span style={{ fontVariantNumeric: 'tabular-nums' }}>{pct(asset.netWorthShare)}</span>
-      </div>
-      <div className="flex justify-between items-baseline" style={{ marginBottom: '4px' }}>
-        <span style={{ opacity: 0.6 }}>Trend (6mo)</span>
-        <span style={{ color: trendColor, fontVariantNumeric: 'tabular-nums' }}>
-          {pct(asset.trendPct, true)}
+
+      {/* Trend arrow + share on same line */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '10px' }}>
+        <span style={{ color: trendColor, fontSize: '11px', fontVariantNumeric: 'tabular-nums' }}>
+          {asset.trendPct >= 0 ? '▲' : '▼'} {pct(asset.trendPct, true)}
+        </span>
+        <span style={{ opacity: 0.5, fontSize: '10px' }}>
+          {pct(asset.netWorthShare)} of net worth
         </span>
       </div>
 
       {/* Deep scan section */}
       {isDeepScan ? (
         <>
-          <div style={{ borderTop: `1px dashed ${color}`, margin: '8px 0', opacity: 0.25 }} />
+          <div style={{ borderTop: `1px dashed ${color}`, margin: '0 0 8px', opacity: 0.25 }} />
           {renderDeepScanRows(asset, isDecoding)}
           <button
             onClick={onCollapse}
