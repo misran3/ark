@@ -1,4 +1,9 @@
 import { create } from 'zustand';
+import {
+  generateSpawnPosition,
+  STATIC_THREAT_TYPES,
+  BLACK_HOLE_POSITION,
+} from '@/lib/constants/scene-layout';
 
 export interface Threat {
   id: string;
@@ -16,11 +21,16 @@ export interface Threat {
   angularVelocity?: [number, number, number];
 }
 
+function demoPosition(id: string, type: Threat['type']): [number, number, number] {
+  if (STATIC_THREAT_TYPES.has(type)) return BLACK_HOLE_POSITION;
+  return generateSpawnPosition(id);
+}
+
 export const DEMO_THREATS: Threat[] = [
   {
     id: 'gym-membership',
     type: 'asteroid',
-    position: [20, 14, -35],
+    position: demoPosition('gym-membership', 'asteroid'),
     size: 1.3,
     color: '#ff5733',
     label: 'GYM $49.99/mo',
@@ -35,7 +45,7 @@ export const DEMO_THREATS: Threat[] = [
   {
     id: 'dining-overspend',
     type: 'ion_storm',
-    position: [26, 16, -42],
+    position: demoPosition('dining-overspend', 'ion_storm'),
     size: 1.5,
     color: '#a855f7',
     label: 'DINING +142%',
@@ -48,7 +58,7 @@ export const DEMO_THREATS: Threat[] = [
   {
     id: 'streaming',
     type: 'solar_flare',
-    position: [18, 15, -38],
+    position: demoPosition('streaming', 'solar_flare'),
     size: 2,
     color: '#fbbf24',
     label: 'STREAMING $31.98',
@@ -61,7 +71,7 @@ export const DEMO_THREATS: Threat[] = [
   {
     id: 'missed-rewards',
     type: 'asteroid',
-    position: [24, 12, -45],
+    position: demoPosition('missed-rewards', 'asteroid'),
     size: 0.7,
     color: '#06b6d4',
     label: 'MISSED REWARDS',
@@ -76,7 +86,7 @@ export const DEMO_THREATS: Threat[] = [
   {
     id: 'credit-card-debt',
     type: 'black_hole',
-    position: [30, 18, -48],
+    position: demoPosition('credit-card-debt', 'black_hole'),
     size: 1.5,
     color: '#4c1d95',
     label: 'DEBT SPIRAL',
@@ -89,7 +99,7 @@ export const DEMO_THREATS: Threat[] = [
   {
     id: 'savings-opportunity',
     type: 'wormhole',
-    position: [19, 20, -50],
+    position: demoPosition('savings-opportunity', 'wormhole'),
     size: 1,
     color: '#60a5fa',
     label: 'SAVINGS PORTAL',
@@ -102,7 +112,7 @@ export const DEMO_THREATS: Threat[] = [
   {
     id: 'fraud-alert',
     type: 'enemy_cruiser',
-    position: [25, 14, -36],
+    position: demoPosition('fraud-alert', 'enemy_cruiser'),
     size: 1.2,
     color: '#991b1b',
     label: 'FRAUD ALERT',
