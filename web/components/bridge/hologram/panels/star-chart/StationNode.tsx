@@ -29,6 +29,7 @@ interface StationNodeProps {
   config: StationConfig;
   color: Color;
   materializeProgress: number; // 0-1, for spawn-in effect
+  onClick?: () => void;
 }
 
 const hologramVertexShader = /* glsl */ `
@@ -300,10 +301,10 @@ const STATION_COMPONENTS: Record<StationType, React.FC<{ material: ShaderMateria
   'black-market': BlackMarket,
 };
 
-export function StationNode({ config, color, materializeProgress }: StationNodeProps) {
+export function StationNode({ config, color, materializeProgress, onClick }: StationNodeProps) {
   const groupRef = useRef<Group>(null);
   const material = useStationMaterial(color);
-  const StationComponent = STATION_COMPONENTS[config.type];
+  const StationComponent = STATION_COMPONENTS[config.type as StationType] || CargoBay;
 
   useFrame(({ clock }) => {
     material.uniforms.uTime.value = clock.getElapsedTime();
@@ -319,7 +320,11 @@ export function StationNode({ config, color, materializeProgress }: StationNodeP
   if (materializeProgress <= 0) return null;
 
   return (
-    <group ref={groupRef} position={config.position}>
+    <group
+      ref={groupRef}
+      position={config.position}
+      onClick={(e) => { e.stopPropagation(); onClick?.(); }}
+    >
       <group scale={materializeProgress}>
         <StationComponent material={material} />
       </group>

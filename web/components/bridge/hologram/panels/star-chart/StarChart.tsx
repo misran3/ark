@@ -8,6 +8,8 @@ import { useConsoleStore } from '@/lib/stores/console-store';
 import { getSystemColor, getSystemCSSColor, getSystemCSSGlow } from '@/lib/hologram/colors';
 import { HologramParticles } from '@/components/bridge/hologram/HologramParticles';
 import { ScanPulse } from '@/components/bridge/hologram/ScanPulse';
+import { DEMO_STATIONS } from '@/lib/data/demo-financial-data';
+import { HologramDetailPanel, DetailHeader, DetailRow, DetailDivider } from '@/components/bridge/hologram/HologramDetailPanel';
 import { StationNode, type StationConfig, type StationType } from './StationNode';
 import { RouteBeam } from './RouteBeam';
 import { DispatchPod } from './DispatchPod';
@@ -36,8 +38,24 @@ const ALL_STATIONS: StationConfig[] = [
   { type: 'black-market',      label: 'BLACK MARKET',    position: [1.3, -0.2, 0.4],   amount: 15000, isIncome: true },
 ];
 
-const INITIAL_STATION_COUNT = 4;
-const MAX_STATIONS = 10;
+const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+
+// In demo mode, build StationConfig[] from DEMO_STATIONS (real transaction categories)
+const DEMO_STATION_CONFIGS: StationConfig[] = isDemo
+  ? DEMO_STATIONS.map((ds) => ({
+      type: ds.type as StationType,
+      label: ds.label,
+      position: ds.position,
+      amount: ds.amount,
+      isIncome: ds.isIncome,
+    }))
+  : [];
+
+// Use demo stations or default stations
+const STATIONS_ARRAY = isDemo ? DEMO_STATION_CONFIGS : ALL_STATIONS;
+
+const INITIAL_STATION_COUNT = isDemo ? DEMO_STATION_CONFIGS.length : 4;
+const MAX_STATIONS = isDemo ? DEMO_STATION_CONFIGS.length : 10;
 const DISPATCH_INTERVAL = 30; // seconds
 const DISPATCH_TRAVEL_DURATION = 4; // seconds for pod to travel
 const EMBLEM_POS: [number, number, number] = [0, 0, 0];
@@ -101,11 +119,12 @@ export function StarChart() {
   const systemColor = useMemo(() => getSystemColor('transactions', health).clone(), [health]);
   const cssColor = getSystemCSSColor('transactions', health);
   const cssGlow = getSystemCSSGlow('transactions', health, 0.3);
+  const [selectedStationIdx, setSelectedStationIdx] = useState<number | null>(null);
 
   // ─── Dynamic station spawning ──────────────────────────────────────
   const [activeStationCount, setActiveStationCount] = useState(INITIAL_STATION_COUNT);
   const stationMaterializeRef = useRef<number[]>(
-    ALL_STATIONS.map((_, i) => (i < INITIAL_STATION_COUNT ? 1 : 0))
+    STATIONS_ARRAY.map((_, i) => (i < INITIAL_STATION_COUNT ? 1 : 0))
   );
 
   // ─── Dispatch state ───────────────────────────────────────────────
@@ -175,7 +194,7 @@ export function StarChart() {
     emblemMaterial.uniforms.uTime.value = elapsed;
 
     // Materialize new stations (smooth lerp to 1)
-    for (let i = 0; i < ALL_STATIONS.length; i++) {
+    for (let i = 0; i < STATIONS_ARRAY.length; i++) {
       const target = i < activeStationCount ? 1 : 0;
       stationMaterializeRef.current[i] +=
         (target - stationMaterializeRef.current[i]) * delta * 2;
@@ -224,7 +243,7 @@ export function StarChart() {
             d.phaseTimer = 0;
 
             // Update credits
-            const station = ALL_STATIONS[d.stationIndex];
+            const station = STATIONS_ARRAY[d.stationIndex];
             const delta = station.isIncome ? station.amount : -station.amount;
             setCreditTotal((c) => c + delta);
             setCreditFlash(true);
@@ -269,7 +288,7 @@ export function StarChart() {
   };
 
   // ─── Pod direction: income goes station→emblem, expense goes emblem→station
-  const activeStation = ALL_STATIONS[dispatchRender.stationIndex];
+  const activeStation = STATIONS_ARRAY[dispatchRender.stationIndex];
   const podFrom = activeStation?.isIncome ? activeStation.position : EMBLEM_POS;
   const podTo = activeStation?.isIncome ? EMBLEM_POS : activeStation?.position ?? EMBLEM_POS;
 
@@ -288,7 +307,7 @@ export function StarChart() {
       </group>
 
       {/* ─── Station Nodes (staggered 10% - 70%) ──────────────── */}
-      {ALL_STATIONS.map((station, i) => {
+      {STATIONS_ARRAY.map((station, i) => {
         const staggerStart = 0.1 + (i / MAX_STATIONS) * 0.4;
         const revealAlpha = layerAlpha(revealProgress, staggerStart, 0.25);
         // For initial stations: use reveal progress. For dynamic: use materialize ref
@@ -302,12 +321,13 @@ export function StarChart() {
             config={station}
             color={systemColor}
             materializeProgress={materialize}
+            onClick={() => setSelectedStationIdx((prev) => (prev === i ? null : i))}
           />
         );
       })}
 
       {/* ─── Route Beams ───────────────────────────────────────── */}
-      {ALL_STATIONS.map((station, i) => (
+      {STATIONS_ARRAY.map((station, i) => (
         <RouteBeam
           key={`route-${station.type}`}
           from={station.position}
@@ -335,7 +355,7 @@ export function StarChart() {
 
       {/* ─── Origin flash (expanding ring at station) ──────────── */}
       {flashStationIndex !== null && (
-        <group position={ALL_STATIONS[flashStationIndex].position}>
+        <group position={STATIONS_ARRAY[flashStationIndex].position}>
           <ScanPulse color={systemColor} interval={0.6} maxRadius={0.3} speed={1} />
         </group>
       )}
@@ -416,7 +436,7 @@ export function StarChart() {
           position={[0, -2.2, 0.1]}
         >
           {dispatchRender.phase === 'origin-flash'
-            ? `DISPATCH FROM ${ALL_STATIONS[dispatchRender.stationIndex].label}`
+            ? `DISPATCH FROM ${STATIONS_ARRAY[dispatchRender.stationIndex].label}`
             : dispatchRender.phase === 'route-energize'
               ? 'ROUTE LOCK ACQUIRED'
               : dispatchRender.phase === 'pod-travel'
@@ -424,6 +444,41 @@ export function StarChart() {
                 : `TRANSFER COMPLETE`}
         </Text>
       )}
+
+      {/* ─── Station detail panel ────────────────────────────────── */}
+      {selectedStationIdx !== null && isDemo && (() => {
+        const demoStation = DEMO_STATIONS[selectedStationIdx];
+        if (!demoStation) return null;
+        return (
+          <HologramDetailPanel
+            position={[
+              demoStation.position[0] + 0.6,
+              demoStation.position[1] + 0.4,
+              demoStation.position[2] + 0.3,
+            ]}
+            color={cssColor}
+            glowColor={cssGlow}
+            onClose={() => setSelectedStationIdx(null)}
+          >
+            <DetailHeader color={cssColor}>{demoStation.label}</DetailHeader>
+            <DetailRow
+              label="Total"
+              value={`${demoStation.isIncome ? '+' : '-'}$${demoStation.amount.toLocaleString()}`}
+              color={demoStation.isIncome ? '#44ff88' : undefined}
+            />
+            <DetailRow label="Transactions" value={`${demoStation.transactions.length}`} />
+            <DetailDivider color={cssColor} />
+            {demoStation.transactions.slice(0, 5).map((t) => (
+              <DetailRow
+                key={t.id}
+                label={t.merchant}
+                value={`$${Math.abs(t.amount).toFixed(2)}`}
+                color={t.amount > 0 ? '#44ff88' : undefined}
+              />
+            ))}
+          </HologramDetailPanel>
+        );
+      })()}
     </group>
   );
 }
