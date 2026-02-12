@@ -69,3 +69,56 @@ export function tubeFromPoints(
   const curve = new THREE.CatmullRomCurve3(points);
   return new THREE.TubeGeometry(curve, tubularSegments, radius, radialSegments, false);
 }
+
+/**
+ * Morph an existing TubeGeometry's vertices to follow a new lightning path.
+ * Updates position attribute in-place — no new geometry allocation.
+ * The tube must have been created with the same tubularSegments and radialSegments.
+ */
+export function morphTubeToPath(
+  tube: THREE.TubeGeometry,
+  newPoints: THREE.Vector3[],
+  radius = 0.05
+): void {
+  const curve = new THREE.CatmullRomCurve3(newPoints);
+  const pos = tube.attributes.position;
+  const tubularSegments = tube.parameters.tubularSegments ?? 16;
+  const radialSegments = tube.parameters.radialSegments ?? 4;
+
+  const P = new THREE.Vector3();
+  const T = new THREE.Vector3();
+  const N = new THREE.Vector3();
+  const B = new THREE.Vector3();
+
+  // Compute Frenet frames and write vertex positions
+  for (let i = 0; i <= tubularSegments; i++) {
+    const t = i / tubularSegments;
+    curve.getPointAt(t, P);
+    curve.getTangentAt(t, T);
+
+    // Minimal normal computation (stable for most arcs)
+    if (Math.abs(T.y) > 0.99) {
+      N.set(1, 0, 0);
+    } else {
+      N.set(0, 1, 0);
+    }
+    B.crossVectors(T, N).normalize();
+    N.crossVectors(B, T).normalize();
+
+    for (let j = 0; j <= radialSegments; j++) {
+      const theta = (j / radialSegments) * Math.PI * 2;
+      const sinT = Math.sin(theta);
+      const cosT = Math.cos(theta);
+      const idx = i * (radialSegments + 1) + j;
+
+      pos.setXYZ(
+        idx,
+        P.x + radius * (cosT * N.x + sinT * B.x),
+        P.y + radius * (cosT * N.y + sinT * B.y),
+        P.z + radius * (cosT * N.z + sinT * B.z)
+      );
+    }
+  }
+
+  pos.needsUpdate = true;
+}
