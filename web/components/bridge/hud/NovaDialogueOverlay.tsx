@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, memo } from 'react';
+import { useEffect, useState, useRef, useCallback, memo } from 'react';
 import { useNovaDialogueStore } from '@/lib/stores/nova-dialogue-store';
 import { useAlertStore, ALERT_COLORS } from '@/lib/stores/alert-store';
 import { useVoiceSynthesis } from '@/hooks/useVoiceSynthesis';
@@ -61,6 +61,8 @@ export function NovaDialogueOverlay() {
   const [typewriterDone, setTypewriterDone] = useState(false);
   const autoDismissRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const handleTypewriterComplete = useCallback(() => setTypewriterDone(true), []);
+
   // Speak the message using the active variant's voice profile
   useEffect(() => {
     if (currentMessage?.text) {
@@ -89,11 +91,13 @@ export function NovaDialogueOverlay() {
 
   if (state === 'idle' || !currentMessage) return null;
 
+  const showAckButton = currentMessage.category !== 'detail';
+
   return (
     <div
       className="fixed z-40 font-mono"
       style={{
-        right: '192px', // To the left of Nova panel (180px wide + gap)
+        right: '192px',
         top: '60px',
         maxWidth: '320px',
         animation: 'slide-in-right 0.3s ease-out',
@@ -142,23 +146,32 @@ export function NovaDialogueOverlay() {
           Cpt. Nova — Advisory
         </div>
 
-        {/* Message body */}
-        <div className="text-[11px] leading-relaxed" style={{ color: colors.hud }}>
-          <TypewriterText
-            key={currentMessage.id}
-            text={currentMessage.text}
-            onComplete={() => setTypewriterDone(true)}
-          />
+        {/* Message body — fixed-size: invisible full text defines dimensions */}
+        <div className="relative text-[11px] leading-relaxed" style={{ color: colors.hud }}>
+          {/* Invisible full text — pre-sizes the container */}
+          <div aria-hidden="true" style={{ visibility: 'hidden' }}>
+            {currentMessage.text}
+          </div>
+          {/* Typewriter overlay — fills the pre-sized space */}
+          <div className="absolute inset-0">
+            <TypewriterText
+              key={currentMessage.id}
+              text={currentMessage.text}
+              onComplete={handleTypewriterComplete}
+            />
+          </div>
         </div>
 
-        {/* Acknowledge button (shown after typewriter completes) */}
-        {typewriterDone && currentMessage.category !== 'detail' && (
+        {/* Acknowledge button — always reserved, fades in when ready */}
+        {showAckButton && (
           <button
             onClick={() => { cancelSpeech(); dismiss(); }}
-            className="mt-2 w-full text-[7px] tracking-[2px] uppercase py-1 rounded border transition-colors"
+            className="mt-2 w-full text-[7px] tracking-[2px] uppercase py-1 rounded border transition-all duration-300"
             style={{
               borderColor: `${colors.hud}40`,
               color: `${colors.hud}80`,
+              opacity: typewriterDone ? 1 : 0,
+              pointerEvents: typewriterDone ? 'auto' : 'none',
             }}
             onMouseEnter={(e) => {
               (e.target as HTMLElement).style.borderColor = colors.hud;

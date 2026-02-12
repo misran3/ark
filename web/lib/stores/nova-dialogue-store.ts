@@ -64,6 +64,7 @@ export const useNovaDialogueStore = create<NovaDialogueStore>((set, get) => ({
   speakForThreat: (threatId, text) => {
     set({
       state: 'speaking',
+      queue: [], // clear stale queue so dismiss doesn't replay old messages
       currentMessage: {
         id: `threat-${threatId}`,
         text,

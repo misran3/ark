@@ -83,10 +83,19 @@ export function useVoiceSynthesis() {
   const boundaryCallbackRef = useRef<((charIndex: number, char: string) => void) | null>(null);
   const charOffsetRef = useRef(0);
 
-  useEffect(() => {
-    setIsSupported('speechSynthesis' in window);
+  // Stable ref for voices — allows speakChunk to always use latest voices
+  // without recreating the callback chain
+  const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
+  voicesRef.current = voices;
 
-    if ('speechSynthesis' in window) {
+  const isSupportedRef = useRef(false);
+
+  useEffect(() => {
+    const supported = 'speechSynthesis' in window;
+    setIsSupported(supported);
+    isSupportedRef.current = supported;
+
+    if (supported) {
       const loadVoices = () => {
         const availableVoices = window.speechSynthesis.getVoices();
         setVoices(availableVoices);
@@ -109,7 +118,7 @@ export function useVoiceSynthesis() {
         const profile = profileRef.current;
 
         if (profile) {
-          const voice = findBestVoice(voices, profile.preferredVoices);
+          const voice = findBestVoice(voicesRef.current, profile.preferredVoices);
           if (voice) utterance.voice = voice;
           utterance.pitch = profile.pitch;
           utterance.rate = profile.rate;
@@ -132,11 +141,10 @@ export function useVoiceSynthesis() {
         }
 
         window.speechSynthesis.speak(utterance);
-        // Track character offset for boundary callbacks across chunks
-        charOffsetRef.current += text.length + 1; // +1 for the space between chunks
+        charOffsetRef.current += text.length + 1;
       });
     },
-    [voices],
+    [], // stable — reads voices from ref
   );
 
   /** Process the chunk queue sequentially with pauses */
@@ -167,7 +175,7 @@ export function useVoiceSynthesis() {
       profile?: VoiceProfile,
       onBoundary?: (charIndex: number, char: string) => void,
     ) => {
-      if (!isSupported) {
+      if (!isSupportedRef.current) {
         console.warn('Speech synthesis not supported');
         return;
       }
@@ -197,7 +205,7 @@ export function useVoiceSynthesis() {
         setIsSpeaking(false);
       };
     },
-    [isSupported, processQueue],
+    [processQueue],
   );
 
   const cancel = useCallback(() => {
