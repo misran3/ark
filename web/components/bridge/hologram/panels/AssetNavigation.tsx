@@ -103,6 +103,8 @@ export function AssetNavigation() {
                 size={asset.size}
                 geometry={asset.geometry}
                 color={systemColor}
+                isSelected={selectedAssetId === asset.id}
+                someSelected={selectedAssetId !== null}
                 onClick={() => handleAssetClick(asset.id)}
               />
             </group>

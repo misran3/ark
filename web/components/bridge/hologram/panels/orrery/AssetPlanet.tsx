@@ -18,6 +18,7 @@ import {
   Float32BufferAttribute,
 } from 'three';
 import type { AssetGeometry } from '@/lib/stores/asset-store';
+import { SelectionGlow } from '@/components/bridge/hologram/panels/orrery/SelectionGlow';
 
 interface AssetPlanetProps {
   name: string;
@@ -27,6 +28,8 @@ interface AssetPlanetProps {
   size: number;
   geometry: AssetGeometry;
   color: Color;
+  isSelected?: boolean;
+  someSelected?: boolean; // true when ANY planet is selected (for dimming others)
   onClick?: () => void;
 }
 
@@ -59,6 +62,8 @@ export function AssetPlanet({
   size,
   geometry: geoType,
   color,
+  isSelected = false,
+  someSelected = false,
   onClick,
 }: AssetPlanetProps) {
   const wireGroupRef = useRef<Group>(null);
@@ -97,14 +102,16 @@ export function AssetPlanet({
     return new WireframeGeometry(base);
   }, [size, geoType]);
 
+  const dimFactor = someSelected && !isSelected ? 0.35 : 1.0;
+
   const wireMat = useMemo(
     () =>
       new LineBasicMaterial({
         color,
         transparent: true,
-        opacity: hovered ? 0.9 : 0.7,
+        opacity: (hovered ? 0.9 : 0.7) * dimFactor,
       }),
-    [color, hovered]
+    [color, hovered, dimFactor]
   );
 
   // Inner fill (subtle holographic volume)
@@ -127,11 +134,11 @@ export function AssetPlanet({
       new MeshBasicMaterial({
         color,
         transparent: true,
-        opacity: 0.06,
+        opacity: 0.06 * dimFactor,
         blending: AdditiveBlending,
         depthWrite: false,
       }),
-    [color]
+    [color, dimFactor]
   );
 
   // Saturn ring for icosahedron-ringed (Investment Portfolio)
@@ -210,6 +217,9 @@ export function AssetPlanet({
         </group>
       )}
 
+      {/* Selection glow ring */}
+      {isSelected && <SelectionGlow size={size} color={color} />}
+
       {/* Labels — billboard to always face camera */}
       <Billboard follow lockX={false} lockY={false} lockZ={false}>
         <Text
@@ -218,7 +228,7 @@ export function AssetPlanet({
           color={color}
           anchorX="center"
           anchorY="bottom"
-          fillOpacity={hovered ? 0.9 : 0.7}
+          fillOpacity={(hovered ? 0.9 : 0.7) * dimFactor}
           outlineWidth="6%"
           outlineColor="#000000"
           outlineOpacity={0.5}
@@ -232,7 +242,7 @@ export function AssetPlanet({
           color={color}
           anchorX="center"
           anchorY="bottom"
-          fillOpacity={hovered ? 0.7 : 0.5}
+          fillOpacity={(hovered ? 0.7 : 0.5) * dimFactor}
           outlineWidth="6%"
           outlineColor="#000000"
           outlineOpacity={0.4}
