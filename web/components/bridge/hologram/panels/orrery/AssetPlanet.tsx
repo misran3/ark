@@ -2,7 +2,7 @@
 
 import { useRef, useMemo, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Text } from '@react-three/drei';
+import { Text, Billboard } from '@react-three/drei';
 import {
   Group,
   Color,
@@ -210,32 +210,37 @@ export function AssetPlanet({
         </group>
       )}
 
-      {/* Labels — fade in on hover */}
-      <Text
-        fontSize={0.12}
-        letterSpacing={0.15}
-        color={color}
-        anchorX="center"
-        anchorY="bottom"
-        fillOpacity={hovered ? 0.8 : 0.6}
-        outlineWidth="4%"
-        outlineColor={color}
-        outlineOpacity={0.15}
-        position={[0, size + 0.25, 0]}
-      >
-        {formatDollars(value)}
-      </Text>
-      <Text
-        fontSize={0.07}
-        letterSpacing={0.2}
-        color={color}
-        anchorX="center"
-        anchorY="bottom"
-        fillOpacity={hovered ? 0.6 : 0.4}
-        position={[0, size + 0.1, 0]}
-      >
-        {name}
-      </Text>
+      {/* Labels — billboard to always face camera */}
+      <Billboard follow lockX={false} lockY={false} lockZ={false}>
+        <Text
+          fontSize={0.14}
+          letterSpacing={0.15}
+          color={color}
+          anchorX="center"
+          anchorY="bottom"
+          fillOpacity={hovered ? 0.9 : 0.7}
+          outlineWidth="6%"
+          outlineColor="#000000"
+          outlineOpacity={0.5}
+          position={[0, size + 0.25, 0]}
+        >
+          {formatDollars(value)}
+        </Text>
+        <Text
+          fontSize={0.08}
+          letterSpacing={0.2}
+          color={color}
+          anchorX="center"
+          anchorY="bottom"
+          fillOpacity={hovered ? 0.7 : 0.5}
+          outlineWidth="6%"
+          outlineColor="#000000"
+          outlineOpacity={0.4}
+          position={[0, size + 0.08, 0]}
+        >
+          {name}
+        </Text>
+      </Billboard>
     </group>
   );
 }
