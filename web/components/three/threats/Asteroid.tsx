@@ -396,8 +396,8 @@ export default function Asteroid({
         const p1 = collapseProgress / 0.25;
 
         if (materialRef.current) {
-          materialRef.current.heatIntensity = 1.0 + p1 * 3.0;
-          materialRef.current.emissiveStrength = 3.0 + p1 * 4.0;
+          materialRef.current.heatIntensity = 1.0 + p1 * 3.0;       // same — collapse should go hot
+          materialRef.current.emissiveStrength = 1.6 + p1 * 4.0;    // starts from new baseline
         }
         if (coreRef.current) {
           (coreRef.current.material as THREE.MeshBasicMaterial).opacity = 0.5 + p1 * 0.5;
@@ -423,7 +423,7 @@ export default function Asteroid({
             0.8 * (1 - p2);
         }
         if (materialRef.current) {
-          materialRef.current.emissiveStrength = 7.0 * (1 - p2);
+          materialRef.current.emissiveStrength = 5.0 * (1 - p2);
         }
       }
       // Phase 3 (0.6-1.0): Volumetric glow expands and fades
@@ -436,7 +436,7 @@ export default function Asteroid({
         if (hazeMeshRef.current) {
           hazeMeshRef.current.scale.setScalar(1.4 + p3 * 1.0);
           if (hazeRef.current) {
-            hazeRef.current.opacity = (1 - p3) * 0.6;
+            hazeRef.current.opacity = (1 - p3) * 0.5;
           }
         }
         if (shockwaveRingRef.current) {
