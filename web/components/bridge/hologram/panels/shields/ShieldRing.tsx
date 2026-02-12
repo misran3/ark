@@ -22,6 +22,7 @@ interface ShieldRingProps {
   color: Color;
   rotationSpeed?: number;
   label: string;
+  onSegmentClick?: (id: string) => void;
 }
 
 export function ShieldRing({
@@ -30,6 +31,7 @@ export function ShieldRing({
   segments,
   color,
   rotationSpeed = 0,
+  onSegmentClick,
 }: ShieldRingProps) {
   const groupRef = useRef<Group>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -95,6 +97,7 @@ export function ShieldRing({
             userData={{ segId: arc.id }}
             onPointerEnter={(e) => handlePointerEnter(e, arc.id)}
             onPointerLeave={handlePointerLeave}
+            onClick={(e) => { e.stopPropagation(); onSegmentClick?.(arc.id); }}
           >
             <ringSegmentMaterial
               uColor={color}

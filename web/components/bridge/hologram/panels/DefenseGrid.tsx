@@ -1,11 +1,12 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { Color } from 'three';
 import { Text } from '@react-three/drei';
 import { useConsoleStore } from '@/lib/stores/console-store';
 import { useShieldStore } from '@/lib/stores/shield-store';
-import { getSystemColor } from '@/lib/hologram/colors';
+import { getSystemColor, getSystemCSSColor, getSystemCSSGlow } from '@/lib/hologram/colors';
+import { HologramDetailPanel, DetailHeader, DetailRow, DetailDivider } from '@/components/bridge/hologram/HologramDetailPanel';
 import { RadarSweep } from '@/components/bridge/hologram/RadarSweep';
 import { ShieldRing } from '@/components/bridge/hologram/panels/shields/ShieldRing';
 import { ShieldEmblem } from '@/components/bridge/hologram/panels/shields/ShieldEmblem';
@@ -24,8 +25,15 @@ export function DefenseGrid() {
   const revealProgress = useConsoleStore((s) => s.revealProgress);
   const shields = useShieldStore((s) => s.shields);
   const overallPercent = useShieldStore((s) => s.overallPercent);
+  const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null);
 
   const systemColor = useMemo(() => getSystemColor('shields', health).clone(), [health]);
+  const cssColor = getSystemCSSColor('shields', health);
+  const cssGlow = getSystemCSSGlow('shields', health, 0.3);
+
+  const handleSegmentClick = useCallback((id: string) => {
+    setSelectedSegmentId((prev) => (prev === id ? null : id));
+  }, []);
 
   // Map shield store data to ring segments
   const budgetSegments = useMemo(
@@ -87,6 +95,7 @@ export function DefenseGrid() {
           segments={debtSegments}
           color={systemColor}
           label="DEBT STATUS"
+          onSegmentClick={handleSegmentClick}
         />
       </group>
 
@@ -99,6 +108,7 @@ export function DefenseGrid() {
           color={systemColor}
           rotationSpeed={0.3}
           label="BUDGET ALLOCATION"
+          onSegmentClick={handleSegmentClick}
         />
       </group>
 
@@ -110,6 +120,7 @@ export function DefenseGrid() {
           segments={emergencySegments}
           color={systemColor}
           label="EMERGENCY RESERVES"
+          onSegmentClick={handleSegmentClick}
         />
       </group>
 
@@ -225,6 +236,82 @@ export function DefenseGrid() {
           SHIELD INTEGRITY CRITICAL
         </Text>
       )}
+
+      {/* Shield segment detail panel */}
+      {selectedSegmentId && (() => {
+        // Check budget shields (from store)
+        const shield = shields[selectedSegmentId];
+        if (shield) {
+          const statusColor = shield.status === 'optimal' || shield.status === 'nominal'
+            ? '#44ff88'
+            : shield.status === 'caution' || shield.status === 'warning'
+              ? '#ffbb33'
+              : '#ff4444';
+          return (
+            <HologramDetailPanel
+              position={[2.5, 0.5, 0.2]}
+              color={cssColor}
+              glowColor={cssGlow}
+              onClose={() => setSelectedSegmentId(null)}
+            >
+              <DetailHeader color={cssColor}>{shield.name}</DetailHeader>
+              <DetailRow label="Status" value={shield.status.toUpperCase()} color={statusColor} />
+              <DetailRow label="Budget" value={`$${shield.budgetAmount.toLocaleString()}`} />
+              <DetailRow label="Spent" value={`$${shield.actualSpendAmount.toLocaleString()}`} />
+              <DetailRow
+                label="Usage"
+                value={`${Math.round((shield.actualSpendAmount / shield.budgetAmount) * 100)}%`}
+                color={shield.actualSpendAmount > shield.budgetAmount ? '#ff4444' : '#44ff88'}
+              />
+              <DetailDivider color={cssColor} />
+              <div style={{ color: cssColor, fontSize: '10px', letterSpacing: '1px', marginBottom: '4px' }}>SUBCATEGORIES</div>
+              {shield.subcategories.map((sub) => (
+                <DetailRow
+                  key={sub.name}
+                  label={sub.name}
+                  value={`$${sub.spent} / $${sub.budgeted}`}
+                  color={sub.percentUsed > 100 ? '#ff4444' : undefined}
+                />
+              ))}
+            </HologramDetailPanel>
+          );
+        }
+
+        // Check debt segments
+        const debt = debtSegments.find((s) => s.id === selectedSegmentId);
+        if (debt) {
+          return (
+            <HologramDetailPanel
+              position={[1.5, 0.3, 0.2]}
+              color={cssColor}
+              glowColor={cssGlow}
+              onClose={() => setSelectedSegmentId(null)}
+            >
+              <DetailHeader color={cssColor}>{debt.label}</DetailHeader>
+              <DetailRow label="Payoff Progress" value={`${debt.value}%`} />
+              <DetailRow label="Health" value={debt.health >= 0.6 ? 'ON TRACK' : 'AT RISK'} color={debt.health >= 0.6 ? '#44ff88' : '#ff4444'} />
+            </HologramDetailPanel>
+          );
+        }
+
+        // Check emergency segments
+        const emergency = emergencySegments.find((s) => s.id === selectedSegmentId);
+        if (emergency) {
+          return (
+            <HologramDetailPanel
+              position={[3.5, 0.5, 0.2]}
+              color={cssColor}
+              glowColor={cssGlow}
+              onClose={() => setSelectedSegmentId(null)}
+            >
+              <DetailHeader color={cssColor}>{emergency.label}</DetailHeader>
+              <DetailRow label="Funded" value={`${emergency.value}%`} color={emergency.value >= 100 ? '#44ff88' : '#ffbb33'} />
+            </HologramDetailPanel>
+          );
+        }
+
+        return null;
+      })()}
     </group>
   );
 }
