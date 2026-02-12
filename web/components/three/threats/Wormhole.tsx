@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useMemo, useCallback, useEffect, useState } from 'react';
+import { useRef, useMemo, useCallback, useEffect } from 'react';
 import { useFrame, extend } from '@react-three/fiber';
 import { shaderMaterial, Text, Billboard } from '@react-three/drei';
 import * as THREE from 'three';
@@ -126,10 +126,10 @@ export default function Wormhole({
 
   const isPanelOpen = useConsoleStore((s) => !!s.expandedPanel);
 
-  // Electrical rim arc geometries (regenerate periodically)
+  // Electrical rim arc geometries (regenerate periodically via direct geometry swap)
   const frameCountRef = useRef(0);
   const arcGeometriesRef = useRef<THREE.TubeGeometry[]>([]);
-  const [arcVersion, setArcVersion] = useState(0);
+  const arcMeshRefs = useRef<(THREE.Mesh | null)[]>([null, null, null, null, null]);
 
   const outerRadius = 2.5 * size;
 
@@ -339,12 +339,16 @@ export default function Wormhole({
       }
     }
 
-    // ---- Layer 4: Regenerate rim arcs ----
+    // ---- Layer 4: Regenerate rim arcs (direct geometry swap, no React re-render) ----
     frameCountRef.current++;
     if (frameCountRef.current % 40 === 0) {
       arcGeometriesRef.current.forEach((g) => g.dispose());
-      arcGeometriesRef.current = generateArcs();
-      setArcVersion((v) => v + 1);
+      const newArcs = generateArcs();
+      arcGeometriesRef.current = newArcs;
+      for (let i = 0; i < newArcs.length; i++) {
+        const mesh = arcMeshRefs.current[i];
+        if (mesh) mesh.geometry = newArcs[i];
+      }
     }
 
     // ---- Layer 6: Through-portal icon ----
@@ -488,9 +492,12 @@ export default function Wormhole({
         </mesh>
       ))}
 
-      {/* ===== Layer 4: Electrical Rim Arcs ===== */}
-      {arcGeometriesRef.current.map((geo, i) => (
-        <mesh key={`arc-${i}-${arcVersion}`} geometry={geo}>
+      {/* ===== Layer 4: Electrical Rim Arcs (geometry swapped imperatively) ===== */}
+      {[0, 1, 2, 3, 4].map((i) => (
+        <mesh
+          key={`arc-${i}`}
+          ref={(ref) => { arcMeshRefs.current[i] = ref; }}
+        >
           <meshBasicMaterial
             color="#ffffff"
             transparent

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 const auroraKeyframes = [
   { time: 0,    colors: ['#8b5cf6', '#6366f1', '#3b82f6'] }, // Purple → Indigo → Blue
@@ -51,8 +51,11 @@ function getAuroraColorsAtProgress(progress: number): string[] {
   ];
 }
 
+/** Initial colors — returned as a stable reference. Live values are on CSS variables. */
+const INITIAL_COLORS = auroraKeyframes[0].colors;
+
 export function useAuroraColors() {
-  const [colors, setColors] = useState(auroraKeyframes[0].colors);
+  const colorsRef = useRef(INITIAL_COLORS);
 
   useEffect(() => {
     const startTime = Date.now();
@@ -61,9 +64,9 @@ export function useAuroraColors() {
       const elapsed = (Date.now() - startTime) / 60000; // 60-second cycle
       const progress = elapsed % 1;
       const newColors = getAuroraColorsAtProgress(progress);
-      setColors(newColors);
+      colorsRef.current = newColors;
 
-      // Update CSS variables
+      // Update CSS variables (the only consumer of live values)
       if (typeof document !== 'undefined') {
         document.documentElement.style.setProperty('--aurora-primary', newColors[0]);
         document.documentElement.style.setProperty('--aurora-secondary', newColors[1]);
@@ -80,5 +83,5 @@ export function useAuroraColors() {
     return () => clearInterval(interval);
   }, []);
 
-  return colors;
+  return colorsRef.current;
 }
