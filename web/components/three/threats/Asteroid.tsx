@@ -542,15 +542,15 @@ export default function Asteroid({
       {trailTier === 'full' && (
         <>
           <InstancedParticleSystem
-            count={200}
+            count={80}
             color="#f97316"
             colorEnd="#1a1a1a"
             velocityMin={[-0.3, -0.3, 0.5]}
             velocityMax={[0.3, 0.3, 1.5]}
             lifespan={[1.0, 2.5]}
             gravity={[0, -0.1, 0]}
-            emitRate={80}
-            size={size * 0.06}
+            emitRate={25}
+            size={size * 0.04}
             spawnRadius={size * 0.3}
             loop
           />
@@ -558,19 +558,19 @@ export default function Asteroid({
             targetRef={groupRef}
             color="#f97316"
             colorEnd="#333333"
-            width={size * 0.2}
+            width={size * 0.12}
             lifetime={1.5}
             maxPoints={40}
-            opacity={0.5}
+            opacity={0.25}
           />
           <InstancedParticleSystem
-            count={15}
+            count={8}
             color="#dc2626"
             colorEnd="#1a1a1a"
             velocityMin={[-0.1, -0.1, 0.2]}
             velocityMax={[0.1, 0.1, 0.5]}
             lifespan={[2.0, 4.0]}
-            emitRate={3}
+            emitRate={1.5}
             size={size * 0.15}
             spawnRadius={size * 0.2}
             loop
@@ -581,15 +581,15 @@ export default function Asteroid({
       {/* Reduced trail: 30 ember particles only (no ribbon, no chunks) */}
       {trailTier === 'reduced' && (
         <InstancedParticleSystem
-          count={30}
+          count={20}
           color="#f97316"
           colorEnd="#1a1a1a"
           velocityMin={[-0.2, -0.2, 0.3]}
           velocityMax={[0.2, 0.2, 1.0]}
           lifespan={[0.8, 2.0]}
           gravity={[0, -0.1, 0]}
-          emitRate={12}
-          size={size * 0.05}
+          emitRate={8}
+          size={size * 0.04}
           spawnRadius={size * 0.2}
           loop
         />
