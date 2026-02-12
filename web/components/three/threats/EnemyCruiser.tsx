@@ -3,6 +3,7 @@
 import { useRef, useMemo, useCallback, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import '@/lib/materials/VolumetricGlowMaterial';
 import '@/lib/materials/EnergyFlowMaterial';
 import '@/lib/materials/HolographicMaterial';
@@ -98,9 +99,76 @@ export default function EnemyCruiser({
     return geo;
   }, [size]);
 
+  // Merged hull geometry — 9 parts → 1 draw call
+  const mergedHull = useMemo(() => {
+    const parts: THREE.BufferGeometry[] = [];
+    const m = new THREE.Matrix4();
+
+    // Front nose cone: pos [0, 0, size*0.5], rot X=PI/2
+    const nose = new THREE.ConeGeometry(size * 0.22, size * 1.0, 8);
+    m.makeRotationX(Math.PI / 2).setPosition(0, 0, size * 0.5);
+    nose.applyMatrix4(m);
+    parts.push(nose);
+
+    // Rear engine cone: pos [0, 0, -size*0.3], rot X=-PI/2
+    const rear = new THREE.ConeGeometry(size * 0.22, size * 0.6, 8);
+    m.makeRotationX(-Math.PI / 2).setPosition(0, 0, -size * 0.3);
+    rear.applyMatrix4(m);
+    parts.push(rear);
+
+    // Port armor plate
+    const portArmor = new THREE.BoxGeometry(size * 0.04, size * 0.18, size * 1.0);
+    m.identity().setPosition(-size * 0.24, 0, 0.1);
+    portArmor.applyMatrix4(m);
+    parts.push(portArmor);
+
+    // Starboard armor plate
+    const stbdArmor = new THREE.BoxGeometry(size * 0.04, size * 0.18, size * 1.0);
+    m.identity().setPosition(size * 0.24, 0, 0.1);
+    stbdArmor.applyMatrix4(m);
+    parts.push(stbdArmor);
+
+    // Dorsal panel
+    const dorsal = new THREE.BoxGeometry(size * 0.3, size * 0.03, size * 0.9);
+    m.identity().setPosition(0, size * 0.18, 0.1);
+    dorsal.applyMatrix4(m);
+    parts.push(dorsal);
+
+    // Ventral panel
+    const ventral = new THREE.BoxGeometry(size * 0.3, size * 0.03, size * 0.9);
+    m.identity().setPosition(0, -size * 0.18, 0.1);
+    ventral.applyMatrix4(m);
+    parts.push(ventral);
+
+    // Port pylon (Y rotation for swept-back)
+    const portPylon = new THREE.BoxGeometry(size * 0.25, size * 0.05, size * 0.08);
+    m.makeRotationY(0.26).setPosition(-size * 0.35, 0, size * 0.1);
+    portPylon.applyMatrix4(m);
+    parts.push(portPylon);
+
+    // Starboard pylon
+    const stbdPylon = new THREE.BoxGeometry(size * 0.25, size * 0.05, size * 0.08);
+    m.makeRotationY(-0.26).setPosition(size * 0.35, 0, size * 0.1);
+    stbdPylon.applyMatrix4(m);
+    parts.push(stbdPylon);
+
+    // Bridge section
+    const bridge = new THREE.BoxGeometry(size * 0.12, size * 0.06, size * 0.15);
+    m.identity().setPosition(0, size * 0.22, size * 0.15);
+    bridge.applyMatrix4(m);
+    parts.push(bridge);
+
+    const merged = mergeGeometries(parts, false);
+    parts.forEach(p => p.dispose());
+    return merged!;
+  }, [size]);
+
   useEffect(() => {
-    return () => { bracketGeometry.dispose(); };
-  }, [bracketGeometry]);
+    return () => {
+      bracketGeometry.dispose();
+      mergedHull.dispose();
+    };
+  }, [bracketGeometry, mergedHull]);
 
   // Running lights: single Points mesh instead of 8 individual meshes
   const { lightsGeo, lightsMat } = useMemo(() => {
@@ -174,8 +242,16 @@ export default function EnemyCruiser({
 
   useFrame(({ clock, mouse }, delta) => {
     if (!groupRef.current) return;
-    if (isPanelOpen && !isCollapsingRef.current) return;
     const time = clock.getElapsedTime();
+
+    if (isPanelOpen && !isCollapsingRef.current) {
+      if (auraRef.current) auraRef.current.time = time;
+      if (leftCapRingRef.current) leftCapRingRef.current.time = time;
+      if (rightCapRingRef.current) rightCapRingRef.current.time = time;
+      if (shieldRef.current) shieldRef.current.time = time;
+      return;
+    }
+
     const hovered = isHoveredRef.current;
 
     // Set collapse start time
@@ -370,16 +446,13 @@ export default function EnemyCruiser({
         />
       </mesh>
 
-      {/* ===== Layer 2: Multi-part Hull ===== */}
+      {/* ===== Layer 2: Merged Hull (9 parts → 1 draw call) ===== */}
       <group
         onPointerOver={handlePointerOver}
         onPointerOut={handlePointerOut}
         onClick={handleClick}
       >
-        {/* Main Fuselage — elongated octahedron (two cones base-to-base) */}
-        {/* Front cone (aggressive nose) */}
-        <mesh ref={hullRef} position={[0, 0, size * 0.5]} rotation={[Math.PI / 2, 0, 0]}>
-          <coneGeometry args={[size * 0.22, size * 1.0, 8]} />
+        <mesh ref={hullRef} geometry={mergedHull}>
           <meshStandardMaterial
             color="#1f2937"
             metalness={0.85}
@@ -389,90 +462,14 @@ export default function EnemyCruiser({
             toneMapped={false}
           />
         </mesh>
-
-        {/* Rear cone (engine block) */}
-        <mesh position={[0, 0, -size * 0.3]} rotation={[-Math.PI / 2, 0, 0]}>
-          <coneGeometry args={[size * 0.22, size * 0.6, 8]} />
-          <meshStandardMaterial
-            color="#1f2937"
-            metalness={0.85}
-            roughness={0.25}
-            emissive={color}
-            emissiveIntensity={0.3}
-            toneMapped={false}
-          />
-        </mesh>
-
-        {/* Armor Plates — 4 panels with gap from hull */}
-        {/* Port */}
-        <mesh position={[-size * 0.24, 0, 0.1]}>
-          <boxGeometry args={[size * 0.04, size * 0.18, size * 1.0]} />
-          <meshStandardMaterial color="#111827" metalness={0.9} roughness={0.2} toneMapped={false} />
-        </mesh>
-        {/* Starboard */}
-        <mesh position={[size * 0.24, 0, 0.1]}>
-          <boxGeometry args={[size * 0.04, size * 0.18, size * 1.0]} />
-          <meshStandardMaterial color="#111827" metalness={0.9} roughness={0.2} toneMapped={false} />
-        </mesh>
-        {/* Dorsal */}
-        <mesh position={[0, size * 0.18, 0.1]}>
-          <boxGeometry args={[size * 0.3, size * 0.03, size * 0.9]} />
-          <meshStandardMaterial color="#111827" metalness={0.9} roughness={0.2} toneMapped={false} />
-        </mesh>
-        {/* Ventral */}
-        <mesh position={[0, -size * 0.18, 0.1]}>
-          <boxGeometry args={[size * 0.3, size * 0.03, size * 0.9]} />
-          <meshStandardMaterial color="#111827" metalness={0.9} roughness={0.2} toneMapped={false} />
-        </mesh>
-
-        {/* Wing Pylons — swept-back 15° */}
-        <mesh position={[-size * 0.35, 0, size * 0.1]} rotation={[0, 0.26, 0]}>
-          <boxGeometry args={[size * 0.25, size * 0.05, size * 0.08]} />
-          <meshStandardMaterial
-            color="#1f2937"
-            metalness={0.8}
-            roughness={0.3}
-            emissive="#991b1b"
-            emissiveIntensity={0.2}
-            toneMapped={false}
-          />
-        </mesh>
-        <mesh position={[size * 0.35, 0, size * 0.1]} rotation={[0, -0.26, 0]}>
-          <boxGeometry args={[size * 0.25, size * 0.05, size * 0.08]} />
-          <meshStandardMaterial
-            color="#1f2937"
-            metalness={0.8}
-            roughness={0.3}
-            emissive="#991b1b"
-            emissiveIntensity={0.2}
-            toneMapped={false}
-          />
-        </mesh>
-
-        {/* Bridge / Command Section — raised dorsal box */}
-        <mesh position={[0, size * 0.22, size * 0.15]}>
-          <boxGeometry args={[size * 0.12, size * 0.06, size * 0.15]} />
-          <meshStandardMaterial
-            color="#374151"
-            metalness={0.7}
-            roughness={0.35}
-            toneMapped={false}
-          />
-        </mesh>
-        {/* Bridge window lights */}
+        {/* Bridge window lights (separate — emissive points) */}
         <mesh position={[-size * 0.03, size * 0.25, size * 0.22]}>
           <sphereGeometry args={[size * 0.012, 6, 6]} />
-          <meshBasicMaterial
-            color="#93c5fd"
-            toneMapped={false}
-          />
+          <meshBasicMaterial color="#93c5fd" toneMapped={false} />
         </mesh>
         <mesh position={[size * 0.03, size * 0.25, size * 0.22]}>
           <sphereGeometry args={[size * 0.012, 6, 6]} />
-          <meshBasicMaterial
-            color="#93c5fd"
-            toneMapped={false}
-          />
+          <meshBasicMaterial color="#93c5fd" toneMapped={false} />
         </mesh>
       </group>
 
