@@ -17,6 +17,7 @@ import { AssetNavigation } from '@/components/bridge/hologram/panels/AssetNaviga
 import { StarChart } from '@/components/bridge/hologram/panels/star-chart/StarChart';
 import { FleetCommand } from '@/components/bridge/hologram/panels/FleetCommand';
 import { useConsoleStore } from '@/lib/stores/console-store';
+import { CAMERA } from '@/lib/constants/scene-layout';
 
 export function Viewport3D() {
   const allThreats = useThreatStore((state) => state.threats);
@@ -31,10 +32,10 @@ export function Viewport3D() {
     <div className="w-full h-full">
       <Canvas
         camera={{
-          position: [0, 0, 5],
-          fov: 75,
-          near: 0.1,
-          far: 3000,
+          position: CAMERA.position as [number, number, number],
+          fov: CAMERA.fov,
+          near: CAMERA.near,
+          far: CAMERA.far,
         }}
         dpr={[1, 1.5]}
         gl={{
