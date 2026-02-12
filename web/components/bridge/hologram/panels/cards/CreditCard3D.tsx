@@ -82,9 +82,10 @@ interface CreditCard3DProps {
   systemColor: Color;
   reveal: number;
   rotationOffset: number;
+  onClick?: () => void;
 }
 
-export function CreditCard3D({ card, systemColor, reveal, rotationOffset }: CreditCard3DProps) {
+export function CreditCard3D({ card, systemColor, reveal, rotationOffset, onClick }: CreditCard3DProps) {
   const meshRef = useRef<Mesh>(null);
   const matRef = useRef<any>(null);
   const [hovered, setHovered] = useState(false);
@@ -127,6 +128,7 @@ export function CreditCard3D({ card, systemColor, reveal, rotationOffset }: Cred
       ref={meshRef}
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
+      onClick={(e) => { e.stopPropagation(); onClick?.(); }}
     >
       <boxGeometry args={[1.0, 0.63, 0.02]} />
       <cardHologramMaterial

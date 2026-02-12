@@ -1,11 +1,13 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { Color, BufferGeometry, BufferAttribute, AdditiveBlending } from 'three';
 import { Text } from '@react-three/drei';
 import { useConsoleStore } from '@/lib/stores/console-store';
-import { getSystemColor } from '@/lib/hologram/colors';
-import { FLEET_CARDS, FLEET_STATS } from '@/lib/data/fleet-cards';
+import { getSystemColor, getSystemCSSColor, getSystemCSSGlow } from '@/lib/hologram/colors';
+import { ACTIVE_FLEET_CARDS as FLEET_CARDS, ACTIVE_FLEET_STATS as FLEET_STATS } from '@/lib/data/fleet-cards';
+import { DEMO_TRANSACTIONS } from '@/lib/data/demo-financial-data';
+import { HologramDetailPanel, DetailHeader, DetailRow, DetailDivider, DetailList } from '@/components/bridge/hologram/HologramDetailPanel';
 import { CreditCard3D } from '@/components/bridge/hologram/panels/cards/CreditCard3D';
 import { CardUtilizationBar } from '@/components/bridge/hologram/panels/cards/CardUtilizationBar';
 import { HologramParticles } from '@/components/bridge/hologram/HologramParticles';
@@ -65,8 +67,15 @@ function ConnectorLines({ systemColor, opacity }: { systemColor: Color; opacity:
 export function FleetCommand() {
   const health = useConsoleStore((s) => s.panelHealth.cards);
   const revealProgress = useConsoleStore((s) => s.revealProgress);
+  const [selectedCardIdx, setSelectedCardIdx] = useState<number | null>(null);
 
   const systemColor = useMemo(() => getSystemColor('cards', health).clone(), [health]);
+  const cssColor = getSystemCSSColor('cards', health);
+  const cssGlow = getSystemCSSGlow('cards', health, 0.3);
+
+  const handleCardClick = useCallback((slotIdx: number) => {
+    setSelectedCardIdx((prev) => (prev === slotIdx ? null : slotIdx));
+  }, []);
 
   const { avgUtilization, totalLimit, totalBalance } = FLEET_STATS;
 
@@ -103,6 +112,7 @@ export function FleetCommand() {
               systemColor={systemColor}
               reveal={reveal}
               rotationOffset={slotIdx * (Math.PI * 2) / 3}
+              onClick={() => handleCardClick(slotIdx)}
             />
             <CardUtilizationBar
               utilization={card.utilization}
@@ -214,6 +224,53 @@ export function FleetCommand() {
           HIGH FLEET UTILIZATION
         </Text>
       )}
+
+      {/* Card detail panel */}
+      {selectedCardIdx !== null && (() => {
+        const cardIdx = CARD_ORDER[selectedCardIdx];
+        const card = FLEET_CARDS[cardIdx];
+        const pos = CARD_POSITIONS[selectedCardIdx];
+        const balance = Math.round(card.limit * (card.utilization / 100));
+        const cardTxns = DEMO_TRANSACTIONS
+          .filter((t) => t.cardLastFour === card.cardNumber.slice(-4))
+          .slice(0, 4);
+
+        return (
+          <HologramDetailPanel
+            position={[pos[0] + 0.8, pos[1] + 0.3, pos[2] + 0.3]}
+            color={cssColor}
+            glowColor={cssGlow}
+            onClose={() => setSelectedCardIdx(null)}
+          >
+            <DetailHeader color={cssColor}>{card.name}</DetailHeader>
+            <div style={{ opacity: 0.5, marginBottom: '8px' }}>{card.cardNumber}</div>
+            <DetailRow label="Balance" value={`$${balance.toLocaleString()}`} />
+            <DetailRow label="Limit" value={`$${card.limit.toLocaleString()}`} />
+            <DetailRow
+              label="Utilization"
+              value={`${card.utilization}%`}
+              color={card.utilization > 70 ? '#ff4444' : card.utilization > 40 ? '#ffbb33' : '#44ff88'}
+            />
+            <DetailDivider color={cssColor} />
+            <div style={{ color: cssColor, fontSize: '10px', letterSpacing: '1px', marginBottom: '4px' }}>BENEFITS</div>
+            <DetailList items={card.benefits} color={cssColor} />
+            {cardTxns.length > 0 && (
+              <>
+                <DetailDivider color={cssColor} />
+                <div style={{ color: cssColor, fontSize: '10px', letterSpacing: '1px', marginBottom: '4px' }}>RECENT</div>
+                {cardTxns.map((t) => (
+                  <DetailRow
+                    key={t.id}
+                    label={t.merchant}
+                    value={`$${Math.abs(t.amount).toFixed(2)}`}
+                    color={t.amount > 0 ? '#44ff88' : undefined}
+                  />
+                ))}
+              </>
+            )}
+          </HologramDetailPanel>
+        );
+      })()}
     </group>
   );
 }
