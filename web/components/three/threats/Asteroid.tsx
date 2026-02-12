@@ -372,14 +372,14 @@ export default function Asteroid({
     if (coreRef.current && !isCollapsingRef.current) {
       // Pulse rate increases with field instability
       const pulseFreq = 2 + fieldInstability * 4; // 2 Hz normal → 6 Hz at max instability
-      const corePulse = 0.2 + (Math.sin(time * pulseFreq * Math.PI * 2) * 0.5 + 0.5) * 0.3;
+      const corePulse = 0.08 + (Math.sin(time * pulseFreq * Math.PI * 2) * 0.5 + 0.5) * 0.12;
       (coreRef.current.material as THREE.MeshBasicMaterial).opacity = corePulse;
 
       // Core gets brighter with damage (exposed inner glow)
       if (damageLevel > 0.6) {
         const coreExposure = (damageLevel - 0.6) / 0.4; // 0-1 over last 40% of damage
         (coreRef.current.material as THREE.MeshBasicMaterial).opacity =
-          corePulse + coreExposure * 0.4;
+          corePulse + coreExposure * 0.25;
         coreRef.current.scale.setScalar(1 + coreExposure * 0.3);
       }
     }
@@ -493,8 +493,8 @@ export default function Asteroid({
           noiseScale={2.0}
           noiseSpeed={0.8}
           rimPower={2.5}
-          glowStrength={0.6}
-          opacity={1.0}
+          glowStrength={0.3}
+          opacity={0.25}
           transparent
           side={THREE.BackSide}
           depthWrite={false}
@@ -529,7 +529,7 @@ export default function Asteroid({
         <meshBasicMaterial
           color="#ff4500"
           transparent
-          opacity={0.3}
+          opacity={0.12}
           blending={THREE.AdditiveBlending}
           depthWrite={false}
           toneMapped={false}
