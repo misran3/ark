@@ -354,14 +354,14 @@ export default function Asteroid({
       materialRef.current.sympatheticGlow = sympatheticGlow;
 
       if (!isCollapsingRef.current) {
-        materialRef.current.heatIntensity = hovered ? 1.5 : 1.0;
+        materialRef.current.heatIntensity = hovered ? 1.15 : 1.0;
 
         // Boost emissive when unstable (in addition to sympatheticGlow uniform)
-        let baseEmissive = hovered ? 3.5 : 3.0;
+        let baseEmissive = hovered ? 2.2 : 1.6;
         if (sympatheticGlow > 0) {
           const pulse = Math.sin(time * (1 + sympatheticGlow * 3) * Math.PI * 2);
-          // Emissive boost: 0-2x based on sympatheticGlow and pulse
-          const emissiveBoost = 1.0 + sympatheticGlow * (1.0 + pulse * 0.5);
+          // Emissive boost: capped so max ≈ 2.4 (was uncapped to 6.0+)
+          const emissiveBoost = 1.0 + sympatheticGlow * (0.4 + pulse * 0.1);
           baseEmissive *= emissiveBoost;
         }
         materialRef.current.emissiveStrength = baseEmissive;
