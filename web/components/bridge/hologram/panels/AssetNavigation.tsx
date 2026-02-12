@@ -15,6 +15,7 @@ import { OrbitPath } from '@/components/bridge/hologram/panels/orrery/OrbitPath'
 import { AssetPlanet } from '@/components/bridge/hologram/panels/orrery/AssetPlanet';
 import { DebtDebrisRing } from '@/components/bridge/hologram/panels/orrery/DebtDebrisRing';
 import { DeepScanPulse } from '@/components/bridge/hologram/panels/orrery/DeepScanPulse';
+import { useCameraFollow } from '@/hooks/useCameraFollow';
 
 /** Returns 0-1 for a layer that starts appearing at `start` and is fully visible at `start + span` */
 function layerAlpha(progress: number, start: number, span: number): number {
@@ -69,6 +70,19 @@ export function AssetNavigation() {
           : 'CRITICAL';
 
   const selectedAsset = selectedAssetId ? assets.find((a) => a.id === selectedAssetId) : null;
+
+  // Camera target: offset from planet world position to frame planet + panel
+  const cameraTarget = useMemo<[number, number, number] | null>(() => {
+    if (!selectedAsset) return null;
+    const x = Math.cos(selectedAsset.fixedAngle) * selectedAsset.orbitRadius;
+    const z = Math.sin(selectedAsset.fixedAngle) * selectedAsset.orbitRadius;
+    // Offset: slightly toward camera (+Z), pan toward planet X, lift slightly
+    // Multiply by the group scale (0.4) since the orrery is in a scaled group
+    const scale = 0.4;
+    return [x * scale * 0.3, 0.6 + 0.3, 5 - 0.5];
+  }, [selectedAsset]);
+
+  useCameraFollow(cameraTarget);
 
   return (
     <group scale={0.4}>

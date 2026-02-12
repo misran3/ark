@@ -68,11 +68,13 @@ export function HologramOverlay({ children }: HologramOverlayProps) {
     const health = panelHealth[expandedPanel];
     const systemColor = getSystemColor(expandedPanel, health);
 
-    // --- Camera micro-drift ---
-    const camTarget = activationPhase === 'idle' || activationPhase === 'dismissing'
-      ? CAM_REST
-      : CAM_DRIFT;
-    camera.position.lerp(camTarget, delta * 4);
+    // --- Camera micro-drift (disabled for networth — useCameraFollow handles it) ---
+    if (expandedPanel !== 'networth') {
+      const camTarget = activationPhase === 'idle' || activationPhase === 'dismissing'
+        ? CAM_REST
+        : CAM_DRIFT;
+      camera.position.lerp(camTarget, delta * 4);
+    }
 
     // --- Dim plane ---
     if (dimPlaneRef.current) {
