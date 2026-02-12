@@ -1,20 +1,20 @@
 'use client';
 
-import { useRef, useMemo, useState, useCallback } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useMemo, useState, useCallback } from 'react';
 import { Text } from '@react-three/drei';
-import { Color, Group } from 'three';
+import { Color } from 'three';
 import { useConsoleStore } from '@/lib/stores/console-store';
-import { useAssetStore } from '@/lib/stores/asset-store';
+import { useAssetStore, RING_RADII, DEBRIS_BELT_RADIUS } from '@/lib/stores/asset-store';
+import type { Asset } from '@/lib/stores/asset-store';
 import { getSystemColor, getSystemCSSColor, getSystemCSSGlow } from '@/lib/hologram/colors';
-import { DEMO_SNAPSHOT } from '@/lib/data/demo-financial-data';
-import { HologramDetailPanel, DetailHeader, DetailRow, DetailDivider } from '@/components/bridge/hologram/HologramDetailPanel';
+import { HologramDetailPanel } from '@/components/bridge/hologram/HologramDetailPanel';
 import { HologramParticles } from '@/components/bridge/hologram/HologramParticles';
 import { ScanPulse } from '@/components/bridge/hologram/ScanPulse';
 import { OrreryCore } from '@/components/bridge/hologram/panels/orrery/OrreryCore';
 import { OrbitPath } from '@/components/bridge/hologram/panels/orrery/OrbitPath';
 import { AssetPlanet } from '@/components/bridge/hologram/panels/orrery/AssetPlanet';
 import { DebtDebrisRing } from '@/components/bridge/hologram/panels/orrery/DebtDebrisRing';
+import { DeepScanPulse } from '@/components/bridge/hologram/panels/orrery/DeepScanPulse';
 
 /** Returns 0-1 for a layer that starts appearing at `start` and is fully visible at `start + span` */
 function layerAlpha(progress: number, start: number, span: number): number {
@@ -25,18 +25,20 @@ function layerAlpha(progress: number, start: number, span: number): number {
 
 const ORRERY_TILT = 0.3; // radians (~17 degrees)
 const DEBT_COLOR = new Color(0.8, 0.2, 0.15);
+// 4 unique orbital rings
+const UNIQUE_RINGS = [RING_RADII[1], RING_RADII[2], RING_RADII[3], RING_RADII[4]];
 
-const formatCredits = (v: number) => `₡${v.toLocaleString('en-US')}`;
+const formatDollars = (v: number) => `$${v.toLocaleString('en-US')}`;
 
 export function AssetNavigation() {
   const health = useConsoleStore((s) => s.panelHealth.networth);
   const revealProgress = useConsoleStore((s) => s.revealProgress);
   const assets = useAssetStore((s) => s.assets);
   const netWorth = useAssetStore((s) => s.netWorth);
-  const liabilities = useAssetStore((s) => s.liabilities);
+  const totalLiabilities = useAssetStore((s) => s.totalLiabilities);
   const trendPct = useAssetStore((s) => s.trendPct);
-  const timeRef = useRef(0);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
+  const [deepScanTarget, setDeepScanTarget] = useState<Asset | null>(null);
 
   const systemColor = useMemo(() => getSystemColor('networth', health).clone(), [health]);
   const cssColor = getSystemCSSColor('networth', health);
@@ -44,16 +46,17 @@ export function AssetNavigation() {
 
   const handleAssetClick = useCallback((id: string) => {
     setSelectedAssetId((prev) => (prev === id ? null : id));
+    setDeepScanTarget(null); // Reset deep scan when switching asset
   }, []);
 
-  // Map asset planets to demo accounts for detail view
-  const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
-  const assetAccountMap: Record<string, { nickname: string; type: string; balance: number }> = isDemo ? {
-    hull: { nickname: DEMO_SNAPSHOT.accounts[0].nickname, type: DEMO_SNAPSHOT.accounts[0].type, balance: DEMO_SNAPSHOT.accounts[0].balance },
-    liquid: { nickname: DEMO_SNAPSHOT.accounts[1].nickname, type: DEMO_SNAPSHOT.accounts[1].type, balance: DEMO_SNAPSHOT.accounts[1].balance },
-    cargo: { nickname: DEMO_SNAPSHOT.accounts[2].nickname, type: DEMO_SNAPSHOT.accounts[2].type, balance: DEMO_SNAPSHOT.accounts[2].balance },
-    stationed: { nickname: 'Investments', type: 'brokerage', balance: 0 },
-  } : {};
+  const handleDeepScan = useCallback((asset: Asset) => {
+    setDeepScanTarget(asset);
+  }, []);
+
+  const handleClose = useCallback(() => {
+    setSelectedAssetId(null);
+    setDeepScanTarget(null);
+  }, []);
 
   // Status label based on health
   const statusLabel =
@@ -65,65 +68,65 @@ export function AssetNavigation() {
           ? 'WARNING'
           : 'CRITICAL';
 
-  // Track animation time
-  useFrame(({ clock }) => {
-    timeRef.current = clock.getElapsedTime();
-  });
+  const selectedAsset = selectedAssetId ? assets.find((a) => a.id === selectedAssetId) : null;
 
   return (
     <group scale={0.4}>
-      {/* === LAYER 1: Central star — appears first (0% - 25%) === */}
-      <group scale={0.3 + layerAlpha(revealProgress, 0, 0.25) * 0.7}>
-        <OrreryCore color={systemColor} health={health} />
-      </group>
-
-      {/* === LAYER 2: Debt debris ring — appears second (10% - 40%) === */}
-      <group scale={layerAlpha(revealProgress, 0.1, 0.3)}>
-        <DebtDebrisRing color={DEBT_COLOR} tilt={ORRERY_TILT} beltRadius={3.5} count={80} />
-      </group>
-
-      {/* === LAYER 3: Orbit paths — appear third (20% - 50%) === */}
-      {assets.map((asset) => (
-        <group key={asset.id} scale={layerAlpha(revealProgress, 0.2, 0.3)}>
-          <OrbitPath
-            radius={asset.orbitRadius}
-            color={systemColor}
-            opacity={0.15}
-            tilt={ORRERY_TILT}
-          />
+      {/* Orrery group — tilted */}
+      <group rotation-x={ORRERY_TILT}>
+        {/* === LAYER 1: Central star — appears first (0% - 25%) === */}
+        <group scale={0.3 + layerAlpha(revealProgress, 0, 0.25) * 0.7}>
+          <OrreryCore color={systemColor} health={health} />
         </group>
-      ))}
 
-      {/* === LAYER 4: Planets — appear fourth (30% - 60%) === */}
-      {revealProgress > 0.25 &&
-        assets.map((asset, i) => (
-          <group key={asset.id} scale={layerAlpha(revealProgress, 0.3, 0.3)}>
-            <AssetPlanet
-              name={asset.name}
-              value={asset.value}
-              orbitRadius={asset.orbitRadius}
-              orbitSpeed={asset.orbitSpeed}
-              size={asset.size}
-              detail={asset.detail}
-              hasRing={asset.hasRing}
-              color={systemColor}
-              tilt={ORRERY_TILT}
-              orbitOffset={(i * Math.PI * 2) / assets.length}
-              time={timeRef.current}
-              onClick={() => handleAssetClick(asset.id)}
-            />
+        {/* === LAYER 2: Debt debris ring — appears second (10% - 40%) === */}
+        <group scale={layerAlpha(revealProgress, 0.1, 0.3)}>
+          <DebtDebrisRing color={DEBT_COLOR} beltRadius={DEBRIS_BELT_RADIUS} count={80} />
+        </group>
+
+        {/* === LAYER 3: Orbit paths — 4 unique rings (20% - 50%) === */}
+        {UNIQUE_RINGS.map((radius) => (
+          <group key={radius} scale={layerAlpha(revealProgress, 0.2, 0.3)}>
+            <OrbitPath radius={radius} color={systemColor} opacity={0.15} />
           </group>
         ))}
 
-      {/* === LAYER 5: Ambient particles — appear late (55% - 85%) === */}
-      {revealProgress > 0.5 && (
-        <HologramParticles count={40} color={systemColor} spread={[3.5, 3.5, 0.5]} />
-      )}
+        {/* === LAYER 4: Planets — 6 assets at fixed positions (30% - 60%) === */}
+        {revealProgress > 0.25 &&
+          assets.map((asset) => (
+            <group key={asset.id} scale={layerAlpha(revealProgress, 0.3, 0.3)}>
+              <AssetPlanet
+                name={asset.name}
+                value={asset.value}
+                orbitRadius={asset.orbitRadius}
+                fixedAngle={asset.fixedAngle}
+                size={asset.size}
+                geometry={asset.geometry}
+                color={systemColor}
+                onClick={() => handleAssetClick(asset.id)}
+              />
+            </group>
+          ))}
 
-      {/* === LAYER 6: Scan pulse — appears last (65% - 95%) === */}
-      {revealProgress > 0.6 && (
-        <ScanPulse color={systemColor} interval={5} maxRadius={3.5} />
-      )}
+        {/* === LAYER 5: Ambient particles — appear late (55% - 85%) === */}
+        {revealProgress > 0.5 && (
+          <HologramParticles count={40} color={systemColor} spread={[3.5, 3.5, 0.5]} />
+        )}
+
+        {/* === LAYER 6: Ambient scan pulse — appears last (65% - 95%) === */}
+        {revealProgress > 0.6 && (
+          <ScanPulse color={systemColor} interval={5} maxRadius={3.5} />
+        )}
+
+        {/* === Deep scan pulse — from selected planet === */}
+        {deepScanTarget && (
+          <DeepScanPulse
+            color={systemColor}
+            originAngle={deepScanTarget.fixedAngle}
+            originRadius={deepScanTarget.orbitRadius}
+          />
+        )}
+      </group>
 
       {/* === TEXT READOUTS — appear with core (15% - 45%) === */}
       {revealProgress > 0.15 && (
@@ -156,7 +159,7 @@ export function AssetNavigation() {
             outlineOpacity={0.3}
             position={[0, 0.15, 0]}
           >
-            {formatCredits(netWorth)}
+            {formatDollars(netWorth)}
           </Text>
 
           {/* Trend indicator */}
@@ -201,7 +204,7 @@ export function AssetNavigation() {
           fillOpacity={layerAlpha(revealProgress, 0.15, 0.3) * 0.5}
           position={[0, -3.2, 0.1]}
         >
-          {`LIABILITIES · -${formatCredits(liabilities)}`}
+          {`LIABILITIES · -${formatDollars(totalLiabilities)}`}
         </Text>
       )}
 
@@ -223,40 +226,19 @@ export function AssetNavigation() {
         </Text>
       )}
 
-      {/* Asset detail panel */}
-      {selectedAssetId && (() => {
-        const asset = assets.find((a) => a.id === selectedAssetId);
-        if (!asset) return null;
-        const account = assetAccountMap[asset.id];
-        const fmtCredits = (v: number) => `$${v.toLocaleString()}`;
-        const grossAssets = netWorth + liabilities;
-
-        return (
-          <HologramDetailPanel
-            position={[3.5, 1.5, 0.3]}
-            color={cssColor}
-            glowColor={cssGlow}
-            onClose={() => setSelectedAssetId(null)}
-          >
-            <DetailHeader color={cssColor}>
-              {account ? account.nickname : asset.name}
-            </DetailHeader>
-            {account && (
-              <div style={{ opacity: 0.5, marginBottom: '6px', fontSize: '10px', textTransform: 'uppercase' }}>
-                {account.type.replace('_', ' ')}
-              </div>
-            )}
-            <DetailRow
-              label="Balance"
-              value={fmtCredits(account ? account.balance : asset.value)}
-              color={account && account.balance < 0 ? '#ff4444' : '#44ff88'}
-            />
-            <DetailDivider color={cssColor} />
-            <DetailRow label="Trend" value={`${trendPct >= 0 ? '+' : ''}${trendPct.toFixed(1)}%`} color={trendPct >= 0 ? '#44ff88' : '#ff4444'} />
-            <DetailRow label="Net Worth Share" value={`${grossAssets > 0 ? ((asset.value / grossAssets) * 100).toFixed(1) : '0.0'}%`} />
-          </HologramDetailPanel>
-        );
-      })()}
+      {/* === Asset detail panel — tiered reveal === */}
+      {selectedAsset && (
+        <HologramDetailPanel
+          position={[3.5, 1.5, 0.3]}
+          color={cssColor}
+          glowColor={cssGlow}
+          asset={selectedAsset}
+          isDeepScan={deepScanTarget?.id === selectedAsset.id}
+          onDeepScan={() => handleDeepScan(selectedAsset)}
+          onCollapse={() => setDeepScanTarget(null)}
+          onClose={handleClose}
+        />
+      )}
     </group>
   );
 }
