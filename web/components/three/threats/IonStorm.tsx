@@ -6,7 +6,8 @@ import * as THREE from 'three';
 import '@/lib/materials/VolumetricGlowMaterial';
 import '@/lib/materials/EnergyFlowMaterial';
 import { InstancedParticleSystem, type ParticleState } from '@/lib/particles';
-import { generateLightningPath, tubeFromPoints } from '@/lib/utils/geometry';
+import { generateLightningPath, tubeFromPoints, morphTubeToPath } from '@/lib/utils/geometry';
+import { useConsoleStore } from '@/lib/stores/console-store';
 
 interface IonStormProps {
   position: [number, number, number];
@@ -70,12 +71,12 @@ export default function IonStorm({
   const isCollapsingRef = useRef(false);
   const collapseStartTimeRef = useRef(0);
 
+  const isPanelOpen = useConsoleStore((s) => !!s.expandedPanel);
+
   // Frame counter for arc regeneration
   const frameCountRef = useRef(0);
 
-  // Lightning arc geometries — ref-based to avoid setState in render loop
-  const outerArcGeosRef = useRef<(THREE.TubeGeometry | null)[]>(new Array(OUTER_ARC_COUNT).fill(null));
-  const coreArcGeosRef = useRef<(THREE.TubeGeometry | null)[]>(new Array(CORE_ARC_COUNT).fill(null));
+  // Lightning arc mesh refs (geometry is pre-generated, morphed in-place)
   const outerArcMeshRefs = useRef<(THREE.Mesh | null)[]>([]);
   const coreArcMeshRefs = useRef<(THREE.Mesh | null)[]>([]);
 
@@ -101,13 +102,51 @@ export default function IonStorm({
     return geo;
   }, [size]);
 
+  // Pre-generate arc geometries ONCE — will morph in place
+  const outerArcGeos = useMemo(() => {
+    return Array.from({ length: OUTER_ARC_COUNT }, (_, i) => {
+      const theta = (i / OUTER_ARC_COUNT) * Math.PI * 2;
+      const phi = Math.PI * 0.5 + (Math.random() - 0.5) * Math.PI * 0.6;
+      const innerR = size * 0.35;
+      const outerR = size * 1.0;
+      const start = new THREE.Vector3(
+        innerR * Math.sin(phi) * Math.cos(theta),
+        innerR * Math.cos(phi),
+        innerR * Math.sin(phi) * Math.sin(theta)
+      );
+      const end = new THREE.Vector3(
+        outerR * Math.sin(phi) * Math.cos(theta + 0.5),
+        outerR * Math.cos(phi),
+        outerR * Math.sin(phi) * Math.sin(theta + 0.5)
+      );
+      const points = generateLightningPath(start, end, 10, size * 0.15);
+      return tubeFromPoints(points, 0.015, 16, 4);
+    });
+  }, [size]);
+
+  const coreArcGeos = useMemo(() => {
+    return Array.from({ length: CORE_ARC_COUNT }, (_, i) => {
+      const theta = (i / CORE_ARC_COUNT) * Math.PI * 2;
+      const phi = Math.PI * 0.5 + (Math.random() - 0.5) * Math.PI * 0.4;
+      const endR = size * 0.5;
+      const start = new THREE.Vector3(0, 0, 0);
+      const end = new THREE.Vector3(
+        endR * Math.sin(phi) * Math.cos(theta),
+        endR * Math.cos(phi),
+        endR * Math.sin(phi) * Math.sin(theta)
+      );
+      const points = generateLightningPath(start, end, 8, size * 0.1);
+      return tubeFromPoints(points, 0.025, 12, 4);
+    });
+  }, [size]);
+
   useEffect(() => {
     return () => {
       bracketGeometry.dispose();
-      outerArcGeosRef.current.forEach(g => g?.dispose());
-      coreArcGeosRef.current.forEach(g => g?.dispose());
+      outerArcGeos.forEach(g => g.dispose());
+      coreArcGeos.forEach(g => g.dispose());
     };
-  }, [bracketGeometry]);
+  }, [bracketGeometry, outerArcGeos, coreArcGeos]);
 
   const handlePointerOver = useCallback(() => {
     isHoveredRef.current = true;
@@ -127,8 +166,8 @@ export default function IonStorm({
     }
   }, [onClick]);
 
-  // Generate a random lightning arc between inner and outer sphere surfaces
-  const generateOuterArc = useCallback((arcIndex: number, time: number) => {
+  // Generate lightning path points (for morphing existing geometry in-place)
+  const generateOuterArcPath = useCallback((arcIndex: number, time: number) => {
     const innerR = size * 0.35;
     const outerR = size * 1.0;
     const theta1 = (arcIndex / OUTER_ARC_COUNT) * Math.PI * 2 + time * 0.3;
@@ -147,11 +186,10 @@ export default function IonStorm({
       outerR * Math.sin(phi2) * Math.sin(theta2)
     );
 
-    const points = generateLightningPath(start, end, 10, size * 0.15);
-    return tubeFromPoints(points, 0.015, 16, 4);
+    return generateLightningPath(start, end, 10, size * 0.15);
   }, [size]);
 
-  const generateCoreArc = useCallback((arcIndex: number, time: number) => {
+  const generateCoreArcPath = useCallback((arcIndex: number, time: number) => {
     const endR = size * 0.5;
     const theta = (arcIndex / CORE_ARC_COUNT) * Math.PI * 2 + time * 0.2;
     const phi = Math.PI * 0.5 + (Math.random() - 0.5) * Math.PI * 0.4;
@@ -163,8 +201,7 @@ export default function IonStorm({
       endR * Math.sin(phi) * Math.sin(theta)
     );
 
-    const points = generateLightningPath(start, end, 8, size * 0.1);
-    return tubeFromPoints(points, 0.025, 12, 4);
+    return generateLightningPath(start, end, 8, size * 0.1);
   }, [size]);
 
   // Vortex particle custom tick — orbit in vortex pattern
@@ -195,6 +232,7 @@ export default function IonStorm({
 
   useFrame(({ clock }, delta) => {
     if (!groupRef.current) return;
+    if (isPanelOpen && !isCollapsingRef.current) return;
     const time = clock.getElapsedTime();
     const hovered = isHoveredRef.current;
     frameCountRef.current++;
@@ -241,31 +279,21 @@ export default function IonStorm({
       mat.opacity = hovered ? 0.7 : 0.5;
     }
 
-    // ---- Layer 4: Lightning Arcs — swap geometry directly on mesh refs ----
+    // ---- Layer 4: Lightning Arcs — morph existing geometry in place (zero allocation) ----
     const outerRegenRate = hovered ? 12 : 20;
     const coreRegenRate = hovered ? 8 : 16;
 
     if (frameCountRef.current % outerRegenRate === 0) {
       for (let i = 0; i < OUTER_ARC_COUNT; i++) {
-        const mesh = outerArcMeshRefs.current[i];
-        if (mesh) {
-          outerArcGeosRef.current[i]?.dispose();
-          const newGeo = generateOuterArc(i, time);
-          outerArcGeosRef.current[i] = newGeo;
-          mesh.geometry = newGeo;
-        }
+        const points = generateOuterArcPath(i, time);
+        morphTubeToPath(outerArcGeos[i], points, 0.015);
       }
     }
 
     if (frameCountRef.current % coreRegenRate === 0) {
       for (let i = 0; i < CORE_ARC_COUNT; i++) {
-        const mesh = coreArcMeshRefs.current[i];
-        if (mesh) {
-          coreArcGeosRef.current[i]?.dispose();
-          const newGeo = generateCoreArc(i, time);
-          coreArcGeosRef.current[i] = newGeo;
-          mesh.geometry = newGeo;
-        }
+        const points = generateCoreArcPath(i, time);
+        morphTubeToPath(coreArcGeos[i], points, 0.025);
       }
     }
 
@@ -425,12 +453,13 @@ export default function IonStorm({
 
       {/* ===== Layer 4: Lightning Arc System ===== */}
 
-      {/* Outer arcs (8) — TubeGeometry via generateLightningPath */}
+      {/* Outer arcs (8) — pre-generated geometry, morphed in place */}
       <group ref={outerArcsGroupRef}>
-        {Array.from({ length: OUTER_ARC_COUNT }, (_, i) => (
+        {outerArcGeos.map((geo, i) => (
           <mesh
             key={`outer-arc-${i}`}
             ref={(el) => { outerArcMeshRefs.current[i] = el; }}
+            geometry={geo}
           >
             <meshBasicMaterial
               color="#ec4899"
@@ -445,12 +474,13 @@ export default function IonStorm({
         ))}
       </group>
 
-      {/* Core arcs (4) — thicker, white-pink */}
+      {/* Core arcs (4) — thicker, white-pink, morphed in place */}
       <group ref={coreArcsGroupRef}>
-        {Array.from({ length: CORE_ARC_COUNT }, (_, i) => (
+        {coreArcGeos.map((geo, i) => (
           <mesh
             key={`core-arc-${i}`}
             ref={(el) => { coreArcMeshRefs.current[i] = el; }}
+            geometry={geo}
           >
             <meshBasicMaterial
               color="#ffffff"
