@@ -158,38 +158,104 @@
   }
 }
 
-/* Start screen: idle hologram flicker — subtle periodic glitch after title appears */
-@keyframes title-idle-glitch {
-  0%, 72% {
+/* Chromatic aberration pseudo-elements for ARK title */
+h1[data-text]::before,
+h1[data-text]::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+}
+
+h1[data-text]::before {
+  color: rgba(255, 40, 40, 0.7);
+}
+
+h1[data-text]::after {
+  color: rgba(40, 80, 255, 0.7);
+}
+
+/* Apply chromatic animations when glitch-in has completed (h1 is visible and idle) */
+h1[data-text].ark-idle::before {
+  animation: ark-chroma-red 11s ease-in-out infinite;
+}
+
+h1[data-text].ark-idle::after {
+  animation: ark-chroma-blue 13s ease-in-out infinite;
+}
+
+/* Start screen: idle signal interference — co-prime loops for apparent randomness */
+@keyframes ark-glitch-main {
+  /* Stable */
+  0%, 68% {
     transform: translateX(0);
     filter: brightness(1);
     clip-path: inset(0);
   }
-  74% {
-    transform: translateX(-2px);
-    filter: brightness(1.6);
-    clip-path: inset(30% 0 40% 0);
-  }
-  76% {
-    transform: translateX(3px);
+  /* Burst 1: sharp horizontal tear */
+  70% {
+    transform: translateX(-3px);
     filter: brightness(1.8);
-    clip-path: inset(0);
+    clip-path: inset(25% 0 50% 0);
   }
-  78%, 92% {
-    transform: translateX(0);
-    filter: brightness(1);
-    clip-path: inset(0);
+  71% {
+    transform: translateX(4px);
+    filter: brightness(1.5);
+    clip-path: inset(60% 0 15% 0);
   }
-  94% {
+  72% {
     transform: translateX(-1px);
-    filter: brightness(1.4);
-    clip-path: inset(60% 0 20% 0);
+    filter: brightness(2.0);
+    clip-path: inset(10% 0 70% 0);
   }
-  96%, 100% {
+  73%, 88% {
     transform: translateX(0);
     filter: brightness(1);
     clip-path: inset(0);
   }
+  /* Burst 2: quick single tear */
+  89% {
+    transform: translateX(2px);
+    filter: brightness(1.6);
+    clip-path: inset(45% 0 30% 0);
+  }
+  90% {
+    transform: translateX(-3px);
+    filter: brightness(1.4);
+    clip-path: inset(0);
+  }
+  91%, 100% {
+    transform: translateX(0);
+    filter: brightness(1);
+    clip-path: inset(0);
+  }
+}
+
+/* Red channel shift (11s loop — co-prime with 7s and 13s) */
+@keyframes ark-chroma-red {
+  0%, 72% { opacity: 0; transform: translateX(0); }
+  73% { opacity: 0.8; transform: translateX(-4px); }
+  74% { opacity: 0.5; transform: translateX(-2px); }
+  75%, 91% { opacity: 0; transform: translateX(0); }
+  92% { opacity: 0.6; transform: translateX(-3px); }
+  93% { opacity: 0; transform: translateX(0); }
+  94%, 100% { opacity: 0; transform: translateX(0); }
+}
+
+/* Blue channel shift (13s loop — co-prime with 7s and 11s) */
+@keyframes ark-chroma-blue {
+  0%, 65% { opacity: 0; transform: translateX(0); }
+  66% { opacity: 0.7; transform: translateX(5px); }
+  67% { opacity: 0.4; transform: translateX(3px); }
+  68%, 84% { opacity: 0; transform: translateX(0); }
+  85% { opacity: 0.5; transform: translateX(4px); }
+  86% { opacity: 0.7; transform: translateX(2px); }
+  87% { opacity: 0; transform: translateX(0); }
+  88%, 100% { opacity: 0; transform: translateX(0); }
 }
 
 /* Start screen: title glitch-out — hologram destabilizes then collapses to scanline */

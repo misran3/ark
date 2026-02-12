@@ -38,7 +38,7 @@ export function StartScreen({ onStart }: StartScreenProps) {
       case 'title':
       case 'ready':
         // Entrance glitch, then chain into idle flicker loop after 1.2s
-        return 'title-glitch-in 1s ease-out forwards, title-idle-glitch 4s ease-in-out 1.2s infinite';
+        return 'title-glitch-in 1s ease-out forwards, ark-glitch-main 7s ease-in-out 1.2s infinite';
       case 'exiting':
         return 'title-glitch-out 900ms ease-in forwards';
       case 'scanline':
@@ -52,21 +52,37 @@ export function StartScreen({ onStart }: StartScreenProps) {
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center">
-      {/* ARK title */}
-      <h1
-        className="relative font-orbitron font-black tracking-[0.3em] mb-12"
-        style={{
-          fontSize: 'clamp(80px, 12vw, 160px)',
-          lineHeight: 1,
-          color: 'rgba(0, 240, 255, 0.9)',
-          opacity: phase === 'waiting' ? 0 : undefined,
-          animation: getTitleAnimation(),
-          textShadow:
-            '0 0 30px rgba(0, 240, 255, 0.5), 0 0 60px rgba(0, 240, 255, 0.25), 0 0 120px rgba(0, 240, 255, 0.1)',
-        }}
-      >
-        ARK
-      </h1>
+      {/* ARK title with volumetric bloom */}
+      <div className="relative mb-12">
+        {/* Volumetric light cone behind ARK title */}
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            width: '100%',
+            height: '120%',
+            top: '-10%',
+            left: 0,
+            background: 'radial-gradient(ellipse 600px 800px at 50% 40%, rgba(0, 240, 255, 0.12) 0%, rgba(0, 240, 255, 0.04) 40%, transparent 70%)',
+            opacity: phase === 'waiting' ? 0 : 1,
+            transition: 'opacity 0.5s',
+          }}
+        />
+        <h1
+          data-text="ARK"
+          className={`relative font-orbitron font-black tracking-[0.3em] ${phase === 'ready' ? 'ark-idle' : ''}`}
+          style={{
+            fontSize: 'clamp(80px, 12vw, 160px)',
+            lineHeight: 1,
+            color: 'rgba(0, 240, 255, 0.9)',
+            opacity: phase === 'waiting' ? 0 : undefined,
+            animation: getTitleAnimation(),
+            textShadow:
+              '0 0 40px rgba(0, 240, 255, 0.6), 0 0 80px rgba(0, 240, 255, 0.35), 0 0 160px rgba(0, 240, 255, 0.2), 0 0 300px rgba(0, 240, 255, 0.1), 0 0 500px rgba(0, 240, 255, 0.05)',
+          }}
+        >
+          ARK
+        </h1>
+      </div>
 
       {/* Initialize button -- hidden during exit */}
       <button
